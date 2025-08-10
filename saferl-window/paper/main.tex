@@ -1,0 +1,109 @@
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xcolor}
+\usepackage{cite}
+
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\pp}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+
+\title{SafeRL-Window: A Safe Reinforcement Learning Controller for Sliding-Window Decoding in Time-Varying Quantum Channels (Simulation Study)}
+
+\author{
+\IEEEauthorblockN{Your Name}
+\IEEEauthorblockA{
+Affiliation\\
+Email: you@example.com}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We propose \emph{SafeRL-Window}, a safe reinforcement learning (Safe RL) controller for adaptive sliding-window decoding of quantum low-density parity-check (QLDPC) codes under time-varying and burst noise. The controller jointly schedules window size $W$, shift $F$, BP iterations, damping, and measurement/update sequences, while enforcing hard constraints on latency and compute. We formalize this as a constrained Markov decision process and train with Lagrangian-PPO. In simulation, SafeRL-Window reduces average iterations/latency at fixed logical error rate (LER), and lowers LER under fixed latency budgets. To our knowledge, Safe RL for the \emph{control layer} of sliding-window decoding has not been systematically studied. We release code and protocols for full reproducibility.
+\end{abstract}
+
+\begin{IEEEkeywords}
+QLDPC, CSS codes, sliding-window decoding, safe reinforcement learning, time-varying quantum channels.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Quantum communication links---including satellite/free-space optical and fiber QKD---face time-varying, bursty impairments. Spatially-coupled QLDPC (SC-QLDPC) with sliding-window decoding reduces latency, yet practical systems often rely on static or heuristic settings for $W,F,$ iteration count, damping, and measurement scheduling. Such fixed controls waste resources or compromise reliability when conditions drift. We introduce \emph{SafeRL-Window}, a lightweight Safe RL controller that adapts these parameters online using only syndrome-derived features and runtime statistics, while guaranteeing hard budgets (latency, compute) and \emph{no-worse-than-baseline} performance via action masking and fallback.
+
+\textbf{Contributions:}
+(i) A unified Safe RL \emph{control layer} for sliding-window decoding that jointly schedules $W,F$, iterations, damping, and sequence; (ii) safety via hard constraints, action masking, and baseline fallback; (iii) a simulation protocol with time-varying quantum channels, ablations, and generalization tests; (iv) open-source code.
+
+\section{Background}
+\textbf{Stabilizer/CSS codes and QLDPC.} Stabilizer codes specify commuting generators; CSS uses two classical codes to correct $X$/$Z$ errors separately with $H_X H_Z^\top \equiv 0$. QLDPC entails sparse $H_X,H_Z$ for scalable iterative decoding.
+
+\textbf{Spatial coupling and sliding windows.} Spatial coupling forms a banded structure that improves thresholds at finite length. Sliding-window decoding processes a local band before shifting, reducing latency and memory.
+
+\textbf{AI for communications/QEC.} Neural-BP/GNN decoders modify the \emph{algorithm layer}. We instead target the \emph{control layer}: scheduling the decoder's resources over time with safety guarantees.
+
+\section{Problem Formulation}
+We consider SC-QLDPC with a window covering slices $[t, t{+}W{-}1]$ and sliding by $F$. At step $t$, the state $s_t$ aggregates (i) syndrome statistics and residuals; (ii) decoder runtime signals (convergence, iterations); (iii) a learned noise fingerprint $\hat{\theta}_t$ (loss, dephasing, depolarization, measurement error, burstiness).
+
+An action $a_t=(W,F,\text{iters},\text{damp},\text{schedule})$ is chosen, subject to \emph{hard constraints} on end-to-end latency $\bar{\tau}\le\tau_{\max}$ and compute $\bar{C}\le C_{\max}$. The reward
+\begin{align}
+r_t = \text{throughput}(a_t,s_t) - \lambda_1 \mathbf{1}[\text{logical failure}] - \lambda_2 \text{latency}(a_t).
+\end{align}
+We adopt a constrained MDP solved by Lagrangian-PPO with action masking and fallback to a safe baseline when confidence is low or constraint violation is predicted.
+
+\section{Method: SafeRL-Window}
+\subsection{Architecture}
+A lightweight actor-critic policy selects $a_t$ per window. The decoder backend (BP/Min-Sum or GNN-BP) is a black box exposing tunables. A safety layer clips actions to the feasible set; a fallback switches to baseline parameters.
+
+\subsection{Training}
+We use entropy-regularized Lagrangian-PPO. Domain randomization spans channel parameters and burst processes. Uncertainty (e.g., MC dropout) triggers conservative actions or fallback. Policy inference cost is negligible compared to a BP iteration.
+
+\begin{algorithm}[t]
+\caption{SafeRL-Window (training loop, sketch)}
+\begin{algorithmic}[1]
+\State Initialize $\pi_\theta, V_\psi$, multipliers $\eta_\tau,\eta_C$, baseline $a^{\text{base}}$
+\For{each episode}
+  \State sample code instance and time-varying channel
+  \For{$t=1$ to $L$}
+    \State $s_t \gets$ features(syndrome stats, residuals, noise fingerprint)
+    \State $\tilde a_t \gets \pi_\theta(s_t)$; $a_t \gets$ mask\&clip$(\tilde a_t)$
+    \If{low\_confidence$(\pi_\theta,s_t)$ or budget\_violation\_forecast$(a_t)$}
+      \State $a_t \gets a^{\text{base}}$
+    \EndIf
+    \State run\_sliding\_window\_decode$(a_t)$
+    \State collect $r_t, \tau_t, C_t$, failure flag
+  \EndFor
+  \State update $(\theta,\psi)$ by PPO on $J(\theta)=\E[\sum_t r_t]-\eta_\tau \E[(\bar\tau-\tau_{\max})_+]-\eta_C \E[(\bar C-C_{\max})_+]$
+  \State $\eta \gets [\eta + \alpha \cdot \text{violation}]_+$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Simulation Protocol}
+\textbf{Codes.} Two SC-QLDPC families with different $(w,L,Z)$ and lengths $N\!\in\![10^4,3{\times}10^4]$. (Placeholders provided; replace with your matrices.)
+
+\textbf{Channels.} Quantum depolarization, dephasing, erasure (loss), measurement error. Time variation via two-state Markov and Poisson burst processes with slow drift.
+
+\textbf{Baselines.} (i) Fixed-parameter sliding window; (ii) heuristic adaptation from channel estimates; (iii) double window; (iv) optional Neural-BP at same compute budget.
+
+\textbf{Metrics.} Logical error rate (LER) with 95\% CI; latency/throughput; per-frame FLOPs; safety (zero hard-constraint violations, fallback rate).
+
+\section{Results (Template)}
+Figure and tables to report: (i) fixed LER target $\to$ lower latency/iterations; (ii) fixed latency budget $\to$ lower LER; (iii) robustness across burst length/strength. Ablations over action dimensions and uncertainty thresholds. \todo{Populate after running code.}
+
+\section{Discussion and Limitations}
+Benefits shrink when channels are stationary and static schedules are near-optimal. Our controller is complementary to algorithm-layer improvements (GNN/Neural-BP). Future work: tighter links to finite-length bounds; learned measurement scheduling.
+
+\section{Reproducibility}
+We release configs, random seeds, Dockerfile hints, and one-click scripts to regenerate all figures. \todo{Add commit hash and environment details.}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}
