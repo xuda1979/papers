@@ -15,15 +15,9 @@ from pathlib import Path
 from typing import Dict, Any
 from tqdm import tqdm
 
-try:
-    import gymnasium as gym
-    from gymnasium import spaces
-    from stable_baselines3 import PPO
-except Exception as e:
-    PPO = None
-    gym = None
-    spaces = None
-
+import gymnasium as gym
+from gymnasium import spaces
+from stable_baselines3 import PPO
 from ..envs.qldpc_env import SlidingWindowEnv
 
 class GymWrapper(gym.Env):
@@ -70,9 +64,6 @@ def train_saferl(config_path: str):
         "schedule":["layered","flooding"]
     })
     gym_env = GymWrapper(env, action_sets, cfg.get("rl", {}).get("safety", {}))
-    if PPO is None:
-        print("stable-baselines3/gymnasium not available in this environment. Please install dependencies.")
-        return
     model = PPO("MlpPolicy", gym_env, verbose=1, tensorboard_log=None,
                 learning_rate=cfg["rl"]["lr"],
                 n_steps=cfg["rl"]["n_steps"],

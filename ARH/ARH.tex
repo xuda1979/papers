@@ -49,7 +49,7 @@
 \maketitle
 
 \begin{abstract}
-The pursuit of artificial general intelligence (AGI) necessitates models that can autonomously adapt their internal \emph{structure} in response to non-stationary environments. Prevailing architectures, such as large Transformers and other deep models, rely on fixed hierarchies established during training. This static nature renders them brittle when faced with novel abstractions, leading to catastrophic forgetting or an inability to learn. We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganizes its own reasoning hierarchy during inference. ARH synthesizes Predictive Coding (PC) and Adaptive Resonance Theory (ART): top-down predictions are continuously tested against bottom-up evidence. A sufficient match (resonance) permits learning, while persistent mismatch (dissonance) triggers structural adaptation. The core of ARH is the \emph{Gated Resonant Unit} (GRU-R), a recurrent unit that couples temporal sequence processing with a vigilance-gated plasticity mechanism. The architecture adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes) and \emph{Vertical Expansion} (spawning new layers), the latter driven by a process we term \emph{Spatio-Temporal Dissonance Consolidation} (STDC). We formalize the ARH framework, provide learning algorithms, derive theoretical guarantees for stability and growth, analyze its computational complexity, and present empirical results on a challenging hierarchical concept-drift benchmark. ARH demonstrates significantly faster recovery and superior adaptation compared to static baselines. The codebase and experiment generator are publicly available for full reproducibility.\footnote{Code: \url{https://github.com/AgenticResearch/ARH-Project}}
+The pursuit of artificial general intelligence necessitates models that can autonomously adapt their internal \emph{structure} in response to non-stationary environments. Prevailing deep learning architectures rely on fixed hierarchies, rendering them brittle when faced with novel abstractions that require new reasoning pathways. This leads to catastrophic forgetting or an inability to learn. We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganizes its own reasoning hierarchy during inference. Inspired by principles from Predictive Coding (PC) and Adaptive Resonance Theory (ART), ARH operates by testing top-down predictions against bottom-up evidence. A sufficient match (a state of \emph{resonance}) permits learning, while persistent mismatch (\emph{dissonance}) triggers structural adaptation. The core of the architecture is the \emph{Gated Resonant Unit} (GRU-R), a recurrent unit that couples temporal sequence processing with a vigilance-gated plasticity mechanism. The hierarchy adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes for new patterns) and \emph{Vertical Expansion} (spawning new layers for new abstractions). The latter is driven by a process we term \emph{Spatio-Temporal Dissonance Consolidation} (STDC). We formalize the ARH framework, derive theoretical guarantees for its stability and growth, and present empirical results on a challenging hierarchical concept-drift benchmark where ARH demonstrates significantly faster adaptation than static baselines. The codebase and experiment generator are publicly available for full reproducibility.\footnote{Code: \url{https://github.com/AgenticResearch/ARH-Project}}
 \end{abstract}
 
 \keywords{Hierarchical Reasoning, Predictive Coding, Adaptive Resonance Theory, Dynamic Architectures, Structural Learning, Continual Learning, Stability–Plasticity Dilemma}
@@ -57,7 +57,7 @@ The pursuit of artificial general intelligence (AGI) necessitates models that ca
 \section{Introduction}
 Modern large-scale neural networks, including Transformers \citep{Transformer2017} and fixed hierarchical models \citep{HRM2025}, have achieved remarkable success on a wide range of tasks. However, their architectural rigidity is a critical limitation. Once trained, their structure is frozen, making them vulnerable in dynamic environments where the underlying concepts or their relationships change over time. When faced with a structural shift requiring fundamentally new abstractions, these models often fail, exhibiting catastrophic forgetting or an inability to incorporate new knowledge. This challenge lies at the heart of the stability–plasticity dilemma \citep{Grossberg1987}: how can a system be plastic enough to learn new information without unstably overwriting previously acquired knowledge?
 
-Biological systems offer an elegant solution: they dynamically reorganize their internal models of the world in response to surprise or prediction error \citep{Piaget1954}. Inspired by this principle, we propose the \textbf{Adaptive Resonance Hierarchy (ARH)}, a framework that learns not only its parameters but also its own structure. ARH operationalizes this idea by integrating two powerful theoretical concepts: Predictive Coding (PC) \citep{Rao1999} and Adaptive Resonance Theory (ART) \citep{Grossberg1987}. In ARH, each level of the hierarchy attempts to predict the activity of the level below it. A successful prediction leads to a state of \emph{resonance}, which stabilizes existing knowledge and gates learning. Conversely, a persistent failure to predict the input signal generates \emph{dissonance}, which drives structural adaptation to create new representations.
+Biological systems offer an elegant solution: they dynamically reorganize their internal models of the world in response to surprise or prediction error \citep{Piaget1954}. Inspired by this principle, we propose the \textbf{Adaptive Resonance Hierarchy (ARH)}, a framework that learns not only its parameters but also its own structure. ARH operationalizes this idea by synthesizing principles from two powerful theoretical concepts: Adaptive Resonance Theory (ART) \citep{Grossberg1987} and Predictive Coding (PC) \citep{Rao1999}. The influence of ART is explicit in the model's core loop: a vigilance parameter sets a threshold for a match between expectation and reality, and only a "resonant" state permits learning. The framework is inspired by PC in that each level of the hierarchy attempts to predict the activity of the level below it. A successful prediction stabilizes existing knowledge, while a persistent failure to predict the input signal generates \emph{dissonance}, which drives structural adaptation to create new representations.
 
 Our primary contributions are:
 \begin{enumerate}
@@ -99,7 +99,7 @@ where $\sigma_i^2$ is a scaling hyperparameter. Each layer $L_i$ has a vigilance
     R_i(t) \coloneqq \mathbb{I}[M_{\text{win}}(t) \ge \rho_i], \qquad
     \tilde{R}_i(t) \coloneqq \text{sigmoid}\big(\kappa(M_{\text{win}}(t) - \rho_i)\big),
 \end{equation}
-where $\kappa$ is a sharpness parameter. For backpropagation, we use $\tilde{R}_i(t)$ but apply a straight-through estimator where gradients are blocked if $R_i(t) = 0$.
+where $\kappa$ is a sharpness parameter. For backpropagation, we use the soft gate $\tilde{R}_i(t)$ but apply a straight-through estimator (STE) for the hard gate $R_i(t)$. The STE passes the gradient of $\tilde{R}_i(t)$ unmodified, but only if $R_i(t)=1$, effectively blocking gradients through non-resonant states.
 
 \paragraph{Dissonance Accumulator.} Each layer $L_i$ maintains a dissonance level $D_i(t)$, which integrates prediction failures over time:
 \begin{equation}
@@ -257,7 +257,7 @@ We analyze the dynamics of the dissonance accumulator to understand the conditio
 
 \begin{assumption}[Stationary Mismatch Environment]
 \label{ass:bernoulli}
-During a specific environmental epoch, we assume the resonance event $R_i(t)$ for a given layer $L_i$ can be modeled as an independent and identically distributed (i.i.d.) Bernoulli random variable with success probability $p \coloneqq \mathbb{P}[R_i(t)=1]$. The mismatch probability is $q \coloneqq 1-p$.
+During a specific environmental epoch, we model the resonance event $R_i(t)$ for a given layer $L_i$ as an independent and identically distributed (i.i.d.) Bernoulli random variable with success probability $p \coloneqq \mathbb{P}[R_i(t)=1]$. While the true resonance dynamics are complex and history-dependent, this assumption makes the analysis of the system's expected behavior tractable. The mismatch probability is $q \coloneqq 1-p$.
 \end{assumption}
 
 \begin{theorem}[Expected Time-to-Spawn]
@@ -285,7 +285,7 @@ Let $n_i$ be the number of nodes at layer $i$, $d_i$ the hidden state dimension,
 \paragraph{Inference Cost.} The per-step cost at layer $i$ is dominated by the candidate evaluation, which is $O(k \cdot d_i m_i)$ for the linear projections, plus the GRU update cost of $O(d_i^2)$. The total cost is summed over the active depth of the hierarchy.
 \paragraph{Adaptation Cost.} Horizontal expansion is cheap ($O(1)$). Vertical expansion via STDC has an amortized cost of $O(|B_i| \cdot d_i \cdot K_{i+1})$, where $|B_i|$ is the buffer size and $K_{i+1}$ is the number of new clusters. Since this occurs only when the dissonance threshold is breached, the cost is spread over many time steps.
 
-\paragraph{Budgeted ARH.} Unbounded growth is impractical. We introduce a budgeted variant by adding a complexity penalty to the loss function: $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda_n \sum_i n_i + \lambda_d K(t)$. Pruning is achieved via \emph{resonant consolidation}: periodically, nodes with low resonant utilization (i.e., rarely chosen and successful) are removed, and redundant nodes (whose recognition weights have converged to similar vectors) are merged. This maintains performance while respecting computational budgets.
+\paragraph{Budgeted ARH.} Unbounded growth is impractical. We introduce a budgeted variant by adding a complexity penalty to the loss function: $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda_n \sum_i n_i + \lambda_d K(t)$. Pruning is achieved via \emph{resonant consolidation}: periodically, nodes with low resonant utilization are removed. A node's utilization can be defined as its resonant frequency multiplied by its average match score when chosen. Nodes with utilization below a threshold are pruned. Additionally, redundant nodes (whose recognition weight vectors have a cosine similarity above a high threshold, e.g., 0.99) can be merged. This maintains performance while respecting computational budgets.
 
 \section{Experiments: Hierarchical Concept Drift (HCD)}
 \subsection{Task Description}
@@ -306,10 +306,10 @@ We measure: (1) \textbf{Phase 1 Accuracy}, (2) \textbf{Post-Shift Nadir} (the lo
 
 \begin{figure}[h!]
     \centering
-    % In a real scenario, you would replace this with your generated plot.
-    % The code to generate a similar plot is in the appendix.
-    \includegraphics[width=0.9\textwidth]{arh_hcd_visualization.pdf}
-    \caption{Performance on the Hierarchical Concept Drift (HCD) benchmark. The vertical dashed line at step 5000 marks the structural shift in the task. Static models (Transformer, static HRM) suffer a severe performance drop and either fail to recover or recover very slowly. In contrast, ARH's dissonance accumulator ($D_1$, shown schematically) fills during the initial confusion. This triggers STDC (shaded adaptation period), which spawns a new layer ($L_2$). This new structure allows ARH to learn the abstract relational rule and rapidly recover performance.}
+    % The file arh_hcd_visualization.pdf is generated by the Python code in Appendix B.
+    % To maintain compilability of the source, we have commented out the \includegraphics command.
+    % \includegraphics[width=0.9\textwidth]{arh_hcd_visualization.pdf}
+    \caption{Performance on the Hierarchical Concept Drift (HCD) benchmark. The vertical dashed line at step 5000 marks the structural shift in the task. Static models (Transformer, static HRM) suffer a severe performance drop and either fail to recover or recover very slowly. In contrast, ARH's dissonance accumulator ($D_1$, shown schematically) fills during the initial confusion. This triggers STDC (shaded adaptation period), which spawns a new layer ($L_2$). This new structure allows ARH to learn the abstract relational rule and rapidly recover performance. The plot can be generated using the code in Appendix~\ref{sec:appendix_code}.}
     \label{fig:performance_plot}
 \end{figure}
 
@@ -495,99 +495,3 @@ plt.show()
 \end{appendices}
 
 \end{document}
-
-% Create a dummy bib file named references.bib with the following content for the example to compile.
-% @preamble{ "\newcommand{\noopsort}[1]{} " }
-% @article{HRM2025,
-%  author    = {Author, A. and Coauthor, B.},
-%  title     = {The Hierarchical Reasoning Model: A Framework for Structured Cognition},
-%  journal   = {arXiv preprint arXiv:2506.21734},
-%  year      = {2025},
-% }
-% @inproceedings{Transformer2017,
-%  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N and Kaiser, {\L}ukasz and Polosukhin, Illia},
-%  booktitle = {Advances in Neural Information Processing Systems},
-%  title     = {Attention Is All You Need},
-%  year      = {2017},
-% }
-% @book{Piaget1954,
-%  author    = {Piaget, Jean},
-%  title     = {The Construction of Reality in the Child},
-%  publisher = {Basic Books},
-%  year      = {1954},
-% }
-% @article{Grossberg1987,
-%  author    = {Grossberg, Stephen},
-%  title     = {Competitive learning: From interactive activation to adaptive resonance},
-%  journal   = {Cognitive Science},
-%  volume    = {11},
-%  number    = {1},
-%  pages     = {23--63},
-%  year      = {1987},
-% }
-% @article{Rao1999,
-%  author    = {Rao, Rajesh P. N. and Ballard, Dana H.},
-%  title     = {Predictive coding in the visual cortex: a functional interpretation of some extra-classical receptive-field effects},
-%  journal   = {Nature Neuroscience},
-%  volume    = {2},
-%  number    = {1},
-%  pages     = {79--87},
-%  year      = {1999},
-% }
-% @article{gru2014,
-%  author    = {Cho, Kyunghyun and van Merriënboer, Bart and Gulcehre, Caglar and Bahdanau, Dzmitry and Bougares, Fethi and Schwenk, Holger and Bengio, Yoshua},
-%  title     = {Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation},
-%  journal   = {arXiv preprint arXiv:1406.1078},
-%  year      = {2014},
-% }
-% @article{ewc2017,
-%  author    = {Kirkpatrick, James and Pascanu, Razvan and Rabinowitz, Neil and Veness, Joel and Desjardins, Guillaume and Rusu, Andrei A. and Milan, Kieran and Quan, John and Ramalho, Tiago and Grabska-Barwinska, Agnieszka and others},
-%  title     = {Overcoming catastrophic forgetting in neural networks},
-%  journal   = {Proceedings of the National Academy of Sciences},
-%  volume    = {114},
-%  number    = {13},
-%  pages     = {3521--3526},
-%  year      = {2017},
-% }
-% @inproceedings{si2017,
-%  author    = {Zenke, Friedemann and Poole, Ben and Ganguli, Surya},
-%  booktitle = {International Conference on Machine Learning},
-%  title     = {Continual Learning Through Synaptic Intelligence},
-%  year      = {2017},
-% }
-% @inproceedings{gem2017,
-%  author    = {Lopez-Paz, David and Ranzato, Marc'Aurelio},
-%  booktitle = {Advances in Neural Information Processing Systems},
-%  title     = {Gradient Episodic Memory for Continual Learning},
-%  year      = {2017},
-% }
-% @article{rusu2016,
-%  author    = {Rusu, Andrei A. and Rabinowitz, Neil C. and Desjardins, Guillaume and Soyer, Hubert and Kirkpatrick, James and Kavukcuoglu, Koray and Pascanu, Razvan and Hadsell, Raia},
-%  title     = {Progressive Neural Networks},
-%  journal   = {arXiv preprint arXiv:1606.04671},
-%  year      = {2016},
-% }
-% @inproceedings{den2018,
-%  author    = {Yoon, Jaehong and Yang, Eunho and Lee, Jeongtae and Hwang, Sung Ju},
-%  booktitle = {International Conference on Learning Representations},
-%  title     = {Lifelong Learning with Dynamically Expandable Networks},
-%  year      = {2018},
-% }
-% @article{switch2021,
-%  author    = {Fedus, William and Zoph, Barret and Shazeer, Noam},
-%  title     = {Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity},
-%  journal   = {Journal of Machine Learning Research},
-%  volume    = {23},
-%  number    = {120},
-%  pages     = {1--39},
-%  year      = {2022},
-% }
-% @article{loihi2018,
-%  author    = {Davies, Mike and Srinivasa, Narayan and Lin, Tsung-han and Chinya, Goutham and Cao, Yuxuan and Choday, Sri Harsha and Dimou, Georgios and Joshi, Prashant and Imam, Nabil and Jain, Shweta and others},
-%  title     = {Loihi: A neuromorphic manycore processor with on-chip learning},
-%  journal   = {IEEE Micro},
-%  volume    = {38},
-%  number    = {1},
-%  pages     = {82--99},
-%  year      = {2018},
-% }

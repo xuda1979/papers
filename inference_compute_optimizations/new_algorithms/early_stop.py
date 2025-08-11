@@ -12,6 +12,9 @@ class EarlyStopStreamer:
         self.stop_phrases.extend(["I hope this helps!", "Let me know if you have any other questions."])
         self.stop_on_json_end = stop_on_json_end
         self.stopped = False
+        # Pre-calculate the lookback window size for efficiency
+        self.lookback_window_size = max(len(p) for p in self.stop_phrases) * 2 if self.stop_phrases else 100
+
 
     async def process_stream(self, stream: AsyncGenerator[str, None]) -> AsyncGenerator[str, None]:
         """
@@ -19,15 +22,13 @@ class EarlyStopStreamer:
         """
         self.stopped = False
         accumulated_content = ""
-        # We look back only a limited window to detect phrases spanning across chunks
-        lookback_window_size = max(len(p) for p in self.stop_phrases) * 2 if self.stop_phrases else 100
 
         async for chunk in stream:
             yield chunk
             accumulated_content += chunk
             
             # Maintain the lookback window
-            recent_content = accumulated_content[-lookback_window_size:]
+            recent_content = accumulated_content[-self.lookback_window_size:]
 
             # Check for stop phrases
             if self._check_stop_phrases(recent_content):
