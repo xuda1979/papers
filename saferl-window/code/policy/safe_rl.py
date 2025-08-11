@@ -1,6 +1,12 @@
 """
 Safe RL training harness using stable-baselines3 (PPO) with a simple Lagrangian penalty
 and action masking/fallback hooks. This is a skeleton; adjust for your environment.
+
+NOTE: This is a research skeleton. The GymWrapper and training loop are functional,
+but they rely on a toy environment (`SlidingWindowEnv`) that uses placeholder logic
+for observations, rewards, and safety checks. The core PPO algorithm is used, but
+the Lagrangian penalties and sophisticated safety mechanisms described in the
+accompanying paper are not implemented here and must be added by the user.
 """
 from __future__ import annotations
 import numpy as np

@@ -57,32 +57,33 @@ class DynamicMicroBatcher:
         batch = self.queues[model]
         futures = self.futures[model]
 
-        # Clear the queue and futures list
+        # Clear the queue and futures list for the next batch
         self.queues[model] = []
         self.futures[model] = []
         
-        # If a timer task was running, ensure it's cleared/cancelled if it exists and is not done
-        if model in self.tasks:
-            if not self.tasks[model].done():
-                self.tasks[model].cancel()
-            del self.tasks[model]
+        # Cancel the timer task if it's running
+        if model in self.tasks and not self.tasks[model].done():
+            self.tasks[model].cancel()
 
-        # Execute the batch asynchronously (outside the lock)
-        asyncio.create_task(self._execute_batch(batch, model, futures, executor_func))
+        # Execute the batch asynchronously.
+        # This task will resolve the futures with their corresponding streams.
+        asyncio.create_task(self._execute_batch_and_resolve_streams(batch, model, futures, executor_func))
 
-    async def _execute_batch(self, batch, model, futures, executor_func):
+    async def _execute_batch_and_resolve_streams(self, batch, model, futures, executor_func):
+        """
+        Executes the batched call and resolves each future with its own stream.
+        """
         try:
-            # This is where the actual batched API call happens
-            results = await executor_func(batch, model)
-            if len(results) != len(futures):
-                raise ValueError(f"Executor returned incorrect number of results ({len(results)}) for batch size ({len(futures)})")
+            # The executor now returns a list of async generators (streams)
+            streams = await executor_func(batch, model)
+            if len(streams) != len(futures):
+                raise ValueError(f"Executor returned {len(streams)} streams for a batch of size {len(futures)}")
 
-            for future, result in zip(futures, results):
+            for future, stream in zip(futures, streams):
                 if not future.done():
-                    future.set_result(result)
+                    future.set_result(stream)
         except Exception as e:
-            logger.error(f"Batch execution failed: {e}")
-            # If execution fails, notify all pending futures
+            logger.error(f"Batch execution failed for model {model}: {e}")
             for future in futures:
                 if not future.done():
                     future.set_exception(e)

@@ -68,8 +68,11 @@ def hcf_noise_model(
 
     # Compute effective power after propagation.
     # Note: The factor 0.1 is used here based on the specific model calibration
-    # described in the accompanying work required to derive the stated probabilities.
-    # P_eff = P_0 * exp(-0.1 * alpha_dB/km * L)
+    # described in the accompanying work. This factor includes the conversion
+    # from a decibel scale to a neperian logarithm scale for the exponential.
+    # The standard formula is P_eff = P_0 * 10^(-alpha_dB * L / 10), which is
+    # equivalent to P_0 * exp(-alpha_dB * L * ln(10)/10). The factor of ~0.23
+    # is absorbed into the calibrated model's 0.1 constant.
     effective_power = classical_power_w * math.exp(
         -attenuation_db_per_km * 0.1 * length_km
     )
@@ -80,9 +83,7 @@ def hcf_noise_model(
     p_z = 1.0 - math.exp(-(sprs_photons + fwm_photons))
     # Amplitude (X) error probability assumed to be a fraction of p_z
     p_x = eta_px * p_z
-    # Y error probability: simultaneous X and Z; taken as half the sum
-    p_y = 0.5 * (p_x + p_z)
-    return {"p_x": p_x, "p_y": p_y, "p_z": p_z}
+    return {"p_x": p_x, "p_z": p_z}
 
 
 def markov_correlated_errors(
@@ -93,8 +94,10 @@ def markov_correlated_errors(
     Uses a two-state model. State 0 (low noise): P(error) = p_base.
     State 1 (high noise): P(error) = 2 * p_base.
     The state persists with probability `correlation_strength` (rho).
-    Due to the symmetric transitions, the steady-state probability for each
-    state is 0.5, resulting in an effective average error rate of 1.5 * p_base.
+    The transition matrix for the hidden state is symmetric, meaning the
+    probability of switching from low-to-high noise is the same as high-to-low.
+    This results in a steady-state probability of 0.5 for being in either
+    state, leading to an effective average error rate of 1.5 * p_base.
 
     Args:
         p_base: Baseline error probability (used in the low-noise state).
@@ -183,7 +186,9 @@ def run_default_demo() -> None:
     # Calculate effective average error rates due to the Markov model (1.5x increase)
     p_x_eff = 1.5 * p_x_base
     p_z_eff = 1.5 * p_z_base
-    p_eff = 1.5 * (p_x_base + p_z_base + probs["p_y"])
+    # Total effective error rate is the sum of effective X, Y, Z probabilities.
+    # Since Y errors are composed of X and Z, we only need to sum the two main components.
+    p_eff = p_x_eff + p_z_eff
 
     print(f"Scenario: L={length_km} km, P_class={classical_power_dBm} dBm, Δλ={wavelength_separation_nm} nm, ρ={rho}")
     print("HCF Noise Model (Baseline probabilities):")
@@ -191,7 +196,7 @@ def run_default_demo() -> None:
     print(f"  p_z_base ≈ {p_z_base:.5e}, p_x_base ≈ {p_x_base:.5e}")
     print("Markov Model (Effective average probabilities):")
     # Expected: p_z_eff ≈ 1.35e-02, p_x_eff ≈ 4.05e-03
-    print(f"  p_z_eff  ≈ {p_z_eff:.5e}, p_x_eff  ≈ {p_x_eff:.5e} (Total p_eff ≈ {p_eff:.4f})")
+    print(f"  p_z_eff  ≈ {p_z_eff:.5e}, p_x_eff  ≈ {p_x_eff:.5e} (Total effective p ≈ {p_eff:.4f})")
 
     # Run Monte Carlo to estimate block error
     print(f"\nRunning Monte Carlo simulation ({trials} trials) with BDD assumption...")

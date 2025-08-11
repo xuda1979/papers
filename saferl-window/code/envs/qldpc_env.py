@@ -1,9 +1,13 @@
 """
 Gym-like environment wrapper for sliding-window decoding with SafeRL control.
-State: features from recent syndromes, residual stats, noise fingerprint
-Action: (W, F, iters, damping, schedule) chosen from discrete sets
-Reward: throughput - penalty(failure, latency/compute)
-Safety: hard budgets via action masking; baseline fallback hook left to controller
+
+NOTE: This is a research skeleton. The environment simulates the interaction
+loop, but the core physics and decoding logic are placeholders. Specifically:
+- The observation space is a toy model (time, prev_failures).
+- Syndromes are generated randomly, not from a real decoder.
+- The reward function is a simple heuristic.
+- The `feasible` check is an approximation.
+A user should replace these with realistic models for their specific use case.
 """
 from __future__ import annotations
 import numpy as np

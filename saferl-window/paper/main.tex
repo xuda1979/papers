@@ -1,4 +1,3 @@
-
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 
@@ -11,97 +10,117 @@
 \usepackage{xcolor}
 \usepackage{cite}
 
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
-\newcommand{\pp}{\mathbb{P}}
-\newcommand{\E}{\mathbb{E}}
-
-\title{SafeRL-Window: A Safe Reinforcement Learning Controller for Sliding-Window Decoding in Time-Varying Quantum Channels (Simulation Study)}
+\title{SafeRL-Window: An Architectural Proposal and Simulation Skeleton for Safe RL Control of Quantum Decoders}
 
 \author{
-\IEEEauthorblockN{Your Name}
+\IEEEauthorblockN{Agentic Research Group}
 \IEEEauthorblockA{
-Affiliation\\
-Email: you@example.com}
+Email: agent@research.com}
 }
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We propose \emph{SafeRL-Window}, a safe reinforcement learning (Safe RL) controller for adaptive sliding-window decoding of quantum low-density parity-check (QLDPC) codes under time-varying and burst noise. The controller jointly schedules window size $W$, shift $F$, BP iterations, damping, and measurement/update sequences, while enforcing hard constraints on latency and compute. We formalize this as a constrained Markov decision process and train with Lagrangian-PPO. In simulation, SafeRL-Window reduces average iterations/latency at fixed logical error rate (LER), and lowers LER under fixed latency budgets. To our knowledge, Safe RL for the \emph{control layer} of sliding-window decoding has not been systematically studied. We release code and protocols for full reproducibility.
+The dynamic control of quantum error correction decoders in response to time-varying noise is a significant challenge. We propose \emph{SafeRL-Window}, an architecture for a safe reinforcement learning (Safe RL) controller designed to adaptively manage sliding-window decoding of quantum low-density parity-check (QLDPC) codes. This paper outlines the architecture, which aims to schedule window size, shift, and decoder parameters to optimize performance under hard constraints on latency and compute. We formalize the control problem as a constrained Markov decision process (CMDP) solvable with algorithms like Lagrangian-PPO. To accelerate research in this domain, we are releasing a complete open-source simulation skeleton in Python, implementing the proposed architecture with placeholder components for the channel, decoder, and state-space. This provides a framework for researchers to integrate their own models and test novel control policies.
 \end{abstract}
 
 \begin{IEEEkeywords}
-QLDPC, CSS codes, sliding-window decoding, safe reinforcement learning, time-varying quantum channels.
+QLDPC, CSS codes, sliding-window decoding, safe reinforcement learning, quantum information, simulation framework.
 \end{IEEEkeywords}
 
 \section{Introduction}
-Quantum communication links---including satellite/free-space optical and fiber QKD---face time-varying, bursty impairments. Spatially-coupled QLDPC (SC-QLDPC) with sliding-window decoding reduces latency, yet practical systems often rely on static or heuristic settings for $W,F,$ iteration count, damping, and measurement scheduling. Such fixed controls waste resources or compromise reliability when conditions drift. We introduce \emph{SafeRL-Window}, a lightweight Safe RL controller that adapts these parameters online using only syndrome-derived features and runtime statistics, while guaranteeing hard budgets (latency, compute) and \emph{no-worse-than-baseline} performance via action masking and fallback.
+Quantum communication links often face time-varying, bursty noise. Spatially-coupled QLDPC (SC-QLDPC) codes with sliding-window decoding offer a promising approach to achieve low-latency error correction. However, practical systems often rely on static or heuristic settings for window size ($W$), shift ($F$), iteration count, and other decoder parameters. Such fixed controls can be inefficient, wasting resources in low-noise regimes or compromising reliability when conditions worsen.
+
+We introduce \emph{SafeRL-Window}, a proposed architecture for a lightweight Safe RL controller that adapts these parameters online. The controller is designed to use only syndrome-derived features and runtime statistics, while guaranteeing hard budgets on latency and compute. The safety aspect is critical, ensuring that any learned policy performs no worse than a reliable baseline.
 
 \textbf{Contributions:}
-(i) A unified Safe RL \emph{control layer} for sliding-window decoding that jointly schedules $W,F$, iterations, damping, and sequence; (ii) safety via hard constraints, action masking, and baseline fallback; (iii) a simulation protocol with time-varying quantum channels, ablations, and generalization tests; (iv) open-source code.
+This work makes the following contributions:
+\begin{enumerate}
+    \item We propose a unified Safe RL \emph{control layer architecture} for sliding-window decoding that can jointly schedule parameters like window size, shift, and decoder iterations.
+    \item We formalize the problem as a Constrained Markov Decision Process (CMDP), providing a principled foundation for applying advanced RL techniques.
+    \item We outline a safety mechanism based on action masking and a fallback to a pre-defined safe baseline policy.
+    \item We release a complete, open-source Python simulation skeleton that implements this architecture, enabling researchers to easily experiment with and validate their own control policies and channel models.
+\end{enumerate}
 
 \section{Background}
 \textbf{Stabilizer/CSS codes and QLDPC.} Stabilizer codes specify commuting generators; CSS uses two classical codes to correct $X$/$Z$ errors separately with $H_X H_Z^\top \equiv 0$. QLDPC entails sparse $H_X,H_Z$ for scalable iterative decoding.
 
 \textbf{Spatial coupling and sliding windows.} Spatial coupling forms a banded structure that improves thresholds at finite length. Sliding-window decoding processes a local band before shifting, reducing latency and memory.
 
-\textbf{AI for communications/QEC.} Neural-BP/GNN decoders modify the \emph{algorithm layer}. We instead target the \emph{control layer}: scheduling the decoder's resources over time with safety guarantees.
+\textbf{AI for communications/QEC.} While many works focus on modifying the decoding algorithm itself (e.g., Neural-BP/GNN decoders), we target the \emph{control layer}: scheduling the decoder's resources over time with safety guarantees.
 
 \section{Problem Formulation}
-We consider SC-QLDPC with a window covering slices $[t, t{+}W{-}1]$ and sliding by $F$. At step $t$, the state $s_t$ aggregates (i) syndrome statistics and residuals; (ii) decoder runtime signals (convergence, iterations); (iii) a learned noise fingerprint $\hat{\theta}_t$ (loss, dephasing, depolarization, measurement error, burstiness).
+We consider an SC-QLDPC code with a sliding window decoder. At each step $t$, the controller observes a state $s_t$ and selects an action $a_t$.
 
-An action $a_t=(W,F,\text{iters},\text{damp},\text{schedule})$ is chosen, subject to \emph{hard constraints} on end-to-end latency $\bar{\tau}\le\tau_{\max}$ and compute $\bar{C}\le C_{\max}$. The reward
+\textbf{State Space $s_t$:} A complete implementation would featurize the state from (i) syndrome statistics and residuals from the decoder; (ii) decoder runtime signals (convergence, iterations); (iii) a learned noise fingerprint $\hat{\theta}_t$ (loss, dephasing, depolarization, burstiness). Our skeleton provides a minimal placeholder for this.
+
+\textbf{Action Space $a_t$:} The action is a tuple of key decoder parameters, e.g., $a_t=(W,F,\text{iters},\text{damp},\text{schedule})$, chosen from discrete sets.
+
+\textbf{Constraints:} The actions are subject to \emph{hard constraints} on average end-to-end latency $\bar{\tau}\le\tau_{\max}$ and compute $\bar{C}\le C_{\max}$.
+
+\textbf{Objective:} The goal is to learn a policy $\pi(a_t|s_t)$ that maximizes a reward function, such as:
 \begin{align}
 r_t = \text{throughput}(a_t,s_t) - \lambda_1 \mathbf{1}[\text{logical failure}] - \lambda_2 \text{latency}(a_t).
 \end{align}
-We adopt a constrained MDP solved by Lagrangian-PPO with action masking and fallback to a safe baseline when confidence is low or constraint violation is predicted.
+This formulation as a CMDP can be solved by algorithms like Lagrangian-PPO.
 
-\section{Method: SafeRL-Window}
-\subsection{Architecture}
-A lightweight actor-critic policy selects $a_t$ per window. The decoder backend (BP/Min-Sum or GNN-BP) is a black box exposing tunables. A safety layer clips actions to the feasible set; a fallback switches to baseline parameters.
+\section{The SafeRL-Window Architecture}
+\subsection{Core Components}
+The architecture consists of a lightweight actor-critic policy that selects $a_t$. This policy treats the decoder backend (e.g., BP or GNN-BP) as a black box, interacting only with its exposed tunable parameters. A safety layer is crucial: it first clips actions to a pre-defined feasible set, and a fallback mechanism can switch to a safe baseline policy if the learned policy is deemed too uncertain or is predicted to violate constraints.
 
-\subsection{Training}
-We use entropy-regularized Lagrangian-PPO. Domain randomization spans channel parameters and burst processes. Uncertainty (e.g., MC dropout) triggers conservative actions or fallback. Policy inference cost is negligible compared to a BP iteration.
+\subsection{Training Methodology}
+The proposed training method is entropy-regularized Lagrangian-PPO. To promote robustness, the training environment should employ domain randomization across a wide range of channel parameters and burst noise processes. Uncertainty estimation (e.g., via Monte Carlo dropout in the policy network) can be used to trigger the fallback to the conservative baseline policy.
 
 \begin{algorithm}[t]
-\caption{SafeRL-Window (training loop, sketch)}
+\caption{SafeRL-Window (Conceptual Training Loop)}
 \begin{algorithmic}[1]
-\State Initialize $\pi_\theta, V_\psi$, multipliers $\eta_\tau,\eta_C$, baseline $a^{\text{base}}$
+\State Initialize policy $\pi_\theta$, value function $V_\psi$, Lagrange multipliers $\eta$
+\State Initialize a safe, fixed-parameter baseline policy $a^{\text{base}}$
 \For{each episode}
-  \State sample code instance and time-varying channel
+  \State Sample a code instance and a time-varying channel model
   \For{$t=1$ to $L$}
-    \State $s_t \gets$ features(syndrome stats, residuals, noise fingerprint)
-    \State $\tilde a_t \gets \pi_\theta(s_t)$; $a_t \gets$ mask\&clip$(\tilde a_t)$
-    \If{low\_confidence$(\pi_\theta,s_t)$ or budget\_violation\_forecast$(a_t)$}
-      \State $a_t \gets a^{\text{base}}$
+    \State $s_t \gets$ get\_features(syndrome, decoder\_stats, ...)
+    \State $\tilde a_t \gets \pi_\theta(s_t)$
+    \State $a_t \gets$ mask\_and\_clip\_to\_feasible\_set$(\tilde a_t)$
+    \If{is\_unsafe$(\pi_\theta, s_t)$}
+      \State $a_t \gets a^{\text{base}}$ \Comment{Fallback to baseline}
     \EndIf
-    \State run\_sliding\_window\_decode$(a_t)$
-    \State collect $r_t, \tau_t, C_t$, failure flag
+    \State Run decoder with parameters $a_t$
+    \State Collect reward $r_t$ and constraint costs $c_t$
   \EndFor
-  \State update $(\theta,\psi)$ by PPO on $J(\theta)=\E[\sum_t r_t]-\eta_\tau \E[(\bar\tau-\tau_{\max})_+]-\eta_C \E[(\bar C-C_{\max})_+]$
-  \State $\eta \gets [\eta + \alpha \cdot \text{violation}]_+$
+  \State Update $(\theta,\psi)$ via PPO on the Lagrangian objective
+  \State Update $\eta$ based on constraint violations
 \EndFor
 \end{algorithmic}
 \end{algorithm}
 
-\section{Simulation Protocol}
-\textbf{Codes.} Two SC-QLDPC families with different $(w,L,Z)$ and lengths $N\!\in\![10^4,3{\times}10^4]$. (Placeholders provided; replace with your matrices.)
+\section{Simulation Skeleton and Usage}
+We provide an open-source Python skeleton to accompany this proposal. It implements the overall training loop and environment structure but uses placeholders for key components.
 
-\textbf{Channels.} Quantum depolarization, dephasing, erasure (loss), measurement error. Time variation via two-state Markov and Poisson burst processes with slow drift.
+\textbf{Code Structure:} The `code/` directory contains the environment (`qldpc_env.py`), the PPO training harness (`safe_rl.py`), and configuration files.
 
-\textbf{Baselines.} (i) Fixed-parameter sliding window; (ii) heuristic adaptation from channel estimates; (iii) double window; (iv) optional Neural-BP at same compute budget.
+\textbf{Placeholders:} Users should note the following are toy models:
+\begin{itemize}
+    \item \textbf{Codes:} The environment uses a placeholder for QLDPC matrices. Users should provide their own.
+    \item \textbf{Channel:} The channel model generates random noise events but does not simulate the full quantum state evolution.
+    \item \textbf{Decoder:} The `css_bp_round` function is a placeholder that does not perform actual belief propagation.
+    \item \textbf{State/Reward:} The observation space and reward function are minimalistic and should be replaced with more meaningful, problem-specific versions.
+\end{itemize}
 
-\textbf{Metrics.} Logical error rate (LER) with 95\% CI; latency/throughput; per-frame FLOPs; safety (zero hard-constraint violations, fallback rate).
-
-\section{Results (Template)}
-Figure and tables to report: (i) fixed LER target $\to$ lower latency/iterations; (ii) fixed latency budget $\to$ lower LER; (iii) robustness across burst length/strength. Ablations over action dimensions and uncertainty thresholds. \todo{Populate after running code.}
+\textbf{Running the Skeleton:} The provided code can be run out-of-the-box to demonstrate the training loop:
+\begin{verbatim}
+cd code
+pip install -r requirements.txt
+python -m experiments.run_saferl --config configs/saferl.yaml
+\end{verbatim}
+This will start a training run using the PPO algorithm from `stable-baselines3` with the toy environment. It serves as a starting point for implementing and testing real control policies.
 
 \section{Discussion and Limitations}
-Benefits shrink when channels are stationary and static schedules are near-optimal. Our controller is complementary to algorithm-layer improvements (GNN/Neural-BP). Future work: tighter links to finite-length bounds; learned measurement scheduling.
+The proposed architecture is a control-layer solution, complementary to algorithm-layer improvements like GNN-based decoders. The effectiveness of a fully implemented system would depend on the quality of the feature engineering for the state space and the accuracy of the noise models. This skeleton aims to lower the barrier to entry for researchers exploring these questions.
 
 \section{Reproducibility}
-We release configs, random seeds, Dockerfile hints, and one-click scripts to regenerate all figures. \todo{Add commit hash and environment details.}
+We release the simulation skeleton described here to facilitate research in this area. The code is available in the `code/` directory of this repository.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}

@@ -11,11 +11,13 @@ class EarlyStopStreamer:
         # Add common verbose closing remarks
         self.stop_phrases.extend(["I hope this helps!", "Let me know if you have any other questions."])
         self.stop_on_json_end = stop_on_json_end
+        self.stopped = False
 
     async def process_stream(self, stream: AsyncGenerator[str, None]) -> AsyncGenerator[str, None]:
         """
         Wraps the stream, monitors content, and stops generation if criteria met.
         """
+        self.stopped = False
         accumulated_content = ""
         # We look back only a limited window to detect phrases spanning across chunks
         lookback_window_size = max(len(p) for p in self.stop_phrases) * 2 if self.stop_phrases else 100
@@ -30,12 +32,14 @@ class EarlyStopStreamer:
             # Check for stop phrases
             if self._check_stop_phrases(recent_content):
                 print(f"\n[Early Stop Triggered by phrase]")
+                self.stopped = True
                 return # Terminate the generator
 
             # Check for JSON completion (simple heuristic)
             if self.stop_on_json_end:
                 if self._is_json_complete(accumulated_content):
                     print("\n[Early Stop Triggered by JSON completion]")
+                    self.stopped = True
                     return
 
     def _check_stop_phrases(self, content: str) -> bool:
