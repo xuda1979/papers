@@ -1,15 +1,15 @@
 import asyncio
-from typing import Dict, Any, List, AsyncGenerator
+from typing import Dict, Any, List, AsyncGenerator, Optional, Callable
 import logging
 
 # Assuming these modules are in the same package
 try:
-    from .cache import SimpleCache
+    from .cache import InMemoryLRUCache
     from .router import HeuristicRouter
     from .batcher import DynamicMicroBatcher
     from .early_stop import EarlyStopStreamer
 except ImportError:
-    from cache import SimpleCache
+    from cache import InMemoryLRUCache
     from router import HeuristicRouter
     from batcher import DynamicMicroBatcher
     from early_stop import EarlyStopStreamer
@@ -17,41 +17,63 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# A mock executor function for demonstration purposes.
+# In a real application, this would be replaced with a function that
+# makes a real API call to an LLM service.
+async def mock_llm_executor(batch: List[str], model: str) -> List[AsyncGenerator[str, None]]:
+    """Simulates a batched API call that returns a list of streams."""
+    logger.info(f"\n[API CALL] Executing batch (Size: {len(batch)}) on Model: {model}")
+
+    streams = []
+    for prompt in batch:
+        async def stream_generator(p: str, m: str) -> AsyncGenerator[str, None]:
+            # Simulate token generation
+            response = f"Response from {m} for prompt: {p[:30]}... This response is being streamed. I hope this helps!"
+            tokens = response.split()
+            for token in tokens:
+                await asyncio.sleep(0.05) # Simulate network latency per token
+                yield token + " "
+        streams.append(stream_generator(prompt, model))
+    return streams
+
 class InferenceOrchestrator:
     """
     Combines caching, routing, batching, and early-stop streaming into a single pipeline.
     """
-    def __init__(self, router_config: Dict[str, Any], batcher_config: Dict[str, Any], early_stop_config: Dict[str, Any] = None):
-        self.cache = SimpleCache()
+    def __init__(self, router_config: Dict[str, Any], batcher_config: Dict[str, Any], early_stop_config: Optional[Dict[str, Any]] = None, executor: Callable = mock_llm_executor):
+        self.cache = InMemoryLRUCache()
         self.router = HeuristicRouter(router_config)
         self.batcher = DynamicMicroBatcher(**batcher_config)
+        self.executor_func = executor
+        self.stats = {"cache_hits": 0, "requests_processed": 0, "api_calls": 0, "early_stops": 0}
 
         if early_stop_config:
             self.early_stopper = EarlyStopStreamer(**early_stop_config)
         else:
             self.early_stopper = None
 
-        self.executor_func = self._mock_llm_executor
-        self.stats = {"cache_hits": 0, "requests_processed": 0, "api_calls": 0, "early_stops": 0}
+        # This is a bit of a hack for the mock executor to update the stats
+        # In a real system, the executor would be instrumented differently.
+        if self.executor_func == mock_llm_executor:
+            # Redefine the mock to have access to self.stats
+            async def _mock_llm_executor_with_stats(batch: List[str], model: str) -> List[AsyncGenerator[str, None]]:
+                """Simulates a batched API call that returns a list of streams."""
+                logger.info(f"\n[API CALL] Executing batch (Size: {len(batch)}) on Model: {model}")
+                self.stats["api_calls"] += 1
 
-    async def _mock_llm_executor(self, batch: List[str], model: str) -> List[AsyncGenerator[str, None]]:
-        """Simulates a batched API call that returns a list of streams."""
-        logger.info(f"\n[API CALL] Executing batch (Size: {len(batch)}) on Model: {model}")
-        self.stats["api_calls"] += 1
+                streams = []
+                for prompt in batch:
+                    async def stream_generator(p: str, m: str) -> AsyncGenerator[str, None]:
+                        # Simulate token generation
+                        response = f"Response from {m} for prompt: {p[:30]}... This response is being streamed. I hope this helps!"
+                        tokens = response.split()
+                        for token in tokens:
+                            await asyncio.sleep(0.05) # Simulate network latency per token
+                            yield token + " "
 
-        streams = []
-        for prompt in batch:
-            async def stream_generator(p: str, m: str) -> AsyncGenerator[str, None]:
-                # Simulate token generation
-                response = f"Response from {m} for prompt: {p[:30]}... This response is being streamed. I hope this helps!"
-                tokens = response.split()
-                for token in tokens:
-                    await asyncio.sleep(0.05) # Simulate network latency per token
-                    yield token + " "
-
-            streams.append(stream_generator(prompt, model))
-
-        return streams
+                    streams.append(stream_generator(prompt, model))
+                return streams
+            self.executor_func = _mock_llm_executor_with_stats
 
     async def process_request(self, prompt: str, params: Dict[str, Any]) -> AsyncGenerator[str, None]:
         """
@@ -61,33 +83,30 @@ class InferenceOrchestrator:
         self.stats["requests_processed"] += 1
         
         model = self.router.route(prompt)
-        cached_response = self.cache.get(prompt, model, params)
 
+        # 1. Check Cache
+        cached_response = self.cache.get(prompt, model, params)
         if cached_response:
-            logger.info(f"[Cache] HIT for prompt: {prompt[:15]}...")
+            logger.info(f"[Cache] HIT for prompt: {prompt[:30]}...")
             self.stats["cache_hits"] += 1
             yield cached_response
             return
 
-        logger.info(f"[Cache] MISS. Routing prompt '{prompt[:15]}...' to {model}.")
+        logger.info(f"[Cache] MISS. Routing prompt '{prompt[:30]}...' to {model}.")
 
+        # 2. Add to Batcher
         raw_stream = await self.batcher.process(prompt, model, self.executor_func)
 
-        # Wrap the raw stream with the early stopper if configured
-        if self.early_stopper:
-            processed_stream = self.early_stopper.process_stream(raw_stream)
-        else:
-            processed_stream = raw_stream
+        # 3. Process stream with Early Stopping
+        processed_stream = self.early_stopper.process_stream(raw_stream) if self.early_stopper else raw_stream
 
-        full_response_chunks = []
-        original_len = 0
-        final_len = 0
-
+        # 4. Yield chunks and accumulate for caching
         full_response_chunks = []
         async for chunk in processed_stream:
             yield chunk
             full_response_chunks.append(chunk)
 
+        # 5. Update stats and cache
         if self.early_stopper and self.early_stopper.stopped:
             self.stats["early_stops"] += 1
 

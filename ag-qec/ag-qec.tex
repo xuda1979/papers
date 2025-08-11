@@ -41,7 +41,7 @@
 \maketitle
 
 \begin{abstract}
-Hollow-core fibers (HCFs) provide ultra-low nonlinearity and latency for next-generation mobile backhaul. In co-propagation, however, intense classical channels induce noise---notably spontaneous Raman scattering (SpRS) and four-wave mixing (FWM)---that degrades quantum links over long spans. We propose an \emph{algebraic-geometry-inspired} quantum error-correcting code (QECC) tailored to entanglement distribution over a \SI{100}{\kilo\meter} HCF carrying a \SI{10}{\dBm} classical channel. Our design is a high-rate CSS stabilizer code derived from algebraic-geometry (AG) codes, paired with a fully pipelined belief-propagation decoder architecture (\emph{DABP}) amenable to FPGA deployment. We introduce a physics-driven noise model that captures asymmetric and temporally correlated Pauli errors. To evaluate the code's potential, idealized simulations using Bounded Distance Decoding (BDD) indicate that our AG code can achieve entanglement fidelity \(F_e \approx 0.9992\) at a practical code rate, outperforming baselines. The proposed DABP architecture is estimated to achieve sub-\SI{1}{\micro\second} latency, with resource estimates on a Xilinx Kintex UltraScale (XCKU040) suggesting \(\approx\)\SI{2.1}{\watt} power consumption at \SI{200}{\mega\hertz}. These results highlight a practical path for robust, low-latency quantum key distribution over HCF backhaul.
+Hollow-core fibers (HCFs) provide ultra-low nonlinearity and latency for next-generation mobile backhaul. In co-propagation, however, intense classical channels induce noise---notably spontaneous Raman scattering (SpRS) and four-wave mixing (FWM)---that degrades quantum links over long spans. We propose an \emph{algebraic-geometry-inspired} quantum error-correcting code (QECC) tailored to entanglement distribution over a \SI{100}{\kilo\meter} HCF carrying a \SI{10}{\dBm} classical channel. Our design is a high-rate CSS stabilizer code derived from algebraic-geometry (AG) codes, paired with a fully pipelined belief-propagation decoder architecture (\emph{DABP}) amenable to FPGA deployment. We introduce a physics-driven noise model that captures asymmetric and temporally correlated Pauli errors. To evaluate the code's potential, idealized simulations using an upper-bound Bounded Distance Decoding (BDD) model indicate that our AG code can achieve entanglement fidelity \(F_e \approx 0.9990\) at a practical code rate, outperforming baselines. The proposed DABP architecture is estimated to achieve sub-\SI{1}{\micro\second} latency, with resource estimates on a Xilinx Kintex UltraScale (XCKU040) suggesting \(\approx\)\SI{2.1}{\watt} power consumption at \SI{200}{\mega\hertz}. These results highlight a practical path for robust, low-latency quantum key distribution over HCF backhaul.
 \end{abstract}
 
 \section{Introduction}
@@ -51,10 +51,10 @@ Quantum error correction (QEC) is a natural tool to mitigate such physical error
 
 \textbf{This work.} We develop a CSS code inspired by \emph{algebraic-geometry (AG)} codes and a hardware-oriented decoder for HCF coexistence. Our main contributions are:
 \begin{enumerate}[leftmargin=*,itemsep=1pt,topsep=2pt]
-  \item \textbf{Code construction:} A length-\(n=255\) AG-inspired CSS code with parameters \( [[255,\,33,\,21]] \) (rate \(R\approx0.129\)), along with an asymmetric, channel-tailored variant.
+  \item \textbf{Code construction:} A length-\(n=255\) AG-inspired CSS code with parameters \( [[255,\,33,\,21]] \) (rate \(R\approx0.129\)).
   \item \textbf{Decoder architecture:} A deeply pipelined, fully parallel belief-propagation decoder (\emph{DABP}) using 6-bit LLRs, designed for FPGA.
   \item \textbf{Realistic noise model:} A physics-driven model capturing \(p_Z\!>\!p_X\) asymmetry from SpRS/FWM and first-order temporal correlations, implemented in the accompanying \texttt{simulation.py}.
-  \item \textbf{Performance and analysis:} Idealized BDD simulations showing potential \(F_e\approx0.9992\) under realistic HCF noise; sub-\SI{1}{\micro\second} latency estimates for the DABP architecture; and secret-key rate gains \(>\!3\times\) over a small-\(d\) surface code.
+  \item \textbf{Performance and analysis:} Idealized BDD simulations showing potential \(F_e\approx0.9990\) under realistic HCF noise; sub-\SI{1}{\micro\second} latency estimates for the DABP architecture; and secret-key rate gains \(>\!3\times\) over a small-\(d\) surface code.
 \end{enumerate}
 
 \section{Background and Channel Model}\label{sec:background}
@@ -116,13 +116,6 @@ We construct a pair of nested classical AG codes over an extension field and tak
   [[255,\,33,\,21]] ,\qquad R=k/n\approx 0.129,\qquad t=10.
 \]
 Dimension consistency is achieved with \(\mathrm{rank}(H_X)=\mathrm{rank}(H_Z)=111\), so \(\mathrm{rank}(H_X)+\mathrm{rank}(H_Z)=222=n-k\).
-
-\paragraph*{Channel-tailored variant.}\label{sec:channel-tailored}
-To exploit \(p_Z\!>\!p_X\) under Model~2, we also design an asymmetric CSS instance with distances \(d_Z>d_X\):
-\[
-  [[255,\,63,\,(\,d_Z\!\ge 12,\ d_X\!\ge 6\,)]] ,\qquad R\approx 0.247 .
-\]
-This increases phase-error protection while improving rate.
 
 \subsection{Pipeline Belief-Propagation Decoder (DABP)}\label{sec:implementation}
 We propose a fully unrolled, deeply pipelined min-sum BP decoder architecture with 6-bit LLRs. Check-node and variable-node updates are separated by pipeline registers to maximize \(f_\mathrm{clk}\) (Fig.~\ref{fig:fpga}, Algo.~\ref{algo:dabp}). At \SI{200}{\mega\hertz}, ten iterations complete in \(\sim\)\SI{100}{\nano\second}, with total per-codeword latency \(\sim\)\SI{0.32}{\micro\second} including I/O.
@@ -194,7 +187,7 @@ This bound assumes i.i.d. errors at the average rate and is therefore loose; the
 
 \subsection{Numerical Performance}\label{sec:comparison}
 
-To evaluate the error-correction potential of the proposed codes, we perform Monte Carlo simulations using the models described in Section~\ref{sec:noise_models}. The logical error rates and fidelities are calculated using an idealized \textbf{Bounded Distance Decoder (BDD)}, as implemented in the accompanying \texttt{simulation.py}. BDD assumes perfect correction if the number of physical errors is within the code's designed threshold \(t\), and failure otherwise. This provides an upper bound on performance; the real-world performance of the proposed DABP (Belief Propagation) decoder may be lower.
+To evaluate the error-correction potential of the proposed codes, we perform Monte Carlo simulations using the models described in Section~\ref{sec:noise_models}. \textbf{It is critical to note that all performance results presented here are based on an idealized Bounded Distance Decoder (BDD)}, as implemented in \texttt{simulation.py}. BDD assumes perfect correction if the number of physical errors is within the code's designed threshold \(t\), and failure otherwise. This provides a theoretical upper bound on performance; the practical performance of the proposed DABP (Belief Propagation) decoder will be lower and is a subject for future work.
 
 \subsubsection{Idealized Depolarizing Noise (Model 1)}
 Results under \(p=0.03\) i.i.d. depolarizing noise (\(10^4\) trials) are summarized in Table~\ref{tab:perf_idealized}.
@@ -208,11 +201,10 @@ Results under \(p=0.03\) i.i.d. depolarizing noise (\(10^4\) trials) are summari
 \textbf{Code} & \textbf{Parameters $[[n,k,d]]$} & \textbf{Rate $R$} & \textbf{Logical $P_L$} & \textbf{$F_e$} & \textbf{Decoder latency} & \textbf{Decoder Type} \\
 \midrule
 \textbf{AG-inspired (ours)} & $[[255,33,21]]$ & 0.129 & \(\sim 3\times 10^{-4}\) & \(\sim 0.9997\) & \SI{0.32}{\micro\second} & BP (FPGA, DABP) \\
-AG-inspired (channel-tailored) & $[[255,63, (d_Z\ge 12,d_X\ge 6)]]$ & 0.247 & \(\lesssim 3\times 10^{-4}\) & \(\gtrsim 0.9998\) & \SI{0.35}{\micro\second} & BP (FPGA, DABP) \\
-Surface code ($d=5$) & $[[25,1,5]]$ & 0.04 & \(\sim 4\times 10^{-2}\) & \(\sim 0.96\) & \(\sim\)\SI{5}{\micro\second} & MWPM \\
-Surface code ($d=11$) & $[[121,1,11]]$ & 0.008 & \(\sim 2\times 10^{-2}\) & \(\sim 0.98\) & \(\sim\)\SI{20}{\micro\second} & MWPM \\
-CSS LDPC (BCH) & $[[128,32,8]]$ & 0.25 & \(\sim 1.2\times 10^{-2}\) & \(\sim 0.988\) & \(\sim\)\SI{1}{\micro\second} & BP \\
-CSS LDPC (high distance) & $[[256,128,20]]$ & 0.50 & \(\sim 1\times 10^{-2}\) & \(\sim 0.990\) & \(\sim\)\SI{2}{\micro\second} & BP \\
+Surface code ($d=5$) & $[[25,1,5]]$ & 0.04 & \(\sim 1.5\times 10^{-3}\) & \(\sim 0.9985\) & \(\sim\)\SI{5}{\micro\second} & MWPM \\
+Surface code ($d=11$) & $[[121,1,11]]$ & 0.008 & \(\sim 1.1\times 10^{-4}\) & \(\sim 0.9999\) & \(\sim\)\SI{20}{\micro\second} & MWPM \\
+CSS LDPC (BCH) & $[[128,32,8]]$ & 0.25 & \(\sim 6.0\times 10^{-3}\) & \(\sim 0.9940\) & \(\sim\)\SI{1}{\micro\second} & BP \\
+CSS LDPC (high distance) & $[[256,128,20]]$ & 0.50 & \(\sim 1.2\times 10^{-4}\) & \(\sim 0.9998\) & \(\sim\)\SI{2}{\micro\second} & BP \\
 \bottomrule
 \end{tabular}
 \textsuperscript{a}{\footnotesize Fidelity estimates ($P_L$, $F_e$) assume idealized decoding (BDD for AG/LDPC codes, MWPM for surface codes). Latency refers to the specific hardware decoder architecture proposed or estimated for each code.}
@@ -223,20 +215,20 @@ Under Model 2 (effective average rates \(p_Z^{\mathrm{eff}}\approx1.35\times10^{
 
 \begin{table*}[t]
 \centering
-\caption{Performance under Model 2 (asymmetric, correlated; effective \(p^{\mathrm{eff}}\approx1.76\times10^{-2}\)).\textsuperscript{a}}
+\caption{Performance under Model 2 (asymmetric, correlated; effective \(p^{\mathrm{eff}}\approx1.76\times10^{-2}\)).\textsuperscript{b}}
 \label{tab:perf_realistic}
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Code} & \textbf{Parameters $[[n,k,d]]$} & \textbf{Rate $R$} & \textbf{Logical $P_L$} & \textbf{$F_e$} & \textbf{Decoder latency} & \textbf{Decoder Type} \\
 \midrule
-\textbf{AG-inspired (ours)} & $[[255,33,21]]$ & 0.129 & \(8.2\times 10^{-4}\) & 0.9992 & \SI{0.32}{\micro\second} & BP (FPGA, DABP) \\
+\textbf{AG-inspired (ours)} & $[[255,33,21]]$ & 0.129 & \(1.0\times 10^{-3}\) & 0.9990 & \SI{0.32}{\micro\second} & BP (FPGA, DABP) \\
 Surface code ($d=5$) & $[[25,1,5]]$ & 0.04 & \(4.2\times 10^{-3}\) & 0.9958 & \(\sim\)\SI{5}{\micro\second} & MWPM \\
 Surface code ($d=11$) & $[[121,1,11]]$ & 0.008 & \(5.6\times 10^{-3}\) & 0.9944 & \(\sim\)\SI{20}{\micro\second} & MWPM \\
 CSS LDPC (BCH) & $[[128,32,8]]$ & 0.25 & \(9.7\times 10^{-2}\) & 0.903 & \(\sim\)\SI{1}{\micro\second} & BP \\
 CSS LDPC (high distance) & $[[256,128,20]]$ & 0.50 & \(2.8\times 10^{-3}\) & 0.9972 & \(\sim\)\SI{2}{\micro\second} & BP \\
 \bottomrule
 \end{tabular}
-\textsuperscript{a}{\footnotesize Fidelity estimates ($P_L$, $F_e$) assume idealized decoding (BDD for AG/LDPC codes, MWPM for surface codes). Latency refers to the specific hardware decoder architecture proposed or estimated for each code.}
+\textsuperscript{b}{\footnotesize Fidelity estimates ($P_L$, $F_e$) assume idealized decoding (BDD for AG/LDPC codes, MWPM for surface codes). Latency refers to the specific hardware decoder architecture proposed or estimated for each code.}
 \end{table*}
 
 Despite the relatively high effective physical error rate (\(p^{\mathrm{eff}}\approx1.76\%\)), correlated bursts degrade moderate-distance LDPC performance markedly, while the proposed AG code sustains high potential \(F_e\) at higher rate and lower latency.
@@ -245,7 +237,7 @@ Despite the relatively high effective physical error rate (\(p^{\mathrm{eff}}\ap
 For entanglement-based QKD, the asymptotic secret fraction per logical qubit is \(r_\infty=1-2H_2(Q)\), where \(Q=(1-F_e)/2\) is the logical QBER. Using Model~2 results (Table~\ref{tab:perf_realistic}):
 
 \paragraph*{AG code (\( [[255,33,21]] \)).}
-With \(F_e\approx0.9992\), \(Q\approx4.0\times10^{-4}\), giving \(r_\infty\approx0.995\). Per physical qubit: \(r_\infty\cdot (k/n)\approx 0.995\times(33/255)\approx 0.1288\).
+With \(F_e\approx0.9990\), \(Q\approx5.0\times10^{-4}\), giving \(r_\infty\approx0.994\). Per physical qubit: \(r_\infty\cdot (k/n)\approx 0.994\times(33/255)\approx 0.1287\).
 
 \paragraph*{Surface code (\(d=5\)).}
 With \(F_e\approx0.9958\), \(Q\approx2.1\times10^{-3}\), hence \(r_\infty\approx0.966\); per physical qubit \(0.966/25=0.0386\). The AG code thus yields \(\approx3.34\times\) higher key per physical qubit.
@@ -257,15 +249,15 @@ Finite-size corrections give, for \(N\) pairs and security parameters \((\epsilo
 At \(N=10^6\) and the very small \(Q\) above, penalties are minor.
 
 \section{Conclusion}\label{sec:conclusion}
-We presented AG-inspired CSS codes and a hardware-oriented BP decoder architecture (DABP) for HCF coexistence. Under a physics-driven asymmetric, correlated noise model, idealized simulations (BDD) suggest a \( [[255,33,21]] \) code can potentially achieve \(F_e\approx0.9992\), yielding \(>\!3\times\) higher secret-key per physical qubit than a small-distance surface code. The DABP architecture offers sub-\SI{1}{\micro\second} decoding, and resource estimates on XCKU040 indicate feasibility at \(\sim\)\SI{2}{\watt}.
+We presented AG-inspired CSS codes and a hardware-oriented BP decoder architecture (DABP) for HCF coexistence. Under a physics-driven asymmetric, correlated noise model, idealized BDD simulations suggest a \( [[255,33,21]] \) code can potentially achieve \(F_e\approx0.9990\), yielding \(>\!3\times\) higher secret-key per physical qubit than a small-distance surface code. The DABP architecture offers sub-\SI{1}{\micro\second} decoding, and resource estimates on XCKU040 indicate feasibility at \(\sim\)\SI{2}{\watt}.
 
-\subsection*{Limitations and Future Work}
+\textbf{Limitations and Future Work.}
 Model parameters are scenario-dependent and should be validated experimentally. Crucially, our performance simulations used an idealized Bounded Distance Decoder (BDD) model. While the DABP architecture is designed for low latency, its actual error-correction performance using Belief Propagation may be lower than the BDD estimate. Implementing and simulating the actual BP decoder, and benchmarking DABP against OSD-augmented or ML-guided decoders, is a critical priority.
 
 \appendix
 
 \section{Reproducibility Artifacts and Matrices}
-The CSS instance uses binary \(H_X\in\{0,1\}^{111\times 255}\) and \(H_Z\in\{0,1\}^{111\times 255}\) with \(H_X H_Z^\top\equiv0\) (mod 2). Tables~\ref{tab:Hx-sample}--\ref{tab:Hz-sample} show small excerpts (first 5 rows, 15 columns) for illustration.\footnote{Full matrices, simulation code (including the noise model implementation in \texttt{simulation.py}), and synthesizable HDL for DABP will be made available at: \url{https://github.com/username/AG-QEC-repro}.}
+The CSS instance uses binary \(H_X\in\{0,1\}^{111\times 255}\) and \(H_Z\in\{0,1\}^{111\times 255}\) with \(H_X H_Z^\top\equiv0\) (mod 2). Tables~\ref{tab:Hx-sample}--\ref{tab:Hz-sample} show small excerpts (first 5 rows, 15 columns) for illustration.\footnote{Full matrices, simulation code (including the noise model implementation in \texttt{simulation.py}), and synthesizable HDL for DABP will be made available at a public repository upon publication.}
 
 \begin{table}[h]
 \centering
