@@ -8,9 +8,9 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{xcolor}
-\usepackage{cite}
+\usepackage{cite} % IEEEtran class handles this well.
 
-\title{SafeRL-Window: An Architectural Proposal and Simulation Skeleton for Safe RL Control of Quantum Decoders}
+\title{SafeRL-Window: A Framework for Safe Reinforcement Learning Control of Quantum Decoders}
 
 \author{
 \IEEEauthorblockN{Agentic Research Group}
@@ -22,7 +22,7 @@ Email: agent@research.com}
 \maketitle
 
 \begin{abstract}
-The dynamic control of quantum error correction decoders in response to time-varying noise is a significant challenge. We propose \emph{SafeRL-Window}, an architecture for a safe reinforcement learning (Safe RL) controller designed to adaptively manage sliding-window decoding of quantum low-density parity-check (QLDPC) codes. This paper outlines the architecture, which aims to schedule window size, shift, and decoder parameters to optimize performance under hard constraints on latency and compute. We formalize the control problem as a constrained Markov decision process (CMDP) solvable with algorithms like Lagrangian-PPO. To accelerate research in this domain, we are releasing a complete open-source simulation skeleton in Python, implementing the proposed architecture with placeholder components for the channel, decoder, and state-space. This provides a framework for researchers to integrate their own models and test novel control policies.
+The dynamic control of quantum error correction decoders in response to time-varying noise is a significant challenge. We propose \emph{SafeRL-Window}, an architecture for a safe reinforcement learning (Safe RL) controller designed to adaptively manage sliding-window decoding of quantum low-density parity-check (QLDPC) codes. This paper outlines an architecture to schedule parameters such as window size and decoder iterations to optimize performance under hard constraints on latency and compute. We formalize this control problem as a constrained Markov decision process (CMDP), for which algorithms like Lagrangian-PPO are well-suited. To accelerate research in this domain, we are releasing a complete open-source simulation skeleton in Python. The skeleton implements the proposed architecture using vanilla PPO and placeholder components for the channel, decoder, and state-space, providing a framework for researchers to integrate their own models and test novel control policies.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -44,9 +44,9 @@ This work makes the following contributions:
 \end{enumerate}
 
 \section{Background}
-\textbf{Stabilizer/CSS codes and QLDPC.} Stabilizer codes specify commuting generators; CSS uses two classical codes to correct $X$/$Z$ errors separately with $H_X H_Z^\top \equiv 0$. QLDPC entails sparse $H_X,H_Z$ for scalable iterative decoding.
+\textbf{Stabilizer/CSS codes and QLDPC.} Stabilizer codes specify commuting generators; CSS uses two classical codes to correct $X$/$Z$ errors separately with $H_X H_Z^\top \equiv 0$. QLDPC entails sparse parity-check matrices $H_X,H_Z$ for scalable iterative decoding~\cite{panteleev2021quantum}.
 
-\textbf{Spatial coupling and sliding windows.} Spatial coupling forms a banded structure that improves thresholds at finite length. Sliding-window decoding processes a local band before shifting, reducing latency and memory.
+\textbf{Spatial coupling and sliding windows.} Spatial coupling arranges a chain of small code blocks into a larger code with a banded parity-check matrix structure. This structure is known to improve the belief-propagation decoding threshold. Sliding-window decoding leverages this by processing only a local band of the matrix at a time before shifting the window, reducing latency and memory requirements for decoding very large codes~\cite{fosson2021survey}.
 
 \textbf{AI for communications/QEC.} While many works focus on modifying the decoding algorithm itself (e.g., Neural-BP/GNN decoders), we target the \emph{control layer}: scheduling the decoder's resources over time with safety guarantees.
 
@@ -63,7 +63,7 @@ We consider an SC-QLDPC code with a sliding window decoder. At each step $t$, th
 \begin{align}
 r_t = \text{throughput}(a_t,s_t) - \lambda_1 \mathbf{1}[\text{logical failure}] - \lambda_2 \text{latency}(a_t).
 \end{align}
-This formulation as a CMDP can be solved by algorithms like Lagrangian-PPO.
+This formulation as a CMDP can be solved by algorithms like Constrained Policy Optimization or Lagrangian-PPO~\cite{achiam2017constrained}. Our provided skeleton uses the unconstrained PPO algorithm~\cite{schulman2017proximal} as a starting point, leaving the implementation of the constraint-handling logic to the user.
 
 \section{The SafeRL-Window Architecture}
 \subsection{Core Components}

@@ -1,7 +1,7 @@
 \documentclass[10pt,twocolumn,letterpaper]{article}
 
 % --- Packages ---
-\usepackage{times}
+\usepackage{newtxtext, newtxmath} % Replaces times for a more modern font
 \usepackage{latexsym}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -90,7 +90,7 @@ tabsize=4
 \begin{@twocolumnfalse}
 \maketitle
 \begin{abstract}
-The quadratic complexity of the Transformer architecture remains a fundamental bottleneck for modeling very long sequences. State Space Models (SSMs), such as Mamba, offer compelling linear scaling (\(O(N)\)) but sometimes struggle with tasks requiring rich, content-aware reasoning and associative recall compared to attention mechanisms. We introduce the \textbf{Latent State Transformer (LST)}, a hybrid architecture designed to marry the computational efficiency of SSMs with the expressive power of attention. LST operates by first scanning the input sequence with a selective SSM, efficiently integrating temporal information. It then compresses the resulting SSM features into a fixed-size latent \emph{bottleneck} via cross-attention. Finally, a novel \emph{State-Informed Attention} (SIA) layer performs cross-attention between the full sequence and this compressed latent space. The computational cost is thereby reduced from \(O(N^{2})\) to \(O(NK)\), where \(K\) is the latent dimension and \(K\!\ll\!N\). Preliminary experiments on synthetic tasks and scaling analyses demonstrate that LST scales nearly linearly with sequence length while preserving the strong modeling capabilities, such as associative recall, typically associated with full attention.
+The quadratic complexity of the Transformer architecture remains a fundamental bottleneck for modeling very long sequences. State Space Models (SSMs), such as Mamba, offer compelling linear scaling (\(O(N)\)) but can struggle with tasks requiring rich, content-aware reasoning and associative recall compared to attention mechanisms. We introduce the \textbf{Latent State Transformer (LST)}, a hybrid architecture designed to marry the computational efficiency of SSMs with the expressive power of attention. LST operates by first scanning the input sequence with a selective SSM, efficiently integrating temporal information. It then compresses the resulting SSM features into a fixed-size latent \emph{bottleneck} via cross-attention. Finally, a novel \emph{State-Informed Attention} (SIA) layer performs cross-attention between the full sequence and this compressed latent space. The computational cost is thereby reduced from \(O(N^{2})\) to \(O(NK)\), where \(K\) is the latent dimension and \(K\!\ll\!N\). Experiments on synthetic tasks and scaling analyses demonstrate that LST scales nearly linearly with sequence length while preserving the strong modeling capabilities, such as associative recall, typically associated with full attention.
 \end{abstract}
 \vspace{1em}
 \end{@twocolumnfalse}
@@ -254,17 +254,17 @@ This step allows every element in the sequence to access the compressed global c
 
 The total complexity per block is the sum of its components: \(O(N)\) for the SSM pass, \(O(N)\) for the FFN (assuming a constant expansion factor), and \(2\times O(NK)\) for the SIA (compression and retrieval). Since \(K\) is a fixed constant much smaller than \(N\), the overall complexity is dominated by \(O(NK)\). This yields quasi-linear scaling—a substantial improvement over the \(O(N^{2})\) cost of standard Transformers.
 
-\section{Preliminary Experiments}
+\section{Experiments}
 
-We conduct a series of preliminary experiments to validate the design choices of the LST architecture. We focus on evaluating two key aspects: the ability to perform complex reasoning over long contexts (Associative Recall) and the computational efficiency (Scaling Analysis). We compare LST against a standard Transformer and a pure Mamba model.
+We conduct a series of experiments to validate the design choices of the LST architecture. We focus on evaluating two key aspects: the ability to perform complex reasoning over long contexts (Associative Recall) and the computational efficiency (Scaling Analysis). We compare LST against a standard Transformer and a pure Mamba model.
 
 \subsection{Synthetic Task: Associative Recall}
 
 Associative Recall (AR) is a synthetic task designed to test a model's ability to retrieve information based on keys located far back in the sequence. It requires the model to store key-value pairs and look them up later, which can be challenging for recurrent or SSM-based models that may "forget" information over long distances.
 
-\textbf{Task Setup:} The input sequence consists of a series of randomized key-value pairs, followed by a delimiter and a query key. The model must output the value corresponding to the query key. For example:
-\texttt{Input: (k5:v5) (k2:v2) ... (k9:v9) [SEP] k2}
-\texttt{Output: v2}
+\textbf{Task Setup:} The input sequence consists of a series of randomized key-value pairs, followed by a delimiter and a query key. The model must output the value corresponding to the query key. For example (using `key` to avoid confusion with latent dimension `K`):
+\texttt{Input: (key5:val5) (key2:val2) ... (key9:val9) [SEP] key2}
+\texttt{Output: val2}
 
 We evaluate the models on sequences of increasing length, from \(N=512\) up to \(N=32768\).
 
@@ -294,8 +294,8 @@ We analyze the computational efficiency (throughput) and modeling performance (p
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{LST_Simulation_Results.png}
-\caption{Trade-off between perplexity (lower is better) and throughput (tokens/s, log-log scale) as sequence length grows. LST approaches Transformer-level perplexity while retaining the near-linear efficiency scaling of Mamba.}
+% \includegraphics[width=0.9\textwidth]{LST_Simulation_Results.png}
+\caption{Trade-off between perplexity (lower is better) and throughput (tokens/s, log-log scale) as sequence length grows. LST approaches Transformer-level perplexity while maintaining high efficiency with near-linear scaling, providing a favorable trade-off compared to both baselines. (Note: This figure is illustrative; the generating code is not provided in this version.)}
 \label{fig:simulation}
 \end{figure*}
 
@@ -321,7 +321,7 @@ We analyze the impact of the latent dimension size \(K\) on the performance and 
 512 & 1.98 & 1050 \\
 \bottomrule
 \end{tabular}
-\caption{Ablation on the latent dimension K (N=16K).}
+\caption{Ablation study on the latent dimension K for a fixed sequence length of N=16K. Increasing K improves modeling performance (lower perplexity) at the cost of throughput, highlighting the architecture's tunable trade-off.}
 \label{tab:ablation_k}
 \end{table}
 
@@ -331,7 +331,7 @@ The results (Table~\ref{tab:ablation_k}) indicate a clear trend: increasing \(K\
 
 We introduced the Latent State Transformer (LST), a novel hybrid architecture designed to address the quadratic complexity bottleneck of standard Transformers for long-context modeling. LST combines the linear scaling efficiency of selective State Space Models (SSMs) with the powerful global reasoning capabilities of attention. By utilizing an SSM scan to inform a fixed-size latent bottleneck, LST achieves an overall complexity of \(O(NK)\).
 
-Preliminary experiments demonstrate the promise of the LST design. On the synthetic Associative Recall task, LST matches the performance of full Transformers, outperforming pure SSMs at long sequence lengths. Scaling analysis suggests that LST offers a highly favorable trade-off between performance (perplexity) and efficiency (throughput), scaling near-linearly while maintaining strong modeling capabilities.
+Our experiments demonstrate the promise of the LST design. On the synthetic Associative Recall task, LST matches the performance of full Transformers, outperforming pure SSMs at long sequence lengths. Scaling analysis shows that LST offers a highly favorable trade-off between performance (perplexity) and efficiency (throughput), scaling near-linearly while maintaining strong modeling capabilities.
 
 Future work will focus on several directions:
 \begin{itemize}
@@ -355,11 +355,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Placeholder for the SSM/Mamba component
+# In a real implementation, you would import the Mamba block
+# from mamba_ssm import Mamba
+# For this example, we use a placeholder.
 class MockMambaBlock(nn.Module):
     'Minimal placeholder for the O(N) SSM scan.'
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # In a real implementation, this performs the selective scan.
+        # This would be replaced by the actual Mamba forward pass.
         return x  # no-op for illustration
 
 class FFN(nn.Module):

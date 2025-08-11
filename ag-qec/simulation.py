@@ -61,7 +61,7 @@ def hcf_noise_model(
         eta_px: Ratio of amplitude (X) to phase (Z) error probability.
 
     Returns:
-        A dictionary with keys 'p_x', 'p_y' and 'p_z' (baseline probabilities).
+        A dictionary with keys 'p_x' and 'p_z' (baseline probabilities).
     """
     # Convert classical launch power from dBm to Watts
     classical_power_w = 10 ** ((classical_power_dBm - 30) / 10.0)
@@ -172,7 +172,7 @@ def run_default_demo() -> None:
     attenuation_db_per_km = 0.25
     # Simulation parameters
     rho = 0.6 # Correlation strength (ρ)
-    trials = 50000 # Increased trials for accuracy as reported in the paper
+    trials = 50000 # Number of Monte Carlo trials
 
     # Compute baseline error probabilities from HCF model
     probs = hcf_noise_model(
@@ -186,24 +186,22 @@ def run_default_demo() -> None:
     # Calculate effective average error rates due to the Markov model (1.5x increase)
     p_x_eff = 1.5 * p_x_base
     p_z_eff = 1.5 * p_z_base
-    # Total effective error rate is the sum of effective X, Y, Z probabilities.
-    # Since Y errors are composed of X and Z, we only need to sum the two main components.
+    # Total effective error rate is the sum of effective X and Z probabilities,
+    # as Y errors are composed of both.
     p_eff = p_x_eff + p_z_eff
 
     print(f"Scenario: L={length_km} km, P_class={classical_power_dBm} dBm, Δλ={wavelength_separation_nm} nm, ρ={rho}")
     print("HCF Noise Model (Baseline probabilities):")
-    # Expected: p_z_base ≈ 8.99e-03, p_x_base ≈ 2.70e-03
     print(f"  p_z_base ≈ {p_z_base:.5e}, p_x_base ≈ {p_x_base:.5e}")
     print("Markov Model (Effective average probabilities):")
-    # Expected: p_z_eff ≈ 1.35e-02, p_x_eff ≈ 4.05e-03
     print(f"  p_z_eff  ≈ {p_z_eff:.5e}, p_x_eff  ≈ {p_x_eff:.5e} (Total effective p ≈ {p_eff:.4f})")
 
     # Run Monte Carlo to estimate block error
     print(f"\nRunning Monte Carlo simulation ({trials} trials) with BDD assumption...")
     p_L = monte_carlo_block_error_asymmetric(n, t, p_x_base, p_z_base, rho, trials=trials)
 
-    # Expected (with seed 42): P_L ≈ 8.2e-04, F_e ≈ 0.9992
     F_e = 1.0 - p_L
+    print(f"\n--- Results (seed={42}) ---")
     print(f"Estimated logical block error probability P_L ≈ {p_L:.3e}")
     print(f"Estimated entanglement fidelity F_e ≈ {F_e:.4f}")
 

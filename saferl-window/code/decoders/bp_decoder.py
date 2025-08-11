@@ -9,26 +9,36 @@ import numpy as np
 def syndrome(H, e):
     return (H @ e) % 2
 
-def min_sum_decode(H, syn, max_iters=20, damping=0.5, schedule="layered", rng=None):
+def greedy_decode_placeholder(H, syn, max_iters=20, rng=None):
     """
-    Placeholder: returns an estimated error vector e_hat that satisfies constraints approximately.
+    Placeholder decoder using a simple greedy bit-flip strategy.
+    This is NOT a belief propagation or min-sum decoder.
+    It serves as a functional placeholder in the simulation skeleton.
     """
     rng = np.random.default_rng(rng)
     n = H.shape[1]
-    # naive: try a few random flips guided by syndrome weight
     e_hat = np.zeros(n, dtype=int)
+    current_syn = np.copy(syn)
+
     for _ in range(max_iters):
-        unsat = (syn == 1).astype(int)
-        if unsat.sum() == 0:
+        if np.sum(current_syn) == 0:
             break
-        # pick a variable involved in many unsatisfied checks
-        involvement = H.T @ unsat
-        j = int(np.argmax(involvement))
-        e_hat[j] ^= 1
-        syn = (H @ e_hat) % 2
+        # Find unsatisfied checks
+        unsat_checks = np.where(current_syn == 1)[0]
+        # Pick a random unsatisfied check
+        check_idx = rng.choice(unsat_checks)
+        # Find variables involved in this check
+        var_indices = np.where(H[check_idx, :] == 1)[0]
+        if len(var_indices) > 0:
+            # Flip a random variable in that check
+            var_to_flip = rng.choice(var_indices)
+            e_hat[var_to_flip] ^= 1
+        # Recalculate syndrome
+        current_syn = (H @ e_hat) % 2
     return e_hat
 
 def css_bp_round(Hx, Hz, syn_x, syn_z, iters=20, damping=0.5, schedule="layered", rng=None):
-    ex = min_sum_decode(Hz, syn_x, max_iters=iters, damping=damping, schedule=schedule, rng=rng)
-    ez = min_sum_decode(Hx, syn_z, max_iters=iters, damping=damping, schedule=schedule, rng=rng)
+    # Note: damping and schedule are unused by the placeholder decoder
+    ex = greedy_decode_placeholder(Hz, syn_x, max_iters=iters, rng=rng)
+    ez = greedy_decode_placeholder(Hx, syn_z, max_iters=iters, rng=rng)
     return ex, ez
