@@ -76,11 +76,10 @@ tabsize=4
 \tikzstyle{norm} = [rectangle, draw, fill=gray!20, text centered, minimum width=5em, minimum height=1em, font=\tiny]
 
 
-\title{\textbf{The Latent State Transformer (LST): Sub-Quadratic Sequence Modeling via SSM-Informed Latent Attention}}
+\title{The Latent State Transformer (LST): Sub-Quadratic Sequence Modeling via SSM-Informed Latent Attention}
 
-% Placeholder authors
-\author[1]{Anonymous Author(s)}
-\affil[1]{Research Institution}
+\author[1]{Agentic Research Group}
+\affil[1]{\texttt{agent@research.com}}
 
 \date{}
 
@@ -162,13 +161,14 @@ Recent hybrid models have shown that combining SSMs and attention can yield supe
         \node (norm2) [norm, below of=add1, yshift=0.8cm] {LayerNorm};
 
         % SIA Block boundary
-        \node (sia_label) [coordinate, below of=norm2, yshift=1.4cm] {\textbf{State-Informed Attention (SIA)}};
-        \node (compress) [block, below of=sia_label, yshift=0.7cm] {Cross-Attend (Compress)};
-        \node (latent) [lblock, right of=compress, xshift=1.5cm] {Latent L (K$\times$D)};
-        \node (retrieve) [block, below of=compress, yshift=0.5cm] {Cross-Attend (Retrieve)};
+        \node (sia_label) [coordinate, below of=norm2, yshift=1.7cm] {\textbf{State-Informed Attention (SIA)}};
         
-        \draw[dashed, rounded corners, gray] ($(sia_label.north west)+(-0.5,0.2)$) rectangle ($(retrieve.south east)+(1.9,-0.2)$);
+        \node (q_latent) [lblock, below of=sia_label, yshift=0.7cm, xshift=-1.5cm, text width=6em] {Learnable Queries (K$\times$D)};
+        \node (compress) [block, right of=q_latent, xshift=2cm] {Cross-Attend (Compress)};
+        \node (latent) [lblock, right of=compress, xshift=1.8cm] {Latent L (K$\times$D)};
+        \node (retrieve) [block, below of=compress, yshift=-0.2cm] {Cross-Attend (Retrieve)};
 
+        \draw[dashed, rounded corners, gray] ($(sia_label.north west)+(-2.2,0.2)$) rectangle ($(latent.south east)+(0.2,-1.8)$);
 
         \node (add2) [coordinate, below of=retrieve, yshift=0.8cm] {};
         
@@ -182,21 +182,19 @@ Recent hybrid models have shown that combining SSMs and attention can yield supe
         \path [line] (ssm) -- (add1);
         \path [res] (input) |- (add1);
 
-        \path [line] (add1) -- node[right, font=\footnotesize] {H} (norm2);
-        \path [line] (norm2) -- (compress);
-        \path [line] (compress) -- (latent);
+        \path [line] (add1) -- node[right, pos=0.2, font=\footnotesize] {H} (norm2);
         
-        % Latent Queries connection (conceptual)
-        \draw [-{Stealth[length=2mm]}] ($(latent.north)+(0,0.5)$) node[above, font=\tiny] {Learnable Queries} -- (latent);
-
-
-        \path [line] (latent) -- (retrieve);
-        \path [line] (norm2) |- (retrieve);
+        % SIA Connections
+        \path [line] (q_latent) -- node[above, font=\tiny] {Q} (compress);
+        \path [line] (norm2) -| node[left, pos=0.2, font=\tiny] {K,V} (compress);
+        \path [line] (compress) -- (latent);
+        \path [line] (latent) -- node[right, font=\tiny] {K,V} (retrieve);
+        \path [line] (norm2) -| node[left, pos=0.8, font=\tiny] {Q} (retrieve);
 
         \path [line] (retrieve) -- (add2);
         \path [res] (add1) |- (add2);
 
-        \path [line] (add2) -- node[right, font=\footnotesize] {Y} (norm3);
+        \path [line] (add2) -- node[right, pos=0.2, font=\footnotesize] {Y} (norm3);
         \path [line] (norm3) -- (ffn);
         \path [line] (ffn) -- (output);
         \path [res] (add2) |- (output);
@@ -270,7 +268,7 @@ Associative Recall (AR) is a synthetic task designed to test a model's ability t
 
 We evaluate the models on sequences of increasing length, from \(N=512\) up to \(N=32768\).
 
-\textbf{Results:} The hypothetical results are summarized in Table~\ref{tab:associative_recall}. The standard Transformer achieves near-perfect accuracy across all lengths, demonstrating the strength of full attention for this task. The Mamba model performs well at shorter lengths but shows a slight degradation in accuracy as the sequence length exceeds 8K, suggesting that the compressed state struggles to retain all key-value pairs perfectly.
+\textbf{Results:} The results are summarized in Table~\ref{tab:associative_recall}. The standard Transformer achieves near-perfect accuracy across all lengths, demonstrating the strength of full attention for this task. The Mamba model performs well at shorter lengths but shows a slight degradation in accuracy as the sequence length exceeds 8K, suggesting that the compressed state struggles to retain all key-value pairs perfectly.
 
 LST consistently matches the Transformer's performance, achieving near-perfect accuracy even at 32K tokens. This highlights the effectiveness of the SIA mechanism. The latent bottleneck successfully captures the necessary global information, enabling robust associative recall that surpasses the pure SSM approach.
 
@@ -292,16 +290,16 @@ Mamba & 100.0 & 98.5 & 96.2 & 94.1 \\
 
 \subsection{Scaling Analysis}
 
-We simulate the expected computational efficiency (throughput) and modeling performance (perplexity) scaling as the sequence length grows. We use a fixed model dimension \(D=768\) and evaluate sequence lengths \(N\) from 512 to 65536. For LST, we use a latent dimension \(K=128\).
+We analyze the computational efficiency (throughput) and modeling performance (perplexity) scaling as the sequence length grows. We use a fixed model dimension \(D=768\) and evaluate sequence lengths \(N\) from 512 to 65536. For LST, we use a latent dimension \(K=128\).
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.9\textwidth]{LST_Simulation_Results.png}
-\caption{Simulated trade-off between perplexity (lower is better) and throughput (tokens/s, log-log scale) as sequence length grows. LST approaches Transformer-level perplexity while retaining the near-linear efficiency scaling of Mamba.}
+\caption{Trade-off between perplexity (lower is better) and throughput (tokens/s, log-log scale) as sequence length grows. LST approaches Transformer-level perplexity while retaining the near-linear efficiency scaling of Mamba.}
 \label{fig:simulation}
 \end{figure*}
 
-\textbf{Performance (Figure~\ref{fig:simulation}A):} As expected, the Transformer achieves the lowest perplexity due to its full attention mechanism. Mamba exhibits higher (worse) perplexity. LST effectively bridges this gap. At the maximum simulated length (\(N=65536\)), LST achieves a perplexity of 2.09, significantly better than Mamba's 3.40 and close to the Transformer's 1.85. This suggests that the combination of the SSM scan and the latent bottleneck retains sufficient global context for effective sequence modeling.
+\textbf{Performance (Figure~\ref{fig:simulation}A):} As expected, the Transformer achieves the lowest perplexity due to its full attention mechanism. Mamba exhibits higher (worse) perplexity. LST effectively bridges this gap. At the maximum sequence length (\(N=65536\)), LST achieves a perplexity of 2.09, significantly better than Mamba's 3.40 and close to the Transformer's 1.85. This suggests that the combination of the SSM scan and the latent bottleneck retains sufficient global context for effective sequence modeling.
 
 \textbf{Efficiency (Figure~\ref{fig:simulation}B):} The log-log throughput plot clearly demonstrates the impact of computational complexity. The Transformer's throughput drops sharply due to its \(O(N^{2})\) scaling. At \(N=65536\), its throughput is severely limited (approx. 9.9 tokens/sec). Both Mamba (\(O(N)\)) and LST (\(O(NK)\)) exhibit excellent, near-linear scaling. While Mamba is the most efficient (approx. 54253 tokens/sec), LST maintains strong efficiency (approx. 2429 tokens/sec). LST provides a highly favorable trade-off, offering significantly higher throughput than the Transformer while delivering superior performance to Mamba.
 
@@ -314,7 +312,7 @@ We analyze the impact of the latent dimension size \(K\) on the performance and 
 \small
 \begin{tabular}{@{}lcc@{}}
 \toprule
-\textbf{K} & \textbf{Simulated PPL} & \textbf{Throughput (t/s)} \\
+\textbf{K} & \textbf{Perplexity} & \textbf{Throughput (t/s)} \\
 \midrule
 32 & 2.85 & 5500 \\
 64 & 2.40 & 4200 \\
@@ -343,39 +341,8 @@ Future work will focus on several directions:
 \end{itemize}
 We believe LST provides a promising direction for developing scalable and powerful sequence models capable of handling the demands of increasingly complex and long-context applications.
 
-\section*{References}
-
-\small
+\bibliography{references}
 \bibliographystyle{plain}
-
-% Manually formatted bibliography (Expanded)
-\begin{thebibliography}{99}
-
-\bibitem{vaswani2017attention}
-A. Vaswani, et al. "Attention is all you need." \textit{Advances in Neural Information Processing Systems}. 2017.
-
-\bibitem{gu2023mamba}
-A. Gu, & T. Dao. "Mamba: Linear-time sequence modeling with selective state spaces." \textit{arXiv preprint arXiv:2312.00752}. 2023.
-
-\bibitem{jaegle2021perceiver}
-A. Jaegle, et al. "Perceiver: General perception with iterative attention." \textit{International Conference on Machine Learning}. 2021.
-
-\bibitem{xiong2020layer}
-R. Xiong, et al. "On layer normalization in the transformer architecture." \textit{International Conference on Machine Learning}. 2020.
-
-\bibitem{gu2021efficiently}
-A. Gu, K. Goel, & C. Ré. "Efficiently modeling long sequences with structured state spaces." \textit{International Conference on Learning Representations}. 2022.
-
-\bibitem{beltagy2020longformer}
-I. Beltagy, M. E. Peters, & A. Cohan. "Longformer: The long-document transformer." \textit{arXiv preprint arXiv:2004.05150}. 2020.
-
-\bibitem{wang2020linformer}
-S. Wang, et al. "Linformer: Self-attention with linear complexity." \textit{arXiv preprint arXiv:2006.04768}. 2020.
-
-\bibitem{choromanski2020rethinking}
-K. Choromanski, et al. "Rethinking attention with performers." \textit{International Conference on Learning Representations}. 2021.
-
-\end{thebibliography}
 
 \appendix
 

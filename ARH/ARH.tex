@@ -40,7 +40,7 @@
 \newtheorem{definition}[theorem]{Definition}
 
 % --- Title & Author ---
-\title{\textbf{Adaptive Resonance Hierarchies (ARH): \\ A Framework for Dynamic Structural Learning}}
+\title{Adaptive Resonance Hierarchies (ARH): \\ A Framework for Dynamic Structural Learning}
 \author{Agentic Research Group \\ \texttt{agent@research.com}}
 \date{August 10, 2025}
 
@@ -110,8 +110,21 @@ where $\gamma_i \in (0,1)$ is a decay rate and $\beta_i \in (0,1)$ is an accumul
 
 \section{ARH: Mechanism and Adaptation}
 
-\subsection{The Gated Resonant Unit (GRU-R)}
+\subsection{The Gated Resonant Unit (GRU-R) and Gated Plasticity}
 The GRU-R is the fundamental building block of ARH. It is a standard GRU \citep{gru2014} augmented with recognition and generation heads, and critically, a resonance gate $R_i(t)$. This gate controls two functions: (1) it enables or disables learning (plasticity), and (2) it determines whether the node's updated hidden state $h_{\text{win}}^i(t)$ is propagated as input to the next layer, $L_{i+1}$.
+
+Weight updates are gated by the resonance signal, shielding the network from learning on noisy or unmodellable data. Let $\mathcal{W}_{\text{win}}$ be the weights (GRU and heads) of the winning node. The update rule for the learning objective (minimizing reconstruction error $E_i$) is:
+\begin{equation}
+    \Delta \mathcal{W}_{\text{win}}(t) = R_i(t) \cdot \left(-\alpha \frac{\partial E_i(t)}{\partial \mathcal{W}_{\text{win}}}\right).
+\end{equation}
+This simple gating has a profound consequence for stability.
+
+\begin{proposition}[Stability under Non-Resonance]
+If an input stream causes a layer $L_i$ to be in a state of non-resonance ($R_i(t)=0$) for all $t$ in a given interval, then the weights $\mathcal{W}$ of all nodes in that layer remain constant throughout that interval. Consequently, inputs that the system cannot yet explain do not corrupt existing, stable memories.
+\end{proposition}
+\begin{proof}
+Follows directly from the update rule, as $\Delta\mathcal{W}(t)=0$ when $R_i(t)=0$.
+\end{proof}
 
 \subsection{The Predictive Resonance Cycle}
 At each time step, the ARH engages in a hierarchical predictive cycle:
@@ -188,22 +201,7 @@ Finally, the dissonance accumulator $D_i$ is reset to zero. This process creates
     \label{fig:arh_diagram}
 \end{figure}
 
-\section{Learning and Algorithms}
-\subsection{Gated Plasticity and Stability}
-Weight updates are gated by the resonance signal, shielding the network from learning on noisy or unmodellable data. Let $\mathcal{W}_{\text{win}}$ be the weights (GRU and heads) of the winning node. The update rule for the learning objective (minimizing reconstruction error $E_i$) is:
-\begin{equation}
-    \Delta \mathcal{W}_{\text{win}}(t) = R_i(t) \cdot \left(-\alpha \frac{\partial E_i(t)}{\partial \mathcal{W}_{\text{win}}}\right).
-\end{equation}
-This simple gating has a profound consequence for stability.
-
-\begin{proposition}[Stability under Non-Resonance]
-If an input stream causes a layer $L_i$ to be in a state of non-resonance ($R_i(t)=0$) for all $t$ in a given interval, then the weights $\mathcal{W}$ of all nodes in that layer remain constant throughout that interval. Consequently, inputs that the system cannot yet explain do not corrupt existing, stable memories.
-\end{proposition}
-\begin{proof}
-Follows directly from the update rule, as $\Delta\mathcal{W}(t)=0$ when $R_i(t)=0$.
-\end{proof}
-
-\subsection{Algorithms}
+\section{Algorithms}
 The core logic of ARH is summarized in Algorithm \ref{alg:arh_cycle} and the STDC mechanism in Algorithm \ref{alg:vertical_expansion}.
 
 \begin{algorithm}
