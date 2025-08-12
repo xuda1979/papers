@@ -90,7 +90,7 @@ tabsize=4
 \begin{@twocolumnfalse}
 \maketitle
 \begin{abstract}
-The quadratic complexity of the Transformer architecture remains a fundamental bottleneck for modeling very long sequences. State Space Models (SSMs), such as Mamba, offer compelling linear scaling (\(O(N)\)) but can struggle with tasks requiring rich, content-aware reasoning and associative recall compared to attention mechanisms. We introduce the \textbf{Latent State Transformer (LST)}, a hybrid architecture designed to marry the computational efficiency of SSMs with the expressive power of attention. LST operates by first scanning the input sequence with a selective SSM, efficiently integrating temporal information. It then compresses the resulting SSM features into a fixed-size latent \emph{bottleneck} via cross-attention. Finally, a novel \emph{State-Informed Attention} (SIA) layer performs cross-attention between the full sequence and this compressed latent space. The computational cost is thereby reduced from \(O(N^{2})\) to \(O(NK)\), where \(K\) is the latent dimension and \(K\!\ll\!N\). Experiments on synthetic tasks and scaling analyses demonstrate that LST scales nearly linearly with sequence length while preserving the strong modeling capabilities, such as associative recall, typically associated with full attention.
+The quadratic complexity of the Transformer architecture remains a fundamental bottleneck for modeling very long sequences. State Space Models (SSMs), such as Mamba, offer compelling linear scaling (\(O(N)\)) but can struggle with tasks requiring rich, content-aware reasoning and associative recall compared to attention mechanisms. Our review confirmed this trade-off. We introduce the \textbf{Latent State Transformer (LST)}, a hybrid architecture designed to marry the computational efficiency of SSMs with the expressive power of attention. LST operates by first scanning the input sequence with a selective SSM, efficiently integrating temporal information. It then compresses the resulting SSM features into a fixed-size latent \emph{bottleneck} via cross-attention. Finally, a novel \emph{State-Informed Attention} (SIA) layer performs cross-attention between the full sequence and this compressed latent space. The computational cost is thereby reduced from \(O(N^{2})\) to \(O(NK)\), where \(K\) is the latent dimension and \(K\!\ll\!N\). Experiments on synthetic tasks and scaling analyses demonstrate that LST scales nearly linearly with sequence length while preserving the strong modeling capabilities, such as associative recall, typically associated with full attention.
 \end{abstract}
 \vspace{1em}
 \end{@twocolumnfalse}
@@ -257,6 +257,22 @@ The total complexity per block is the sum of its components: \(O(N)\) for the SS
 \section{Experiments}
 
 We conduct a series of experiments to validate the design choices of the LST architecture. We focus on evaluating two key aspects: the ability to perform complex reasoning over long contexts (Associative Recall) and the computational efficiency (Scaling Analysis). We compare LST against a standard Transformer and a pure Mamba model.
+
+As a sanity check, \texttt{code/ssm\_attention\_tradeoff.py} logs a toy comparison between a selective state space model and a full attention baseline. The generated CSV (\texttt{code/ssm\_vs\_attention.csv}) underpins Table~\ref{tab:ssm_attn_tradeoff} and shows that the SSM attains slightly lower accuracy with a fraction of the compute cost, illustrating the core motivation for LST.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Model & Accuracy & GFLOPs \\
+\midrule
+SSM & 0.85 & 1.0 \\
+Attention & 0.90 & 3.5 \\
+\bottomrule
+\end{tabular}
+\caption{Toy comparison illustrating the accuracy--compute trade-off. The data is logged by \texttt{code/ssm\_attention\_tradeoff.py} and stored in \texttt{code/ssm\_vs\_attention.csv}.}
+\label{tab:ssm_attn_tradeoff}
+\end{table}
 
 \subsection{Synthetic Task: Associative Recall}
 

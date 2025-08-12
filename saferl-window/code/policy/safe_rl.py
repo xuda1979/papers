@@ -11,6 +11,7 @@ accompanying paper are not implemented here and must be added by the user.
 from __future__ import annotations
 import numpy as np
 import yaml
+import csv
 from pathlib import Path
 from typing import Dict, Any
 from tqdm import tqdm
@@ -18,14 +19,14 @@ from tqdm import tqdm
 import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3 import PPO
-from ..envs.qldpc_env import SlidingWindowEnv
+from envs.qldpc_env import SlidingWindowEnv
 
 class GymWrapper(gym.Env):
     metadata = {"render_modes": []}
     def __init__(self, env: SlidingWindowEnv, action_sets: Dict[str, list], safety_cfg: Dict[str, Any]):
         super().__init__()
         self.env = env
-        self.keys = ["W","F","iters","damping","schedule"]
+        self.keys = ["W","F","iters","damp","schedule"]
         self.action_sets = action_sets
         self.safety_cfg = safety_cfg or {}
         # Discrete multi-action via MultiDiscrete
@@ -44,7 +45,8 @@ class GymWrapper(gym.Env):
             for key in ["iters","W"]:
                 for val in sorted(self.action_sets[key]):
                     a[key] = val
-                    if self.env.feasible(a): break
+                    if self.env.feasible(a):
+                        break
         obs, reward, done, info = self.env.step(a)
         return obs.astype(np.float32), float(reward), done, False, info
 
@@ -76,7 +78,20 @@ def train_saferl(config_path: str):
     outdir = Path(cfg.get("logdir","./data/logs/saferl"))
     outdir.mkdir(parents=True, exist_ok=True)
     model.save(outdir / "policy.zip")
-    print(f"Saved policy to {outdir / 'policy.zip'}")
+    # quick evaluation of average reward
+    obs, _ = gym_env.reset()
+    reward_sum = 0.0
+    for _ in range(10):
+        action, _ = model.predict(obs)
+        obs, reward, done, _, _ = gym_env.step(action)
+        reward_sum += reward
+    avg_reward = reward_sum / 10.0
+    log_file = outdir / "training_log.csv"
+    with log_file.open('w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['steps', 'avg_reward'])
+        writer.writerow([steps, avg_reward])
+    print(f"Saved policy to {outdir / 'policy.zip'} and logged training metrics to {log_file}")
 
 if __name__ == "__main__":
     import argparse
@@ -84,3 +99,4 @@ if __name__ == "__main__":
     p.add_argument("--config", type=str, default="configs/saferl.yaml")
     args = p.parse_args()
     train_saferl(args.config)
+
