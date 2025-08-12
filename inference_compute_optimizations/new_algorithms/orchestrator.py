@@ -1,6 +1,9 @@
 import asyncio
-from typing import Dict, Any, List, AsyncGenerator, Optional, Callable
+import csv
 import logging
+import time
+from pathlib import Path
+from typing import Dict, Any, List, AsyncGenerator, Optional, Callable
 
 # Assuming these modules are in the same package
 try:
@@ -126,7 +129,7 @@ async def main():
 
     # --- Test 1: Batching and Streaming ---
     print("\n--- Test 1: Concurrent requests to trigger batching ---")
-    
+
     async def stream_and_print(request_id, prompt):
         print(f"Request {request_id} (sent): '{prompt[:30]}...'")
         response_stream = orchestrator.process_request(prompt, params)
@@ -141,23 +144,41 @@ async def main():
         stream_and_print(2, "Explain the theory of relativity step-by-step in detail."),
         stream_and_print(3, "What is 1+1?")
     ]
+    start = time.time()
     await asyncio.gather(*tasks)
 
     # --- Test 2: Caching ---
     print("\n--- Test 2: Cached request ---")
     await stream_and_print(4, "What is the capital of France?")
-    
+
     # --- Test 3: Early Stopping ---
     print("\n--- Test 3: Early stopping ---")
     # This prompt includes a stop phrase
     await stream_and_print(5, "Tell me about black holes. I hope this helps!")
-
+    runtime = time.time() - start
 
     print("\n--- Final Stats ---")
     print(f"Total Requests: {orchestrator.stats['requests_processed']}")
     print(f"Cache Hits: {orchestrator.stats['cache_hits']}")
     print(f"API Calls (Batches): {orchestrator.stats['api_calls']}")
     print(f"Early Stops: {orchestrator.stats['early_stops']}")
+    print(f"Runtime: {runtime:.2f} s")
+
+    # Write summary statistics
+    out_dir = Path(__file__).resolve().parent / "data"
+    out_dir.mkdir(exist_ok=True)
+    out_file = out_dir / "orchestrator_stats.csv"
+    with out_file.open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["requests", "cache_hits", "api_calls", "early_stops", "runtime_sec"])
+        writer.writerow([
+            orchestrator.stats["requests_processed"],
+            orchestrator.stats["cache_hits"],
+            orchestrator.stats["api_calls"],
+            orchestrator.stats["early_stops"],
+            runtime,
+        ])
+    print(f"Wrote {out_file}")
 
 
 if __name__ == "__main__":

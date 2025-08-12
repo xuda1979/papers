@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 from .channels import QuantumTimeVaryingChannel
 from .codes import sc_qldpc_placeholder, tiny_css_example
-from ..decoders.bp_decoder import css_bp_round
+from decoders.bp_decoder import css_bp_round
 
 class SlidingWindowEnv:
     def __init__(self, code_len=6000, channel_cfg=None,
@@ -22,7 +22,7 @@ class SlidingWindowEnv:
         self.latency_budget = latency_budget_ms
         self.compute_budget = compute_budget
         ch = channel_cfg or {}
-        self.channel = QuantumTimeVaryingChannel(**{k:v for k,v in ch.items() if k not in ["burst","seed"]},
+        self.channel = QuantumTimeVaryingChannel(**{k:v for k,v in ch.items() if k not in ["burst","seed","type"]},
                                                  burst=ch.get("burst", None), rng=ch.get("seed", None))
         self.Hx, self.Hz = sc_qldpc_placeholder(n=code_len, seed=0)
         self.L = 50  # toy number of "slices"

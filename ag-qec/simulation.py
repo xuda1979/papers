@@ -33,8 +33,11 @@ The algorithm proceeds as follows:
 To execute the demo, run this file directly with Python 3.
 """
 
+import csv
 import math
 import random
+import time
+from pathlib import Path
 from typing import Dict, Sequence, List
 
 # Set a fixed seed for reproducibility of the results reported in the paper.
@@ -198,12 +201,34 @@ def run_default_demo() -> None:
 
     # Run Monte Carlo to estimate block error
     print(f"\nRunning Monte Carlo simulation ({trials} trials) with BDD assumption...")
+    start = time.time()
     p_L = monte_carlo_block_error_asymmetric(n, t, p_x_base, p_z_base, rho, trials=trials)
+    runtime = time.time() - start
 
     F_e = 1.0 - p_L
     print(f"\n--- Results (seed={42}) ---")
     print(f"Estimated logical block error probability P_L ≈ {p_L:.3e}")
     print(f"Estimated entanglement fidelity F_e ≈ {F_e:.4f}")
+    print(f"Runtime ≈ {runtime:.2f} s")
+
+    # Write a single-row CSV with key statistics
+    out_dir = Path(__file__).resolve().parent / "data"
+    out_dir.mkdir(exist_ok=True)
+    out_file = out_dir / "ag_qec_results.csv"
+    with out_file.open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "p_z_base",
+            "p_x_base",
+            "p_z_eff",
+            "p_x_eff",
+            "p_eff",
+            "p_L",
+            "F_e",
+            "runtime_sec",
+        ])
+        writer.writerow([p_z_base, p_x_base, p_z_eff, p_x_eff, p_eff, p_L, F_e, runtime])
+    print(f"Wrote {out_file}")
 
 
 if __name__ == "__main__":
