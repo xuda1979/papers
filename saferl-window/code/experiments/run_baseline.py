@@ -5,7 +5,7 @@ Logs minimal stats to a CSV for plotting.
 from __future__ import annotations
 import yaml, csv
 from pathlib import Path
-from ..envs.qldpc_env import SlidingWindowEnv
+from envs.qldpc_env import SlidingWindowEnv
 
 def run(cfg_path: str):
     cfg = yaml.safe_load(Path(cfg_path).read_text())
@@ -25,18 +25,19 @@ def run(cfg_path: str):
     csv_path = outdir / "baseline_log.csv"
     with open(csv_path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["episode","latency_ms","compute","failures"])
+        w.writerow(["episode","latency_ms","compute","failures","reward"])
         for ep in range(frames):
             env.reset()
             done = False
-            latency = compute = fails = 0.0
+            latency = compute = fails = reward = 0.0
             while not done:
                 a = {"W":W, "F":F, "iters":iters, "damp":damp, "schedule":schedule}
-                _, _, done, info = env.step(a)
+                _, r, done, info = env.step(a)
                 latency += info["latency_ms"]
                 compute += info["compute"]
                 fails += info["failures"]
-            w.writerow([ep, latency, compute, int(fails)])
+                reward += r
+            w.writerow([ep, latency, compute, int(fails), reward])
     print(f"Wrote {csv_path}")
 
 if __name__ == "__main__":
@@ -45,3 +46,4 @@ if __name__ == "__main__":
     p.add_argument("--config", type=str, default="configs/baseline.yaml")
     args = p.parse_args()
     run(args.config)
+

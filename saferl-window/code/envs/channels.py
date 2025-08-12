@@ -34,7 +34,8 @@ class QuantumTimeVaryingChannel:
     def __init__(self, depolar=0.005, dephase=0.01, erasure=0.02, meas_err=0.001,
                  burst=None, rng=None):
         self.base = np.array([depolar, dephase, erasure, meas_err], dtype=float)
-        self.bursts = [MarkovBurst(**burst) if burst else None for _ in range(4)]
+        clean_burst = {k: v for k, v in (burst or {}).items() if k != "model"}
+        self.bursts = [MarkovBurst(**clean_burst) if burst else None for _ in range(4)]
         self.rng = np.random.default_rng(rng)
 
     def step(self):
