@@ -49,7 +49,7 @@
 \maketitle
 
 \begin{abstract}
-The pursuit of artificial general intelligence necessitates models that can autonomously adapt their internal \emph{structure} in response to non-stationary environments. Prevailing deep learning architectures rely on fixed hierarchies, rendering them brittle when faced with novel abstractions that require new reasoning pathways. This leads to catastrophic forgetting or an inability to learn. We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganizes its own reasoning hierarchy during inference. Inspired by principles from Predictive Coding (PC) and Adaptive Resonance Theory (ART), ARH operates by testing top-down predictions against bottom-up evidence. A sufficient match (a state of \emph{resonance}) permits learning, while persistent mismatch (\emph{dissonance}) triggers structural adaptation. The core of the architecture is the \emph{Gated Resonant Unit} (GRU-R), a recurrent unit that couples temporal sequence processing with a vigilance-gated plasticity mechanism. The hierarchy adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes for new patterns) and \emph{Vertical Expansion} (spawning new layers for new abstractions). The latter is driven by a process we term \emph{Spatio-Temporal Dissonance Consolidation} (STDC). We formalize the ARH framework, derive theoretical guarantees for its stability and growth, and present empirical results on a challenging hierarchical concept-drift benchmark where ARH demonstrates significantly faster adaptation than static baselines. The codebase and experiment generator are publicly available for full reproducibility.\footnote{Code: \url{https://github.com/AgenticResearch/ARH-Project}}
+The pursuit of artificial general intelligence necessitates models that can autonomously adapt their internal \emph{structure} in response to non-stationary environments. Prevailing deep learning architectures rely on fixed hierarchies, rendering them brittle when faced with novel abstractions that require new reasoning pathways. This leads to catastrophic forgetting or an inability to learn. We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganizes its own reasoning hierarchy during inference. Inspired by principles from Predictive Coding (PC) and Adaptive Resonance Theory (ART), ARH operates by testing top-down predictions against bottom-up evidence. A sufficient match (a state of \emph{resonance}) permits learning, while persistent mismatch (\emph{dissonance}) triggers structural adaptation. The core of the architecture is the \emph{Gated Resonant Unit} (GRU-R), a recurrent unit that couples temporal sequence processing with a vigilance-gated plasticity mechanism. The hierarchy adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes for new patterns) and \emph{Vertical Expansion} (spawning new layers for new abstractions). The latter is driven by a process we term \emph{Spatio-Temporal Dissonance Consolidation} (STDC). We formalize the ARH framework, derive theoretical guarantees for its stability and growth, and present illustrative results from a stylized simulation of a challenging hierarchical concept-drift benchmark. In this simulation, ARH demonstrates significantly faster adaptation than static baselines.
 \end{abstract}
 
 \keywords{Hierarchical Reasoning, Predictive Coding, Adaptive Resonance Theory, Dynamic Architectures, Structural Learning, Continual Learning, Stability–Plasticity Dilemma}
@@ -65,7 +65,7 @@ Our primary contributions are:
     \item \textbf{The Gated Resonant Unit (GRU-R):} We introduce a novel recurrent unit that combines the temporal processing power of a GRU with a resonance-gated plasticity mechanism, ensuring that learning only occurs when predictions match evidence.
     \item \textbf{Spatio-Temporal Dissonance Consolidation (STDC):} We propose a concrete mechanism that transforms accumulated dissonance into new hierarchical layers by clustering buffered activation trajectories that consistently failed to resonate.
     \item \textbf{Theoretical Guarantees:} We provide formal results on (i) the stability of learned weights under non-resonant conditions, and (ii) a closed-form bound on the expected time-to-spawn a new layer under persistent mismatch, enabling principled parameterization.
-    \item \textbf{Empirical Validation:} We demonstrate the efficacy of ARH on a custom Hierarchical Concept Drift (HCD) benchmark, where it significantly outperforms static baselines in recovery speed and adaptation. We also provide a full complexity analysis and a policy for budgeted growth.
+    \item \textbf{Illustrative Validation:} We demonstrate the potential efficacy of ARH on a stylized Hierarchical Concept Drift (HCD) benchmark, where it is modeled to significantly outperform static baselines in recovery speed and adaptation. We also provide a full complexity analysis and a policy for budgeted growth.
 \end{enumerate}
 
 \section{Preliminaries and Notation}
@@ -287,36 +287,35 @@ Let $n_i$ be the number of nodes at layer $i$, $d_i$ the hidden state dimension,
 
 \paragraph{Budgeted ARH.} Unbounded growth is impractical. We introduce a budgeted variant by adding a complexity penalty to the loss function: $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda_n \sum_i n_i + \lambda_d K(t)$. Pruning is achieved via \emph{resonant consolidation}: periodically, nodes with low resonant utilization are removed. A node's utilization can be defined as its resonant frequency multiplied by its average match score when chosen. Nodes with utilization below a threshold are pruned. Additionally, redundant nodes (whose recognition weight vectors have a cosine similarity above a high threshold, e.g., 0.99) can be merged. This maintains performance while respecting computational budgets.
 
-\section{Experiments: Hierarchical Concept Drift (HCD)}
-\subsection{Task Description}
-To evaluate ARH's structural adaptation capability, we designed the Hierarchical Concept Drift (HCD) benchmark. It is a continual classification task presented as a stream of data. The task has two phases:
+\section{Experiments: A Stylized Simulation}
+\subsection{Task Description: Hierarchical Concept Drift (HCD)}
+To illustrate ARH's structural adaptation capability, we use a stylized simulation of a Hierarchical Concept Drift (HCD) benchmark. It is a continual classification task presented as a stream of data. The task has two phases:
 \begin{itemize}
     \item \textbf{Phase 1 (Steps 0-4999):} The classification label depends on a low-level feature of an object in the input scene (e.g., its color). A single-layer model can solve this.
-    \item \textbf{Phase 2 (Steps 5000+):} The labeling rule abruptly changes to depend on an abstract, relational property between two objects (e.g., "is the circle to the left of the square?"). This new rule renders the old features useless and requires a new hierarchical layer to first identify the objects and then compute their relation.
+    \item \textbf{Phase 2 (Steps 5000+):} The labeling rule abruptly changes to depend on an abstract, relational property between two objects (e.g., "is the circle to the left of the square?"). This new rule would render the old features useless and require a new hierarchical layer to first identify the objects and then compute their relation.
 \end{itemize}
 This shift is designed to make a static, shallow model fail and to explicitly require the creation of new abstract representations.
 
-\subsection{Baselines and Metrics}
-We compare ARH against two strong baselines:
+\subsection{Simulated Baselines and Metrics}
+We compare ARH against two strong baselines in our stylized simulation:
 \begin{enumerate}
     \item \textbf{Monolithic Transformer:} A standard Transformer model (LLM-style), representing a powerful but structurally static architecture.
-    \item \textbf{Static HRM:} The Hierarchical Reasoning Model from \citet{HRM2025}, which uses a fixed, hand-designed two-layer hierarchy. It is expected to perform well in Phase 2 but may be suboptimal in Phase 1.
+    \item \textbf{Static HRM:} The Hierarchical Reasoning Model from \citet{HRM2025}, which uses a fixed, hand-designed two-layer hierarchy.
 \end{enumerate}
 We measure: (1) \textbf{Phase 1 Accuracy}, (2) \textbf{Post-Shift Nadir} (the lowest accuracy after the shift), and (3) \textbf{Recovery Speed} (number of steps to return to 90\% of pre-shift accuracy).
 
-Running \texttt{code/plot\_hcd.py} recreates Figure~\ref{fig:performance_plot}, saving the visualization to \texttt{code/arh\_hcd\_visualization.pdf} and the underlying curves to \texttt{code/arh\_hcd\_curves.csv} for inspection.
+The Python script \texttt{code/plot\_hcd.py} generates the stylized performance curves shown in Figure~\ref{fig:performance_plot}, which are intended to be illustrative of the model's theoretical behavior. The script saves the visualization to \texttt{code/arh\_hcd\_visualization.pdf} and the underlying data to \texttt{code/arh\_hcd\_curves.csv}.
 
 \begin{figure}[h!]
     \centering
-    % The file arh_hcd_visualization.pdf is generated by the Python code in Appendix B.
     \includegraphics[width=0.9\textwidth]{code/arh_hcd_visualization.pdf}
-    \caption{Performance on the Hierarchical Concept Drift (HCD) benchmark. The vertical dashed line at step 5000 marks the structural shift in the task. Static models (Transformer, static HRM) suffer a severe performance drop and either fail to recover or recover very slowly. In contrast, ARH's dissonance accumulator ($D_1$, shown schematically) fills during the initial confusion. This triggers STDC (shaded adaptation period), which spawns a new layer ($L_2$). This new structure allows ARH to learn the abstract relational rule and rapidly recover performance. The plot can be generated using the code in Appendix~\ref{sec:appendix_code}, which also saves the underlying curves to \texttt{code/arh\_hcd\_curves.csv}.}
+    \caption{Stylized performance on the Hierarchical Concept Drift (HCD) benchmark, illustrating the expected behavior of ARH. The vertical dashed line at step 5000 marks the structural shift. Static models are modeled to suffer a severe performance drop, while ARH is modeled to detect the persistent dissonance, trigger adaptation (spawning a new layer), and rapidly recover performance. The plot is generated by the script \texttt{code/plot\_hcd.py}, which implements this stylized model. The script also saves the underlying data to \texttt{code/arh\_hcd\_curves.csv}.}
     \label{fig:performance_plot}
 \end{figure}
 
 \begin{table}[h!]
 \centering
-\caption{Quantitative results on the HCD benchmark. Values are averaged over 3 seeds.}
+\caption{Parameters for the stylized HCD benchmark simulation. These values define the curves in Figure~\ref{fig:performance_plot} and are chosen for illustrative purposes.}
 \label{tab:results_hcd}
 \begin{tabular}{@{}lccc@{}}
 \toprule
@@ -330,24 +329,10 @@ HRM (Static, 2-layer) & 93.1 & 35.0 & $\approx$ 7,500 \\
 \end{table}
 
 \subsection{Results and Analysis}
-As shown in Figure \ref{fig:performance_plot} and Table \ref{tab:results_hcd}, ARH demonstrates superior adaptability. In Phase 1, it performs on par with the baselines, learning a flat (single-layer) representation. At the shift, all models suffer, but the static models are crippled. Their fixed architectures lead to catastrophic interference as they try to fit new, incompatible rules into existing structures. ARH, however, detects the persistent mismatch. Its dissonance level $D_1$ rises, triggering vertical expansion. The newly created layer $L_2$ quickly learns to represent the abstract relations needed for Phase 2, leading to a much higher nadir and a >4x faster recovery than the static HRM.
+As shown in our stylized simulation (Figure \ref{fig:performance_plot} and Table \ref{tab:results_hcd}), ARH is modeled to demonstrate superior adaptability. In Phase 1, it performs on par with the baselines by learning a flat (single-layer) representation. At the shift, all models suffer, but the static models are crippled. Their fixed architectures would lead to catastrophic interference. ARH, however, is modeled to detect the persistent mismatch. Its dissonance level $D_1$ rises, triggering vertical expansion. The newly created layer $L_2$ would then learn to represent the abstract relations needed for Phase 2, leading to a much higher nadir and a >4x faster recovery than the static HRM.
 
-\subsection{Sensitivity and Ablations}
-We found that the system's behavior is robust to moderate changes in hyperparameters but depends critically on the core mechanisms.
-\begin{itemize}
-    \item \textbf{No Vertical Growth:} Disabling STDC makes ARH behave like a single-layer model with horizontal growth, which fails to recover, confirming the necessity of hierarchical expansion.
-    \item \textbf{Vigilance $\rho_i$:} A very high $\rho_i \to 1$ causes excessive, unnecessary layer spawning. A very low $\rho_i \to 0$ prevents the system from detecting genuine structural shifts. A curriculum that anneals $\rho_i$ from low to high (e.g., 0.6 to 0.8) during initial learning works best.
-    \item \textbf{Dissonance Decay $\gamma_i$:} This parameter should be set to reflect the expected timescale of environmental stability. For our task, $\gamma_i=0.01$ ensures that dissonance integrates over hundreds of steps, filtering out short-term noise.
-\end{itemize}
-
-\subsection{Implementation Details and Reproducibility}
-\begin{itemize}
-    \item \textbf{HCD Generator:} Scenes contain two objects with 256-dim embeddings. Phase 2 flips the label rule at step 5000. Input vectors are corrupted with Gaussian noise $\mathcal{N}(0, 0.01)$.
-    \item \textbf{Optimization:} All models trained with Adam optimizer, batch size 128, gradient clipping at 1.0, and a cosine annealing learning rate schedule. LR was $10^{-3}$ for ARH/HRM and $5 \times 10^{-4}$ for the Transformer.
-    \item \textbf{ARH Hyperparameters:} Candidate set $k=1$; vigilance $\rho_i$ annealed from 0.6 to 0.8 over the first 2k steps; match scale $\sigma_i=1.0$; dissonance decay $\gamma_i=0.01$; dissonance rate $\beta_i=0.02$; spawn threshold $\theta_{\text{spawn},i}=0.75$; STDC buffer horizon $T=512$; number of new nodes $K_{i+1}$ determined by the elbow method on clustering inertia.
-    \item \textbf{Initialization:} New horizontal nodes are initialized with $W^{BU} \leftarrow \text{normalize}(I_i(t))$ and $W^{TD} \leftarrow (W^{BU})^\top$. GRU weights use Kaiming uniform initialization. New layers are seeded from STDC centroids.
-    \item \textbf{Infrastructure:} Experiments were run on a single NVIDIA A100 (40GB) GPU. All results are averaged over seeds \{1, 2, 3\}. All code, generator scripts, and logs are provided.
-\end{itemize}
+\subsection{Stylized Model Details}
+The results presented are generated by a Python script that models the expected performance curves based on the theoretical framework of ARH. The script does not contain a full implementation of the models but instead uses a parameterized function to create plausible accuracy trajectories for each model under the concept drift scenario. The key parameters for the curves (initial accuracy, post-shift nadir, and recovery speed) are set to the values reported in Table~\ref{tab:results_hcd}. The script is intended for illustrative purposes to visualize the core ideas of the paper. The code can be found in \texttt{code/plot\_hcd.py}.
 
 \section{Related Work}
 ARH builds on several lines of research.
@@ -407,92 +392,6 @@ t \cdot \ln(1-\gamma) \le \ln\left(\frac{\beta q/\gamma - \theta_{\text{spawn}}}
 \end{equation*}
 This gives the bound presented in the main text.
 
-\section{Python Code for Figure \ref{fig:performance_plot}}
-\label{sec:appendix_code}
-The following Python code generates a stylized plot similar to Figure \ref{fig:performance_plot}. It is intended for illustrative purposes.
-
-\begin{verbatim}
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-
-def generate_stylized_curve(steps, initial_acc, nadir, recovery_time, 
-                            shift_point, adaptation_duration=0, final_stabilization=0.99):
-    """Generates a stylized accuracy curve for a concept drift scenario."""
-    time = np.arange(steps)
-    accuracy = np.full(steps, initial_acc, dtype=float)
-    
-    # Phase 1: Stable performance
-    accuracy[:shift_point] = initial_acc + np.random.normal(0, 0.5, shift_point)
-
-    # Phase 2 Start: Sharp drop to nadir
-    drop_duration = 150
-    drop_end = min(shift_point + drop_duration, steps)
-    if drop_end > shift_point:
-        accuracy[shift_point:drop_end] = np.linspace(accuracy[shift_point-1],
-                                                     nadir, drop_end - shift_point)
-
-    # Adaptation phase (optional, for ARH)
-    recovery_start = min(drop_end + adaptation_duration, steps)
-    if recovery_start > drop_end:
-        accuracy[drop_end:recovery_start] = nadir
-
-    # Recovery phase
-    recovery_end = min(recovery_start + recovery_time, steps)
-    if recovery_end > recovery_start:
-        # Use a sigmoid-like curve for smooth recovery
-        x = np.linspace(-6, 6, recovery_end - recovery_start)
-        sigmoid = 1 / (1 + np.exp(-x))
-        target_acc = initial_acc * final_stabilization
-        recovered_segment = nadir + (target_acc - nadir) * sigmoid
-        accuracy[recovery_start:recovery_end] = recovered_segment
-        if recovery_end < steps:
-            accuracy[recovery_end:] = target_acc + np.random.normal(0, 0.5, steps-recovery_end)
-            
-    return np.clip(accuracy, 0, 100)
-
-# --- Parameters ---
-TOTAL_STEPS = 10000
-SHIFT_STEP = 5000
-INITIAL_ACC = 93.0
-
-# --- Generate Data for each model ---
-llm_curve = generate_stylized_curve(TOTAL_STEPS, 91.5, 22.5, 10000) # Fails to recover
-hrm_curve = generate_stylized_curve(TOTAL_STEPS, 93.1, 35.0, 7500)
-arh_curve = generate_stylized_curve(TOTAL_STEPS, 92.8, 65.2, 1700, SHIFT_STEP, 
-                                    adaptation_duration=400) # ARH has a brief adaptation phase
-
-# --- Plotting ---
-plt.style.use('seaborn-v0_8-whitegrid')
-fig, ax = plt.subplots(figsize=(12, 6))
-
-ax.plot(llm_curve, label='LLM (Monolithic)', color='red', linestyle=':')
-ax.plot(hrm_curve, label='HRM (Static)', color='orange', linestyle='--')
-ax.plot(arh_curve, label='ARH (Ours, Dynamic)', color='blue', linewidth=2.5)
-
-# Highlight the structural shift
-ax.axvline(x=SHIFT_STEP, color='black', linestyle='--', linewidth=1.5, label='Structural Shift')
-
-# Highlight ARH adaptation phase
-adapt_start = SHIFT_STEP + 150
-adapt_end = adapt_start + 400
-rect = patches.Rectangle((adapt_start, 0), adapt_end - adapt_start, 100, 
-                         linewidth=0, facecolor='blue', alpha=0.1)
-ax.add_patch(rect)
-ax.text(adapt_start + 200, 40, 'ARH Adaptation\n(STDC triggers)', 
-        horizontalalignment='center', color='blue', alpha=0.8)
-
-# Formatting
-ax.set_xlabel('Time Steps', fontsize=14)
-ax.set_ylabel('Task Accuracy (%)', fontsize=14)
-ax.set_title('Model Performance on Hierarchical Concept Drift (HCD)', fontsize=16)
-ax.legend(fontsize=12)
-ax.set_ylim(0, 100)
-ax.set_xlim(0, TOTAL_STEPS)
-plt.tight_layout()
-plt.savefig('arh_hcd_visualization.pdf')
-plt.show()
-\end{verbatim}
 \end{appendices}
 
 \end{document}
