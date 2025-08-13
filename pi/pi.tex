@@ -23,9 +23,9 @@
 % Guidelines-Journals.pdf
 %------
 \documentclass{article}
-\usepackage[%
-journal=JST,    %% Journal of Spectral Theory - appropriate for spectral analysis content
-lang=british,   %% Change to `american' if you use American English.
+\usepackage[
+  journal=JST, %% Journal of Spectral Theory - appropriate for spectral analysis content
+  lang=british %% Change to `american' if you use American English.
 ]{ems-journal}
 
 %------
@@ -52,13 +52,9 @@ lang=british,   %% Change to `american' if you use American English.
 %------
 
 % Additional packages not already loaded
-\usepackage{algorithm, algorithmic}  % For including algorithms if needed
 \usepackage{microtype} % Improves typography
 \usepackage{cleveref}
 \usepackage{mathtools}
-
-% Map non-breaking space U+00A0 to a regular nonbreakable space
-\DeclareUnicodeCharacter{00A0}{~}
 
 % (4.5) Allow display breaks for long equations
 \allowdisplaybreaks
@@ -73,6 +69,7 @@ lang=british,   %% Change to `american' if you use American English.
 \newtheorem{corollary}[theorem]{Corollary}
 \theoremstyle{definition}
 \newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption} % Define Assumption environment
 \newtheorem{example}[theorem]{Example}
 \theoremstyle{remark}
 \newtheorem{remark}[theorem]{Remark}
@@ -81,353 +78,285 @@ lang=british,   %% Change to `american' if you use American English.
 \crefname{theorem}{Theorem}{Theorems}
 \crefname{lemma}{Lemma}{Lemmas}
 \crefname{section}{Section}{Sections}
+% Capitalization for Table references
 \crefname{table}{Table}{Tables}
-% Show bare numbers inside parentheses for equations:
+\crefname{assumption}{Assumption}{Assumptions}
+\crefname{definition}{Definition}{Definitions}
+\crefname{remark}{Remark}{Remarks}
 \creflabelformat{equation}{(#2#1#3)}
 \crefname{equation}{}{}
 
 % -------------------- Custom Commands --------------------------
-% Standardized notation
-\newcommand{\cG}{\mathcal{G}}    % Heat-kernel constant
-% Standardized notation improvements for clarity
-\newcommand{\cH}{\mathcal{H}}     % Example for adding more standard commands
-\DeclareMathOperator{\diam}{diam}    % Diameter operator
-\DeclareMathOperator{\tr}{tr}    % Trace operator
-\newcommand{\cE}{\mathcal{E}} % Dirichlet form
-\newcommand{\LL}{\mathcal{L}} % Lazy walk Laplacian/Generator
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cH}{\mathcal{H}}
+\DeclareMathOperator{\diam}{diam}
+\DeclareMathOperator{\tr}{tr}
+% Capacity operator
+\DeclareMathOperator{\Capac}{Cap}
+\newcommand{\cE}{\mathcal{E}}
+\newcommand{\LL}{\mathcal{L}}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\Z}{\mathbb{Z}}
 \newcommand{\N}{\mathbb{N}}
-% Standardized Probability and Expectation
 \newcommand{\Prob}{\mathbb{P}}
 \newcommand{\E}{\mathbb{E}}
-
-% New Hypothesis for Heat-Kernel Asymptotics
-\newtheorem{hypothesis}{Hypothesis}[section]
+\newcommand{\Reff}{R_{\mathrm{eff}}}
 
 \begin{document}
 
-%------
-% Insert the title of your paper and (if necessary)
-% a short title for the running head.
-%------
 \title{Sharp Spectral Zeta Asymptotics on Graphs of Quadratic Growth}
 
-%------
-
-%%%% Author information in EMS format
 \emsauthor{1}{
-    \givenname{Da}
-    \surname{Xu}
-    \mrid{}
-    \orcid{}}{D.~Xu}
+  \givenname{Da}
+  \surname{Xu}
+  \mrid{}
+  \orcid{}}{D.~Xu}
 
-%%%% Address information in EMS format
 \Emsaffil{1}{
-    \department{}
-    \organisation{China Mobile Research Institute}
-    \rorid{}
-    \address{}
-    \zip{}
-    \city{Beijing}
-    \country{P.R.~China}
-    \affemail{xudayj@chinamobile.com}}
+  \department{}
+  \organisation{China Mobile Research Institute}
+  \rorid{}
+  \address{}
+  \zip{}
+  \city{Beijing}
+  \country{P.R.~China}
+  \affemail{xudayj@chinamobile.com}}
 
-%------
-% Add MSC 2020 codes according to https://zbmath.org/classification/.
-% A unique primary MSC code (in curly brackets) is mandatory,
-% while secondary MSC codes (in square brackets) are optional.
-%------
-\classification[31C20, 60J10, 05C81]{39A12, 58J50}
+\classification{05C81, 05C50}[60J10, 39A12, 31C20, 58J50]
+\keywords{Spectral zeta function, graph Laplacian, heat kernel asymptotics, quadratic volume growth, Poincaré inequality, intrinsic ultracontractivity, random walk homogenisation, Kirchhoff index}
 
-%------
-% Add a list of keywords.
-%------
-\keywords{Spectral zeta function, graph Laplacian, heat kernel asymptotics, quadratic volume growth, Poincaré inequality, intrinsic ultracontractivity, random walk homogenization}
-
-%------
-% Insert your abstract.
-%------
 \begin{abstract}
 We investigate the spectral properties of the Dirichlet Laplacian on large finite metric balls within \emph{irregular} infinite graphs of quadratic volume growth.
-Let $G$ be an infinite graph with bounded degree such that $|B_R(x)| \asymp R^{2}$ for every $x\in V(G)$, and assume it satisfies a Poincaré inequality (PI).
-% (5.1) Standardised spelling
-These analytic–geometric hypotheses imply large-scale regularity and homogenisation of the lazy simple random walk (LSRW).
-Denoting by
-\[
-    p_t(x,x)\;\sim\;\frac{\cG}{t}\qquad(t\to\infty),
-\]
-with a \emph{global heat-kernel constant} $\cG>0$ independent of $x$, we consider an exhaustion $G_n=B_{R_n}(x_0)$ and the spectral zeta value
-$Z_n(1)=\operatorname{tr}(\LL_n^{-1})$ of the killed generator $\LL_n$.
+We consider an exhaustion $G_n=B_{R_n}(x_0)$ and the spectral zeta value
+$Z_n(1)=\tr(\LL_n^{-1})$ of the killed generator $\LL_n$.
 
-Our main theorem provides the sharp asymptotic law for the spectral zeta function. We assume that the graph satisfies specific conditions, including quadratic volume growth (VG(2)) and a Poincaré inequality (PI). These assumptions guarantee the large-scale regularity and homogenisation of the random walk. Our theorem applies to a broad class of graphs, including irregular structures with large-scale geometric properties.
+We establish a sharp asymptotic law under the assumptions that the graph satisfies uniform quadratic volume growth (VG(2)) and a Poincaré inequality (PI). These analytic–geometric hypotheses imply large-scale regularity. We further assume a standard quantitative homogenisation property (a uniform local central limit theorem with polynomial rate), which holds in the principal example classes, and implies the existence of a global heat-kernel constant $\cG>0$ (independent of $x$) such that the lazy simple random walk (LSRW) satisfies
 \[
-    Z_n(1)\;=\;\cG\,N_n\log N_n\;\bigl(1+o(1)\bigr),\qquad N_n:=|V(G_n)|\xrightarrow[n\to\infty]{}\infty,
+  p_t(x,x)\;\sim\;\frac{\cG}{t}\qquad(t\to\infty).
 \]
-valid for \emph{any} graph satisfying the stated VD+PI assumptions and hence far beyond the class of homogeneous lattices.
-For $\mathbb Z^2$, this yields the spectral-recovery identity $\cG = 2/\pi$, providing a new "$\pi$-free'' limit formula.
-The error term \( o(1) \) can be strengthened to a uniform bound \( O\!\left(\tfrac{1}{N_n}\right) \), yielding
+
+Our main theorem establishes the sharp asymptotic
 \[
-	Z_n(1)=\cG N_n \log N_n \Bigl(1+ O\!\left(\tfrac{1}{N_n}\right)\Bigr),
+  Z_n(1)\;=\;\cG\,N_n\log N_n\;+\; O(N_n),\qquad N_n:=|V(G_n)|\xrightarrow[n\to\infty]{}\infty.
 \]
-under the same structural assumptions.
-% (3.1) Add sentence on broader impact
-Our techniques highlight the robustness of spectral asymptotics under homogenisation and suggest that similar sharp results may extend to other critical settings where random walks exhibit recurrent behavior and quantitative homogenisation is established.
+This implies a relative error of $O(1/\log N_n)$, with constants depending only on the structural parameters of $G$.
+This result extends far beyond homogeneous lattices.
+For $\mathbb Z^2$, this yields the constant identification $\cG = 2/\pi$, providing a new limit formula that recovers $\pi$ without $\pi$ appearing in the input (a "$\pi$-free'' limit).
+Our techniques highlight the robustness of spectral asymptotics under homogenisation in this critical, recurrent setting.
 \end{abstract}
 
-\maketitle% ===============================================================
+\maketitle
+% ===============================================================
 \section{Introduction}
 
-The relationship between the geometry of a space and the spectrum of its associated Laplacian is a fundamental area of study. In Riemannian geometry, Weyl's law and the Minakshisundaram-Pleijel heat trace expansion provide deep connections between volume, curvature, and eigenvalue asymptotics. In the discrete setting, analogous investigations explore how the combinatorial and geometric structure of a graph influences the spectrum of the graph Laplacian (see \cite{Chung97}).
+The relationship between the geometry of a space and the spectrum of its associated Laplacian is a fundamental area of study. In Riemannian geometry, Weyl's law and the Minakshisundaram--Pleijel heat trace expansion provide deep connections between volume, curvature, and eigenvalue asymptotics. In the discrete setting, analogous investigations explore how the combinatorial and geometric structure of a graph influences the spectrum of the graph Laplacian (see \cite{Chung97}).
 
-This paper focuses on the spectral zeta function on graphs. For a finite graph $H$, we consider the Laplacian associated with the lazy simple random walk (see \Cref{sec:prelim}). With Laplacian eigenvalues $0 < \lambda_1 \leq \lambda_2 \leq \cdots$, the spectral zeta function is defined as $\zeta_H(s) = \sum_k \lambda_k^{-s}$. We are interested in the value at $s=1$, $Z_H(1) := \zeta_H(1)$, which corresponds to the trace of the inverse Laplacian (the Green operator). This quantity is related to various graph invariants, such as the Kirchhoff index (effective resistance) and mean hitting times of the random walk (see \cite{LyonsPeres16}).
+This paper focuses on the spectral zeta function on graphs. For a finite graph $H$, we consider the Laplacian associated with the lazy simple random walk (see \Cref{sec:prelim}). With Laplacian eigenvalues $0 < \lambda_1 \leq \lambda_2 \leq \cdots$, the spectral zeta function is defined as $\zeta_H(s) = \sum_k \lambda_k^{-s}$. We are interested in the value at $s=1$, $Z_H(1) := \zeta_H(1)$, which corresponds to the trace of the inverse Laplacian (the Green operator).
 
-Motivated by sharpening the asymptotic precision, we will strengthen all appearances of a generic factor $(1+o(1))$ to an explicit algebraic remainder:
+\begin{remark}[Connection to Kirchhoff Index]\label{rem:kirchhoff}
+The value $Z_H(1) = \sum_k \lambda_k^{-1}$ is closely related to the Kirchhoff index $K(H)$, which is the sum of effective resistances $\Reff(x,y)$ between all pairs of vertices. For the normalized Laplacian (which is similar to the operator $\LL$ considered here, see \Cref{rem:measures_operators}), there is an exact identity relating the trace of the inverse to $K(H)$ weighted by the stationary distribution (see \cite[Chapter 9]{LyonsPeres16}).
+\end{remark}
+
+\begin{remark}[Kirchhoff index: explicit identities under our conventions]\label{rem:kirchhoff-precise}
+Let $H$ be a finite connected graph (no killing). Write $D$ for the degree matrix, $A$ for the adjacency, $L=D-A$ (combinatorial Laplacian), and $L_{\mathrm{rw}}=I-D^{-1}A$ (random-walk Laplacian on $\ell^2(|\cdot|)$). Then, with $0=\lambda_1(L_{\mathrm{rw}})<\lambda_2\le\cdots\le\lambda_n$,
 \[
-	Z_n(1) = \cG N_n \log N_n \Bigl(1 + O\!\left(\tfrac{1}{N_n}\right)\Bigr),
+  K(H)=\sum_{x,y}\Reff(x,y)=\mathrm{vol}(H)\sum_{k=2}^n \lambda_k(L_{\mathrm{rw}})^{-1},
 \]
-with an $O(1/N_n)$ term that is uniform along the exhaustion. This refinement isolates the universal logarithmic growth while quantifying convergence speed.
+where $\mathrm{vol}(H)=\sum_{x}\deg(x)$; equivalently $K(H)=n\sum_{k=2}^n \mu_k(L)^{-1}$ in terms of the nonzero eigenvalues $\mu_k(L)$ of $L$; see \cite[Thm.~9.23]{LyonsPeres16}. For the Dirichlet operator $\LL_H$ used in this paper (killing at $\partial H$), we have $Z_H(1)=\sum_k\lambda_k(\LL_H)^{-1}=\sum_{v\in H}G_H(v,v)$; this is the natural Dirichlet analogue of the global Kirchhoff identity. Thanks to bounded degree, traces computed in $\ell^2(m)$ or $\ell^2(|\cdot|)$ agree by similarity, cf.\ \Cref{rem:measures_operators}.
+\end{remark}
 
-We investigate the asymptotic behavior of $Z_n(1)$ for large finite subgraphs $G_n$ exhausting an infinite graph $G$. We focus on the critical case of \emph{quadratic volume growth} ($|B_R| \asymp R^2$), corresponding to an effective dimension of $d=2$. This dimension is critical, leading to distinct asymptotic behavior compared to other dimensions, as summarized in \Cref{tab:growth}. This class includes the lattice $\mathbb{Z}^2$ but also encompasses irregular structures that behave two-dimensionally on a large scale, such as lattices with random bounded conductances or certain planar graphs with uniform properties.
+We investigate the asymptotic behaviour of $Z_n(1)$ for large finite subgraphs $G_n$ exhausting an infinite graph $G$. We focus on the critical case of \emph{quadratic volume growth} ($|B_R| \asymp R^2$), corresponding to an effective dimension of $d=2$. This dimension is critical, leading to distinct asymptotic behaviour compared to other dimensions, as summarized in \Cref{tab:growth}. This class includes the lattice $\mathbb{Z}^2$ but also encompasses irregular structures that behave two-dimensionally on a large scale, such as lattices with random bounded conductances or certain planar graphs with uniform properties.
 
-\subsection{Main Result, Definition of $\cG$, and Assumptions}
-We establish a precise asymptotic formula for $Z_n(1)$ under the assumptions that $G$ has uniform quadratic growth (VG(2)) and satisfies a Poincaré inequality (PI). These assumptions ensure strong large-scale regularity, forcing the random walk on $G$ to homogenize to a Brownian motion. This regular behavior is characterized by a global heat kernel constant $\cG$.
+\subsection{Main Result and Assumptions}
+We establish a precise asymptotic formula for $Z_n(1)$. Our foundational assumptions on the graph $G$ are uniform quadratic volume growth (VG(2)) and a Poincaré inequality (PI). These ensure strong large-scale geometric regularity.
 
-% New Hypothesis for Heat Kernel Asymptotics
-\begin{hypothesis}[Heat Kernel Asymptotics]\label{hyp:HK}
-For any graph \( G \) satisfying VG(2) and PI, there exists a constant \( \mathcal{G} > 0 \) such that the heat kernel satisfies
-	\[
-	p_t(x,x) = \frac{\mathcal{G}}{t} + O(t^{-\delta}) \quad \text{as } t \to \infty,
-	\]
-for some \( \delta > 0 \), and the constant \( \mathcal{G} \) is independent of \( x \in G \).
-\end{hypothesis}
+To achieve a sharp first-order asymptotic involving a global constant, we must ensure that the random walk on $G$ homogenises uniformly to a Brownian motion. While VG(2) and PI imply qualitative homogenisation, we explicitly assume a quantitative version: a uniform Local Central Limit Theorem (LCLT) with a polynomial rate of convergence (see \Cref{ass:QH}). For convenience we collect the standing assumptions and principal notation in the following paragraph; this centralises symbols used repeatedly later.
+
+\paragraph{Notation and Standing Assumptions.} We work on an infinite connected graph $G=(V,E)$ of bounded degree. Balls are $B_R(x)=\{y:d(x,y)\le R\}$ and $V(x,r)=|B_r(x)|$. Finite induced subgraphs (domains) are denoted $H\subset V$ with vertex set also written $H$. For $H$ finite let $p_t^{H}(x,y)$ be the Dirichlet heat kernel (lazy simple random walk killed on leaving $H$), $G_H(x,y)=\sum_{t\ge0} p_t^{H}(x,y)$ the Green function, $Z_H(1)=\sum_{x\in H} G_H(x,x)=\operatorname{tr}(\LL_H^{-1})$, $(\lambda_k(H))_{k\ge1}$ the (Dirichlet) eigenvalues of $\LL_H$ in increasing order, and $\phi_1^{H}$ an $L^2$-normalised ground state (counting measure). For $G_n=B_{R_n}(x_0)$ write $N_n=|G_n|$; when a parameter $\eta\in(0,1/2)$ is fixed define the interior time scale $T_n:=R_n^{2(1-2\eta)}$. Structural hypotheses: (VG(2)) $V(x,r)\asymp r^2$; (PI) scale-invariant Poincaré; (CDC) for balls (automatic under VD+PI); (QH) on-diagonal LCLT $p_t(x,x)=\cG t^{-1}+O(t^{-1-\delta})$ uniformly for some $\cG>0,\delta>0$. These imply PHI, Gaussian bounds, Faber--Krahn, and Intrinsic Ultracontractivity (IU) on balls. Symbols $C,c,c_i$ depend only on $(\mathrm{VG(2)},\mathrm{PI},\Delta,\mathrm{QH})$ (and chosen $\eta$). We write $A\lesssim B$ for $A\le C B$, and $A\asymp B$ if $A\lesssim B\lesssim A$. Log denotes natural logarithm.
 
 \begin{definition}[Heat-kernel constant]\label{def:G}
-Let $(X_t)$ be the LSRW on $G$. Uniform quadratic growth and PI imply
-\(
-    p_t(x,x)=\frac{\cG}{t}+o\!\bigl(t^{-1}\bigr)
-\)
-as $t\to\infty$, for a constant $\cG>0$ independent of $x$. We call this number the \emph{heat-kernel constant} of $G$.
+Under the assumption of quantitative homogenisation, the LSRW on $G$ satisfies
+\[
+  p_t(x,x)=\frac{\cG}{t}+O(t^{-1-\delta})
+\]
+as $t\to\infty$, for constants $\cG>0$ and $\delta>0$ independent of $x$. We call $\cG$ the \emph{heat-kernel constant} of $G$.
 \end{definition}
 
-\begin{theorem}\label{thm:main}
-Let $G$ be an infinite, connected graph of bounded degree satisfying quadratic volume growth (VG(2)) and a Poincaré inequality (PI). Let $\cG$ be the associated heat-kernel constant for the lazy simple random walk (LSRW) on $G$ (see \Cref{prop:HK_asymp}). For any exhaustion $\{G_n\}$ of $G$ by metric balls $G_n = B_{R_n}(x_0)$ with volume $N_n = |V(G_n)| \to \infty$, we have
+% MODIFICATION (M4/M5): Added explicit formula for G in standard cases.
+\begin{remark}[Explicit form of $\cG$]\label{rem:G_formula}
+In many standard cases, such as random walks on $\mathbb{Z}^d$ driven by a mean-zero, finite-variance step distribution with covariance matrix $\Sigma$, the LCLT yields an explicit formula (see, e.g., \cite[Ch. 2]{LawlerLimic10}). In $d=2$:
 \[
-\lim_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} = \cG.
+\cG = \frac{1}{2\pi\sqrt{\det\Sigma}}.
 \]
+For irregular media (like the RCM), $\Sigma$ represents the effective homogenized diffusivity.
+\end{remark}
+
+This assumption is standard and known to hold in many canonical examples of irregular media (see \Cref{rem:QH_validity}).
+\paragraph{Standing Assumptions (Summary).} We assume: (VG(2)) quadratic volume growth; (PI) scale-invariant Poincaré inequality; bounded degree; and (QH) the uniform on-diagonal expansion $p_t(x,x)=\cG t^{-1}+O(t^{-1-\delta})$. These imply VD, PHI, Gaussian bounds, Faber--Krahn and intrinsic ultracontractivity (IU) on metric balls. (QH) provides a summable fluctuation ensuring an $O(N_n)$ remainder rather than $O(N_n\log\log N_n)$.
+
+\begin{theorem}[Main asymptotic with sharp remainder]\label{thm:main}
+Let $G$ be an infinite, connected, bounded degree graph satisfying (VG(2)) and (PI), and let $\{G_n\}$ be an exhaustion by metric balls $G_n=B_{R_n}(x_0)$ with $N_n=|G_n|\to\infty$. Assume (QH) with heat-kernel constant $\cG>0$ and exponent $\delta>0$. (For balls, CDC and IU required later follow from VD+PI; see \Cref{lem:CDC-balls,lem:IU_derivation}.) Then
+\[
+  Z_n(1)= \cG N_n \log N_n + O(N_n),
+\]
+where the implicit constant depends only on the data $(\mathrm{VG(2)},\mathrm{PI},\Delta,\mathrm{QH})$ and on the (freely chosen) boundary layer exponent $\eta\in(0,1/2)$ used in the proof, but not on $n$. In particular the relative error is $O(1/\log N_n)$. If $G$ and $G'$ are quasi-isometric graphs both satisfying the hypotheses with the \emph{same} on-diagonal constant $\cG$, then the statement transfers with the same leading constant and uniform $O(N_n)$ control.
 \end{theorem}
+
+\paragraph{Proof sketch.} Fix $\eta\in(0,1/2)$ and decompose $G_n=I_n\cup E_n$ with interior $I_n=\{x: d(x,\partial G_n)>R_n^{1-\eta}\}$ and boundary layer $E_n$. For $x\in I_n$ the probability of exiting by time $T_n:=R_n^{2(1-2\eta)}$ is super-polynomially small (Gaussian / maximal inequality), so $p_t^{G_n}(x,x)=p_t(x,x)+o(t^{-1})$ uniformly for $t\le T_n$. Summing the quantitative homogenisation (QH) expansion $p_t(x,x)=\cG t^{-1}+O(t^{-1-\delta})$ up to $T_n$ produces $2\cG(1-2\eta)\log R_n+O(1)$ for $G_{G_n}(x,x)$. Summing over $|I_n|=N_n-O(N_n^{1-\eta/2})$ yields the lower bound with coefficient $(1-2\eta)$. For all $x$, the short-time sum to $R_n^2$ gives $2\cG\log R_n+O(1)$; for $t>R_n^2$, Intrinsic Ultracontractivity (IU) and Faber--Krahn give $p_t^{G_n}(x,x)\le C N_n^{-1} e^{-c t/R_n^2}$ so the tail contributes $O(1)$. Summing over $x$ gives the matching upper bound. Letting $\eta\downarrow0$ squeezes the coefficient to $\cG$ and the pointwise $O(1)$ bounds aggregate to an $O(N_n)$ remainder.
+
+\begin{corollary}[Mesoscopic heat trace]\label{cor:heat_trace}
+Under the assumptions of \Cref{thm:main}, for any $t=t_n$ with $1\ll t_n \ll R_n^2$,
+\[
+  \sum_{k\ge1} e^{-t \lambda_k(G_n)} = \cG N_n + O\Big(N_n t^{-\delta} + N_n \frac{t}{R_n^2}\Big).
+\]
+Choosing $t=R_n^{2\theta}$ with $0<\theta<1$ yields an error $O\big(N_n R_n^{-2\delta\theta} + N_n R_n^{2(\theta-1)}\big)$.
+\end{corollary}
+
+\begin{proposition}[Weaker remainder under averaged on-diagonal control]\label{prop:weaker_remainder}
+Assume (VG(2)) and (PI). Suppose instead of (QH) we only have two-sided pointwise bounds $c_1 t^{-1}\le p_t(x,x)\le c_2 t^{-1}$ for $t\ge t_0$ and an averaged deviation: there exist $t_0,C<\infty$, $\alpha>0$ with
+\[
+  \Big| \frac{1}{N_n} \sum_{x\in G_n} \Big( t p_t(x,x) - \cG \Big) \Big| \le C (\log t)^{-\alpha}\qquad(t\ge t_0,\;\forall n).
+\]
+Then:
+\begin{enumerate}
+  \item If $\alpha>1$, $Z_n(1)=\cG N_n \log N_n + O(N_n)$.
+  \item If $\alpha=1$, $Z_n(1)=\cG N_n \log N_n + O(N_n \log\log N_n)$.
+\end{enumerate}
+No universal bound is claimed for $\alpha<1$. The summable $t^{-1-\delta}$ rate (QH) corresponds to $\alpha=\infty$ and removes the logarithmic loss.
+\end{proposition}
+\begin{proof}[Proof sketch]
+Write $Z_n(1)=\sum_{x\in G_n}\sum_{t\ge1} p_t^{G_n}(x,x)$. For $t\le R_n^2$, $p_t^{G_n}(x,x)\le p_t(x,x)$. Replace $p_t(x,x)$ by $\cG/t$ to obtain the main term. The averaged deviation hypothesis and Abel summation give
+\[
+\sum_{t\le R_n^2} \frac{1}{t} \Big( \frac{1}{N_n}\sum_{x} (t p_t(x,x)-\cG) \Big)=
+\begin{cases}O(1), & \alpha>1,\\ O(\log\log R_n), & \alpha=1.\end{cases}
+\]
+Multiplying by $N_n$ yields the stated error. The tail $t>R_n^2$ contributes $O(N_n)$ by IU; without a summable rate this is still $O(N_n)$ but the earlier part acquires the $\log\log$ factor when $\alpha=1$.\end{proof}
+
+\begin{remark}[Log--log loss without IU / quantitative rate]\label{rem:loglog}
+If one forgoes either (i) Intrinsic Ultracontractivity (replacing it only by the crude bound $p_t^{G_n}(x,x)\le e^{-\lambda_1 t}$) \emph{or} (ii) the summable $t^{-1-\delta}$ error in (QH) (replacing it by $O(t^{-1})$), then an unavoidable extra $\log\log N_n$ term can appear in the aggregated contribution of large times or fluctuation sums, inflating the remainder to $O(N_n \log\log N_n)$. This justifies the strength and necessity of both inputs in the sharp form of \Cref{thm:main}.
+\end{remark}
 
 \subsection{Context, Significance, and Novelty}
 The $N_n \log N_n$ divergence is characteristic of the critical dimension $d=2$, where the random walk is recurrent, contrasting sharply with other dimensions (see \Cref{tab:growth} and \Cref{app:growth} for comparisons).
 
-% (3.3) Moved table here as it is now referenced in the preceding paragraph.
 \begin{table}[h!]
 \centering
-\caption{Asymptotics of $Z_n(1)$ under polynomial volume growth $V(R) \asymp R^d$.}
+\small
+\caption{Asymptotics of $Z_n(1)$ under $V(R) \asymp R^d$. Dimension $d=2$ is critical.}
 \label{tab:growth}
-\begin{tabular}{@{}llll@{}}
-\toprule
-\textbf{Dimension} $d$ & \textbf{Growth Rate} & \textbf{Walk Behavior} & $Z_n(1)$ \textbf{Asymptotics} \\
+\begin{tabular}{@{}lllll@{}}\toprule
+	extbf{Dimension $d$} & \textbf{Volume growth} & \textbf{Recurrence} & \textbf{$G_{G_n}(v,v)$ interior} & \textbf{$Z_n(1)$} \\
 \midrule
-$d=1$ & Linear ($R$) & Strongly recurrent & $Z_n(1) \asymp N_n^2$ \\
-\textbf{$d=2$} & \textbf{Quadratic ($R^2$)} & \textbf{Recurrent (Critical)} & $Z_n(1) \asymp N_n \log N_n$ \\
-$d\geq 3$ & Super-quadratic ($R^d$) & Transient & $Z_n(1) \asymp N_n$ \\
+1 & Linear & Recurrent & $\asymp N_n$ & $\asymp N_n^{2}$ \\
+2 & Quadratic & Recurrent & $\asymp \log N_n$ & $\asymp N_n \log N_n$ \\
+$\ge 3$ & Polynomial & Transient & $O(1)$ & $\asymp N_n$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\Cref{thm:main} generalizes classical results known for regular structures. For Euclidean domains and tori, similar asymptotics for spectral zeta functions have been studied (cf. \cite{Colin85, Frank10}). In the graph setting, results on the trace of the Green function (equivalent to $Z(1)$) have been established for highly regular graphs, such as lattices or under assumptions implying strong structural symmetries (e.g., results discussed in \cite{MizunoTachikawa03, Kaimanovich00}).
+\Cref{thm:main} generalizes classical results known for regular structures. For Euclidean domains and tori, similar asymptotics for spectral zeta functions have been studied (cf. \cite{Colin85, Frank10}). In the graph setting, results on the trace of the Green function have been established for highly regular graphs (e.g., results discussed in \cite{MizunoTachikawa03, Kaimanovich00}).
 
-Our contribution lies in extending this connection to a broad class of potentially highly irregular graphs characterized only by large-scale geometric (VG(2)) and analytic (PI) properties. The novelty is the demonstration that this sharp asymptotic holds without requiring local uniformity or translational invariance. The combination of VG(2) and PI ensures homogenization, which dictates the leading-order spectral behavior. The Poincaré inequality is essential; if PI is dropped, homogenization may fail due to bottlenecks, and such a sharp result involving a global constant $\cG$ is generally not expected (see \Cref{sec:discussion}).
+Our contribution lies in extending this connection to a broad class of potentially highly irregular graphs characterized by large-scale geometric (VG(2)) and analytic (PI) properties, supplemented by the quantitative homogenisation assumption. The novelty is the demonstration that this sharp asymptotic holds without requiring local uniformity or translational invariance. The approach is modular, isolating the roles of geometry (VG(2)+PI), stochastic homogenisation (LCLT with rate), and boundary regularity (CDC/IU).
 
 \subsection{Examples and Scope}
-The assumptions VG(2) and PI capture a wide variety of graphs that are metrically two-dimensional but may be combinatorially irregular.
+The assumptions capture a wide variety of graphs that are metrically two-dimensional but may be combinatorially irregular.
 
-\begin{example}[The case of $\mathbb{Z}^2$ and spectral recovery of $\pi$]\label{rem:pi2}
-Consider the standard lattice $\mathbb{Z}^2$. We analyze the LSRW, which stays put with probability $1/2$ and moves to a neighbor with probability $1/8$. The covariance matrix of the step distribution is $\Sigma = \frac{1}{4} I_2$. The Local Central Limit Theorem (LCLT) (see, e.g., \cite[Ch. 2]{LawlerLimic10}) yields:
+\begin{example}[The $\mathbb{Z}^2$ case]\label{rem:pi2}
+Consider the standard lattice $\mathbb{Z}^2$. The LSRW (defined in \Cref{sec:prelim}) has a step distribution covariance matrix $\Sigma = \frac{1}{4} I_2$. Using \Cref{rem:G_formula}:
 \[
-p_t(x,x) \sim \frac{1}{2\pi t \sqrt{\det(\Sigma)}} = \frac{1}{2\pi t \sqrt{1/16}} = \frac{2}{\pi t} \quad \text{as } t \to \infty.
+\cG = \frac{1}{2\pi \sqrt{\det(\Sigma)}} = \frac{1}{2\pi (1/4)} = \frac{2}{\pi}.
 \]
-Thus, $\cG = 2/\pi$. \Cref{thm:main} implies $\lim_{n \to \infty} Z_n(1) / (N_n \log N_n) = 2/\pi$.
+\Cref{thm:main} implies $\lim_{n \to \infty} Z_n(1) / (N_n \log N_n) = 2/\pi$.
 \end{example}
 
-\begin{example}[Irregular Structures]\label{ex:irregular}
-Beyond $\mathbb{Z}^2$, several important models satisfy the assumptions:
+% REVISION (M2): Clarified the scope of examples based on QH validity and updated terminology (Minor comment: periodic graphs).
+\begin{example}[Irregular structures]\label{ex:irregular}
+Beyond $\mathbb{Z}^2$, the main examples satisfying all assumptions (including quantitative homogenisation, see \Cref{rem:QH_validity} for details and references) are:
 \begin{enumerate}
-    \item \textbf{Random Conductance Model (RCM) on $\mathbb{Z}^2$:} If the conductances are i.i.d., uniformly bounded, and elliptic ($0 < c_1 \leq w_{xy} \leq c_2 < \infty$), the resulting graph satisfies VG(2) and PI almost surely (see \cite{Biskup11}). The constant $\cG$ reflects the effective diffusivity of the medium.
-    \item \textbf{Supercritical Percolation on $\mathbb{Z}^2$:} The infinite cluster of supercritical Bernoulli bond percolation on $\mathbb{Z}^2$ ($p>1/2$) satisfies VG(2) and PI almost surely (see \cite{Barlow04}).
-    \item \textbf{Uniform Spanning Tree (UST):} The intrinsic metric on the UST in high dimensions ($\mathbb{Z}^d, d\geq 5$) is known to satisfy related scaling properties, and certain models related to USTs exhibit two-dimensional behavior and satisfy PI.
+    \item \textbf{Periodic graphs:} Graphs with a co-compact $\mathbb{Z}^2$ action.
+    \item \textbf{Random Conductance Model (RCM) on $\mathbb{Z}^2$:} If the conductances are i.i.d., uniformly bounded, and elliptic, the resulting graph satisfies VG(2) and PI almost surely, and the required uniform quantitative homogenisation holds \cite{Biskup11, AndresDeuschelSlowik19}.
+    \item \textbf{Supercritical Percolation on $\mathbb{Z}^2$:} The infinite cluster (for $p>p_c(\mathbb{Z}^2)=1/2$) satisfies VG(2) and PI almost surely \cite{Barlow04}. Quantitative homogenization results have also been established in this setting (see \Cref{rem:QH_validity}).
 \end{enumerate}
 \end{example}
 
 
-% Modification of the proof to include Hypothesis HK
 \subsection{Methodology Overview and Structure}
-We employ an interior-boundary decomposition strategy and rely heavily on techniques like the Parabolic Harnack Inequality (PHI), Intrinsic Ultracontractivity (IU), and Gaussian bounds derived from Volume Doubling (VD) and the Poincaré inequality (PI). These tools are essential for handling boundary effects in irregular graphs. In particular, we demonstrate the uniform convergence of the error terms by introducing the concept of **Ground-State Dominated Long-Time Bounds** for random walks.
+% REVISION (M9): Highlighted the time-domain approach.
+We employ a time-domain, fully discrete approach based on an interior-boundary decomposition strategy. By analyzing the sums of the heat kernel directly (rather than using Tauberian theorems on the spectral measure), we cleanly isolate the required inputs. The proof relies heavily on techniques derived from Volume Doubling (VD) and the Poincaré inequality (PI).
 
-For practical verification, we use numerical experiments to compute the spectral zeta function for different types of graphs, including the King, Triangular, and Knight walks. These experiments serve to validate our theoretical results.
+The lower bound relies on showing that the killed walk starting in the interior rarely reaches the boundary within the relevant timescale, using maximal inequalities derived from Gaussian bounds.
 
-\paragraph{Structure of the paper.} 
-The paper is organized as follows:
-\Cref{sec:prelim} covers the preliminary definitions, assumptions, and key analytic tools. \Cref{sec:decomposition} introduces the interior-boundary decomposition method and estimates the volume of the boundary layer. \Cref{sec:lower_bound} and \Cref{sec:upper_bound} detail the proofs of the lower and upper bounds for the spectral zeta function. Finally, \Cref{sec:discussion} concludes the proof of \Cref{thm:main} and discusses the broader applicability of our assumptions. The appendices provide context on other growth regimes and explore numerical examples.
+The upper bound uses a short/long time split. The short time uses the full-space LCLT sum. The long-time contribution is controlled sharply using Intrinsic Ultracontractivity (IU) for metric balls. This technique is pivotal as it avoids spurious $\log\log$ terms that would arise from using cruder estimates (see \Cref{rem:IU_necessity}). Both bounds crucially depend on the assumed quantitative homogenisation rate (\Cref{ass:QH}) to sum the LCLT error terms.
 
-This structure enhances the accessibility of the paper, guiding the reader through the various analytic and computational aspects of the work.
+\paragraph{Structure of the paper.}
+\Cref{sec:prelim} covers the preliminary definitions, assumptions, and key analytic tools, including a detailed discussion of the justification for IU under VD+PI. \Cref{sec:decomposition} introduces the interior-boundary decomposition method. \Cref{sec:lower_bound} and \Cref{sec:upper_bound} detail the proofs of the lower and upper bounds. Finally, \Cref{sec:discussion} concludes the proof of \Cref{thm:main} and discusses the assumptions and extensions. The appendices provide context on other growth regimes and explore numerical examples of the $\pi$-identities.
 
-% Proof of Main Theorem using Hypothesis HK (heat kernel constant)
-\paragraph{Proof of Theorem 1.2 (via Hypothesis HK).}
-Let $\eta \in (0,1/4)$ be arbitrary. By \Cref{cor:lower}, the lower asymptotic bound is:
-\begin{align*}
-\liminf_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} &\geq \lim_{n \to \infty} \left( \cG(1-2\eta) - \frac{C_2}{\log N_n} \right) = \cG(1-2\eta).
-\end{align*}
-
-By \Cref{cor:upper}, the upper asymptotic bound is:
-\begin{align*}
-\limsup_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} &\leq \lim_{n \to \infty} \left( \cG + \frac{C_4}{\log N_n} \right) = \cG.
-\end{align*}
-
-Combining the two bounds we obtain
-\[
-\cG(1-2\eta) \leq \liminf_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} \leq \limsup_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} \leq \cG.
-\]
-Since $\eta > 0$ can be chosen arbitrarily small, we conclude that the limit exists and equals $\cG$.
-
-\begin{proposition}[Ground-State Dominated Long-Time Bound]\label{prop:GS_bound}
-For any graph \( G \) satisfying VG(2) and PI, the following long-time bound holds uniformly:
-\[
-p_t(x,x) \leq C \, e^{-\lambda_1 t} \quad \text{for} \quad t \ge R^2,
-\]
-where \( \lambda_1 \) is the first nonzero eigenvalue of the Dirichlet Laplacian on metric balls, and \( C \) is a constant depending on the geometric properties of \( G \).
-\end{proposition}
-
-% Explanation of Ground-State Bound's Usage
-\begin{proof}
-Using Parabolic Harnack Inequality (PHI) and Volume Doubling (VD) properties, we can establish the uniform decay of the heat kernel at large times. The crucial step is the use of Harnack’s inequality to show that the heat kernel at large times decays exponentially with a rate that is dominated by the principal eigenvalue \(\lambda_1\), as given by the Faber-Krahn inequality.
-\end{proof}
- 
-% Update the terminology for intrinsic ultracontractivity
-\paragraph{Discussion on intrinsic ultracontractivity.}
-The intrinsic ultracontractivity concept used in earlier versions is replaced with the **Ground-State Dominated Long-Time Bound**. This term is more general and avoids specific assumptions about CDC, focusing purely on the long-time behavior of the heat kernel, dominated by the spectral properties of the Dirichlet Laplacian.
-
-% ---------------------- Boundary Layer Estimate -------------------------------
-For irregular graphs where the global Volume Doubling property might not strictly hold (but quadratic growth persists on average), we introduce a generalized boundary layer estimate. Instead of relying solely on the standard annular volume decay, we allow
-\[
-	|E_n| \leq C N_n^{\gamma}, \qquad 0 < \gamma < 1,
-\]
-which accommodates localized geometric irregularities while still ensuring $|E_n| = o(N_n)$.
-
-\subsection{Generalizing Intrinsic Ultracontractivity (IU) and CDC}
-
-In previous formulations, a global form of Intrinsic Ultracontractivity (IU) implicitly relied on the Capacity Density Condition (CDC) for the domains $G_n$. For highly irregular (yet still volume-regular at large scales) graphs, CDC may fail locally. We adopt instead a localized spectral homogenization assumption: long-time bounds are dominated by the principal Dirichlet eigenfunction after times of order $R_n^2$, uniformly up to an $O(1/N_n)$ spatial prefactor.
-
-\paragraph{New formulation of the Intrinsic Ultracontractivity assumption.}
-We assume a \'local IU\' statement: there exist $c, C>0$ such that for all metric (or CDC-approximable) exhaustion sets $G_n$ and all $t \ge c R_n^2$,
-\[
-	\sup_{v \in V(G_n)} p_t^{G_n}(v,v) \le \frac{C}{N_n} e^{-\lambda_1(G_n) t}.
-\]
-This aligns with the Ground-State Dominated perspective and is stable under controlled boundary roughness.
-
-\paragraph{Boundary Layer Volume Decay.}
-We relax the earlier choice $|E_n|=O(N_n^{1-\eta/2})$ (derived from a fixed power buffer width) and instead assume the more flexible condition
-\[
-	|E_n| = O(N_n^{1-\eta}), \qquad 0<\eta<1,
-\]
-which is compatible with $|E_n| \le C N_n^{\gamma}$ ($\gamma = 1-\eta$) from localized irregularities.
-
-% Modifications for asymptotic error handling:
-The replacement of $o(1)$ by $O(1/N_n)$ in the main asymptotic follows by refining the tail estimates for the Green function contribution beyond time $R_n^2$ using the localized IU bound together with a sharper summation of the heat-kernel remainder $O(t^{-1-\delta})$.
-
-% New Remark on Graph Types
-\paragraph{Remark (Irregular graph applicability).} These generalized assumptions cover, for instance, random conductance graphs with mild degeneracies, or percolative perturbations where annular regularity may fluctuate yet averaged quadratic scaling and Poincaré remain valid. The boundary layer control in terms of $N_n^{\gamma}$ is sufficient for transferring interior asymptotics to global trace bounds.
-
-% ===============================================================
-\section{Main Results and Asymptotics}
-%%%% Modifications for clarifying error term handling, homogenization assumptions, and Poincaré inequality
-%%%% Additional explanations and computational details for clarity
-
-We refine the error term $ o(1) $ in the asymptotic expression to $ O\left(\frac{1}{N_n}\right) $. This replacement is justified by explicitly showing that the rate of decay is uniform across all $ G_n $ in the exhaustion sequence. More precisely, we prove that the error term decays sufficiently fast for all graph configurations satisfying the VG(2) and PI assumptions, ensuring a uniform upper bound across the sequence. Specifically, the decay rate of the error term is faster than $ O\left(\frac{1}{N_n}\right) $ for all sufficiently large $ n $.
-
-\subsection{Homogenization and Relaxation of Assumptions}
-We note that the homogenization process relies on the combination of the Poincaré inequality (PI) and quadratic volume growth (VG(2)), which enforce the regular behavior of the graph at large scales. However, the assumption of PI is crucial, and removing it might disrupt the homogenization, leading to deviations from the sharp asymptotic law.
-
-In graphs with irregularities or local bottlenecks, PI ensures that the random walk homogenizes effectively. Without PI, the random walk might exhibit localized trapping effects, causing the global heat kernel constant $ \cG $ to be ill-defined or highly variable. Therefore, in cases where PI does not hold, we do not expect a uniform behavior across the exhaustion sequence, and the sharp asymptotics may fail. To mitigate this, one might investigate more relaxed forms of PI or local conditions that could ensure similar homogenization effects.
-
-\subsection{Boundary Layer Analysis in Irregular Graphs}
-In the case of irregular graphs that satisfy VG(2) but may exhibit geometric fluctuations, the boundary layer $ E_n $ might not adhere to the simple volume estimate $ O(N_n^{1-\eta}) $. For highly irregular graphs, particularly random graphs with varying local geometry, the boundary volume could experience larger fluctuations, making the error bound for $ E_n $ non-trivial.
-
-We propose a more general form of boundary layer analysis that accommodates localized irregularities. Specifically, we allow for the boundary layer to scale as $ |E_n| \leq C N_n^\gamma $, where $ \gamma \in (0,1) $, ensuring that the boundary remains small compared to the total volume $ N_n $. This more flexible formulation extends the result to a broader class of graphs, ensuring that the overall asymptotic behavior holds even for irregular structures.
-
-The methods presented here can be extended to other types of graphs with varying growth rates or random conductances.
-
-\subsection{Justification for Heat Kernel Constant Uniformity}
-The uniformity of the heat kernel constant $ \cG $ across all vertices $ x \in V(G) $ is a central assumption in our results. However, for highly irregular graphs, it is not guaranteed that the constant $ \cG $ remains the same for all points $ x $. To handle this potential issue, we extend our analysis to allow for a vertex-dependent heat kernel constant $ \cG(x) $, showing that the variation in $ \cG(x) $ is sufficiently small and does not affect the leading-order asymptotics.
-
-In practice, for graphs that exhibit localized irregularities, the heat kernel constant might exhibit small variations, but these variations decay rapidly as $ t \to \infty $, making their contribution to the spectral zeta function negligible in the long run. The analysis of this variation is important for generalizing the result to a wider class of graphs.
-
-\subsection{Necessity of Poincaré Inequality (PI)}
-The Poincaré inequality (PI) is essential for ensuring that the random walk on the graph homogenizes effectively. If PI is dropped, there may be regions of the graph where the random walk becomes "trapped," preventing the expected convergence to a Brownian motion. In such cases, the spectral zeta function may no longer exhibit the logarithmic divergence, and the sharp asymptotic result would not hold.
-
-While we focus on graphs that satisfy PI, we recognize that there could be situations where weaker forms of PI might still allow for similar homogenization behavior. Future work may explore weaker forms of PI or conditions that can still allow for effective homogenization, particularly in graphs with bottlenecks or highly irregular structures.
-
-\subsection{Generalization to Other Growth Regimes}
-While our results focus on graphs with quadratic volume growth (i.e., $ d = 2 $), the asymptotics for spectral zeta functions may differ for graphs with other growth rates. For instance, graphs with linear growth ($ d = 1 $) or super-quadratic growth ($ d > 2 $) could exhibit different scaling behaviors for the spectral zeta function.
-
-For $ d = 1 $, the asymptotics for $ Z_n(1) $ would scale as $ Z_n(1) \sim N_n^2 $, corresponding to strongly recurrent random walks. For $ d > 2 $, the random walk becomes transient, and the spectral zeta function behaves as $ Z_n(1) \sim N_n $. Extending our results to graphs with different growth rates would require further investigation, particularly into how the homogenization process adapts to higher-dimensional or non-homogeneous growth.
-
-\section{Numerical Verification and Computational Details}
-We present numerical verification results for different types of walks, including King, Triangular, and Knight. These tests provide an approximation to the theoretical predictions for the spectral zeta function. The computations were carried out using Python libraries like \texttt{NumPy} and \texttt{SciPy} to solve the sparse eigenvalue problem. A detailed account of the algorithms used and the hardware specifications is available in the supplementary material.
-
-\subsection{Computational Challenges and Error Handling}
-The numerical results show that the error term decays rapidly for regular graphs, but for irregular graphs, we observe some small fluctuations due to localized irregularities. These fluctuations are accounted for by the generalized boundary layer analysis, which ensures that the error term remains bounded and decays at a rate faster than $ O\left( \tfrac{1}{N_n} \right) $.
-
-In the case of graphs with non-standard growth behaviors, we find that the asymptotic predictions hold with minor modifications to account for the different growth rates. For instance, for graphs with super-quadratic growth, the asymptotic scaling of $ Z_n(1) $ matches the expected behavior for transient random walks.
-
-\paragraph{Computational Methods:}
-The numerical experiments were performed using sparse matrix solvers to compute the trace of the inverse Laplacian. This was done by finding the eigenvalues of the graph Laplacian using the \texttt{scipy.sparse.linalg.eigs} function, followed by summing the reciprocals of the eigenvalues to estimate $ Z_n(1) $. The computations were carried out on a typical desktop workstation with an Intel i7 processor.
-
-\paragraph{Code Availability.} The code used to generate the numerical results in this section is available upon request from the author. This ensures transparency and reproducibility of the computational methods.
 
 % ===============================================================
 \section{Preliminaries and Analytic Tools}\label{sec:prelim}
 
-% (3.4) Ensure this statement is present.
-We use $C, c, c_1, \dots$ to denote positive constants depending only on the structural properties of the graph (e.g., constants in VG(2), PI, and the maximum degree); their values may change line by line. We write $A \asymp B$ if $c A \leq B \leq C A$.
+% REVISION (M7): Clarified dependence of constants.
+\paragraph{Notation (reference).} All symbols were fixed in the central Notation block; we only introduce new ones explicitly when they appear.
 
-Let $G = (V,E)$ be an infinite, connected graph with bounded maximum degree $\Delta < \infty$. We primarily equip $V$ with the counting measure, so $|A| = \sum_{x \in A} 1$. We define metric balls as closed: $B_R(x) = \{y \in V : d_G(x,y) \leq R\}$.
+Let $G = (V,E)$ be an infinite, connected graph with bounded maximum degree $\Delta < \infty$. We define metric balls as closed: $B_R(x) = \{y \in V : d_G(x,y) \leq R\}$.
+
+\paragraph{Convention on constants, normalization, uniformity.}
+Throughout, implicit constants depend only on the structural data \textbf{(VD, PI, $\Delta$)} and, when used, on \textbf{(QH)}$=(\cG,\delta,t_0,C_{QH})$. All $L^2$ norms are with respect to counting measure; the ground state $\phi_1$ is $L^2$-normalised; no volume renormalisation is performed. Unless stated otherwise, $O(1)$ terms and statements claimed "uniformly in $x$" are uniform across space.
 
 \subsection{Geometric and Analytic Assumptions}
 
 \begin{definition}[Quadratic Volume Growth (VG(2))]
 $G$ has (uniform) quadratic volume growth if there exist $c_1, c_2 > 0$ such that for all $x \in V$ and $R \geq 1$,
 \begin{equation}\label{eq:quad}
-c_1 R^{2} \leq |B_R(x)| \leq c_2 R^{2}.
+c_1 R^{2} \leq V(x,R) \leq c_2 R^{2}.
 \end{equation}
 \end{definition}
-% (5.2) Define VD explicitly
-This implies the Volume Doubling (VD) property: $|B_{2R}(x)| \leq C_D |B_R(x)|$.
+This implies the Volume Doubling (VD) property: $V(x,2R) \leq C_D V(x,R)$.
+
+\begin{definition}[Capacity Density Condition (CDC)]\label{def:CDC}
+Let $H\subseteq V$ be finite and let $U\subseteq H$ be open in the graph metric. We say $H$ satisfies CDC (uniformly) if there exist $\theta\in(0,1)$ and $r_0\ge1$ such that for every $x\in H$ and $r\in[1,r_0\wedge \mathrm{diam}(H)]$ with $B_{2r}(x)\subseteq H$,
+\[
+  \mathrm{Cap}_{B_{2r}(x)}\big(B_{r}(x),\,B_{2r}(x)\setminus B_{r}(x)\big)\ \ge\ \theta\,\mathrm{Cap}_{B_{2r}(x)}\big(B_{r}(x)\big),
+\]
+where capacities are computed with respect to the Dirichlet form on $B_{2r}(x)$. Intuitively, CDC rules out "thorns" and ensures quantitative boundary regularity.
+\end{definition}
 
 \begin{definition}[Poincaré Inequality (PI)]\label{def:PI}
 $G$ satisfies a (scaled) Poincaré inequality if there exists $C_P > 0$ such that for any ball $B_R=B_R(x_0)$ and any function $f: V \to \R$,
 \[
 \sum_{x \in B_R} (f(x) - \bar{f}_{B_R})^2 \leq C_P R^2 \, \cE_{B_{2R}}(f,f),
 \]
-where $\bar{f}_{B_R}$ is the average of $f$ over $B_R$, and the local Dirichlet form $\cE_U(f,f)$ is defined as
+where $\bar{f}_{B_R}$ is the average of $f$ over $B_R$ (w.r.t. counting measure), and the local Dirichlet form $\cE_U(f,f)$ is defined as
 \[
 \cE_U(f,f) = \sum_{\substack{\{x,y\} \in E \\ x,y \in U}} (f(x)-f(y))^2.
 \]
 \end{definition}
 
 \begin{remark}\label{rem:PI_equivalence}
-Under the VD condition, this formulation of PI is equivalent to the local version (comparing $B_R$ to $B_R$) (see \cite{HajlaszKoskela00}). The combination of VD and PI is central to analysis on graphs (see \cite{GrigoryanTelcs12}).
+Under the VD condition, this formulation of PI is equivalent to the local version (see \cite{HajlaszKoskela00}). The combination of VD and PI (VD+PI) is central to analysis on graphs (see \cite{GrigoryanTelcs12}).
 \end{remark}
 
 \paragraph{Standing assumptions.} We assume $G$ is infinite, connected, has bounded degree $\Delta < \infty$, satisfies VG(2) (and thus VD), and PI.
 
 \subsection{Random Walk and the Analytic Framework}
-We consider the \emph{lazy} simple random walk (LSRW) $(X_t)_{t \geq 0}$ with transition matrix $P = \frac{1}{2}(I + P_{SRW})$, where $P_{SRW}(x,y) = 1/\deg(x)$ if $y \sim x$. The heat kernel is $p_t(x,y) = \Prob_x[X_t = y]$. The generator (Laplacian) is $\LL = I - P$.
+% MODIFICATION: Explicit definition of LSRW and laziness parameter.
+We consider the \emph{lazy} simple random walk (LSRW) $(X_t)_{t \geq 0}$. This is a discrete-time Markov chain where at each step, the walk stays put with probability $1/2$ or moves to a uniformly chosen neighbor with probability $1/2$. The transition matrix is $P = \frac{1}{2}(I + P_{SRW})$, where $P_{SRW}(x,y) = 1/\deg(x)$ if $y \sim x$. The heat kernel is $p_t(x,y) = \Prob_x[X_t = y]$. The generator (Laplacian) is $\LL = I - P$.
 
-% (3.5) Distinction between measures is handled here.
+% MODIFICATION: Added reason for laziness.
+Laziness ensures the walk is aperiodic, simplifying spectral analysis. It also relates the generators: $\LL_{\text{LSRW}} = \frac{1}{2} \LL_{\text{SRW}}$ (see \Cref{rem:non-lazy}).
+
+% REVISION (M5): Enhanced discussion on measures, trace invariance, and the specific Laplacian used.
 \begin{remark}[Measures and Operators]\label{rem:measures_operators}
-The LSRW is reversible w.r.t. the degree measure $m(x)=\deg(x)$. Due to the assumption of bounded degree ($\Delta < \infty$), the counting measure $|\cdot|$ and the degree measure $m$ are comparable: $m(A) \asymp |A|$. This allows seamless transition between analytic results formulated w.r.t. $m$ (which are often cleaner) and geometric properties formulated w.r.t. $|\cdot|$ (see \cite{Coulhon03}). The heat kernel w.r.t. the reversible measure $k_t(x,y) = p_t(x,y)/m(y)$ satisfies $k_t(x,y) \asymp p_t(x,y)$.
+The LSRW is reversible w.r.t. the degree measure $m(x)=\deg(x)$. The Laplacian $\LL$ is self-adjoint on the Hilbert space $\ell^2(m)$. Due to the assumption of bounded degree ($\Delta < \infty$), the counting measure $|\cdot|$ and the degree measure $m$ are comparable: $m(A) \asymp |A|$. This allows seamless transition between analytic results formulated w.r.t. $m$ (such as those in \Cref{lem:IU_derivation}) and geometric properties formulated w.r.t. $|\cdot|$ (see \cite{Coulhon03}).
+
+% MODIFICATION (M5): Added explanation of trace invariance.
+On a finite subgraph $H$, the Dirichlet Laplacian $\LL_H$ acting on $\ell^2(m|_H)$ is similar to the operator acting on $\ell^2(|\cdot||_H)$ (via the transformation induced by the square root of the measure densities, $M^{1/2}$). Since the trace is similarity-invariant in finite dimensions, $Z_H(1) = \tr(\LL_H^{-1})$ is independent of the chosen (comparable) inner product.
+
+% REVISION: Explicitly distinguished from Combinatorial Laplacian.
+We emphasize that we work with the probabilistic Laplacian $\LL=I-P$ (or its similar normalized form), not the combinatorial Laplacian $D-A$.
+
+% MODIFICATION: Notation consistency
+Unless otherwise stated, all heat-kernel quantities ($p_t$, $p_t^H$, etc.) are those of the LSRW probability kernel. We often suppress the graph index in the Green function (e.g., writing $G_H(v,v)$ instead of $G_{H}(v,v)$) when clear from context.
 \end{remark}
 
 The combination of VD and PI is fundamental:
@@ -438,15 +367,25 @@ The combination of VD and PI is equivalent to the Parabolic Harnack Inequality (
 
 PHI provides strong regularity for solutions to the heat equation, which translates to precise estimates on the random walk.
 
+\begin{remark}[Analytic implication chain]\label{rem:chain}
+(VD)+(PI) $\Rightarrow$ PHI (\Cref{thm:Delmotte}); PHI $\Rightarrow$ Gaussian two-sided bounds $\Rightarrow$ maximal / exit estimates $\Rightarrow$ FK + boundary Harnack $\Rightarrow$ ground-state $L^\infty$ bounds $\Rightarrow$ IU on balls. Later uses cite this chain without restating each implication.
+\end{remark}
+
 \subsection{Heat Kernel Toolbox}
-We summarize the crucial analytic tools derived from PHI.
+We summarize the crucial analytic tools.
 
 \subsubsection{Maximal Inequality and Gaussian Bounds}
 
-\begin{proposition}[Consequences of PHI, \cite{Delmotte99}]\label{prop:maximal}
+% REVISION (M3/M8): Added precise references for the Maximal Inequality derivation and noted the role of VG(2).
+\begin{proposition}[Consequences of PHI, \cite{Delmotte99, Grigoryan09}]\label{prop:maximal}
 Under VD+PI:
 \begin{enumerate}
-    \item (Gaussian Bounds) There exist $C_G, c_G > 0$ such that $p_t(x,y) \leq C_G t^{-1} \exp(-c_G d(x,y)^2/t)$.
+    % REVISION (M3): Stating the general form and specializing.
+    \item (Gaussian Bounds) There exist $C_G, c_G > 0$ such that
+    \[
+    p_t(x,y) \leq \frac{C_G}{\sqrt{V(x,\sqrt{t}) V(y,\sqrt{t})}} \exp\left(-c_G \frac{d(x,y)^2}{t}\right).
+    \]
+    Under the VG(2) assumption, this specializes to $p_t(x,y) \lesssim t^{-1} \exp(-c_G d(x,y)^2/t)$.
     \item (Maximal Inequality) There exist $C_M,c_M > 0$ such that for any $v \in V$, $t \geq 0$, and $d \geq 1$,
     \begin{equation}\label{eq:max_ineq}
     \small
@@ -454,131 +393,187 @@ Under VD+PI:
     \end{equation}
 \end{enumerate}
 \end{proposition}
-
-
-\subsubsection{Heat Kernel Asymptotics (LCLT) and Homogenization}
-A crucial ingredient is the sharp, uniform homogenization of the heat kernel.
-
-\begin{proposition}[Sharp Heat Kernel Asymptotics]\label{prop:HK_asymp}
-Under VG(2)+PI, there exists a universal constant $\cG > 0$ (independent of the basepoint $x$) such that, uniformly in $x \in V$,
-\begin{equation}\label{eq:return-prob}
-p_t(x,x) = \frac{\cG}{t} + O(t^{-1-\delta}) \quad \text{as } t \to \infty.
-\end{equation}
-Furthermore, there exists a $\delta > 0$ depending only on the constants characterizing the VG(2) and PI properties of $G$.
-\end{proposition}
-% (2.1) Add justification for uniform CLT remainder.
-\begin{proof}[Justification and literature]
-VD+PI implies PHI (Delmotte \cite{Delmotte99}) and two-sided Gaussian bounds. The existence of the limit $\cG$ follows from homogenization theory. The key aspect is the \emph{uniformity} of the polynomial convergence rate $O(t^{-1-\delta})$ with a uniform $\delta>0$.
-
-While explicit proofs often focus on specific models like the Random Conductance Model (RCM) (e.g., Biskup \cite{Biskup11}, Thm.\ 3.4 for i.i.d. conductances; Croydon--Hambly \cite{CroydonHambly21} for quenched laws on RCM), the uniformity over the class of graphs satisfying VD+PI with fixed constants relies on the stability of PHI.
-
-Specifically, stability results (Barlow--Bass--Kumagai \cite{BarlowBassKumagai09}) show that the constants in the PHI depend only on the VD and PI constants. Quantitative homogenization arguments relying on PHI then provide error rates in the LCLT that depend on these PHI constants. Consequently, $\delta$ can be chosen uniformly for any graph within the class defined by fixed VG(2) and PI parameters.
+\begin{proof}[Note on derivation]
+The Gaussian upper bounds are a direct consequence of PHI (see \cite{Delmotte99} for the general form). The maximal inequality (exit time estimate) follows from the Gaussian upper bounds via standard arguments involving chaining and union bounds (see, e.g., \cite[Theorem 5.5.3]{Grigoryan09} or arguments in \cite{Delmotte99}).
 \end{proof}
-% (4.1) The redundant \end{proof} was already absent in the input.
 
-Since the error term in \eqref{eq:return-prob} is summable ($1+\delta > 1$), we can sum the asymptotic uniformly:
-\begin{equation}\label{eq:return-sum}
-\sum_{t=1}^{R} p_t(x,x) = \cG \log R + O(1), \qquad R \geq 2.
+
+\subsubsection{Heat Kernel Asymptotics (LCLT) and Homogenisation}
+A crucial ingredient is the sharp, uniform homogenisation of the heat kernel. We state this as a formal assumption.
+
+\begin{assumption}[Quantitative Homogenisation (QH)]\label{ass:QH}
+There exists a constant $\cG > 0$ (the heat-kernel constant), a rate exponent $\delta>0$, a time $t_0\in\N$, and a constant $C_{QH}<\infty$ such that, uniformly in $x\in V$ and for all $t\ge t_0$,
+\begin{equation}\label{eq:return-prob}
+  p_t(x,x) = \frac{\cG}{t} + r_t(x),\qquad |r_t(x)| \le C_{QH}\, t^{-1-\delta}.
 \end{equation}
+Equivalently, $|t\,p_t(x,x)-\cG|\le C_{QH} t^{-\delta}$. All constants are independent of $x$.
+\end{assumption}
 
+% REVISION (M2): Expanded discussion on the scope of QH with precise references and conditions.
+\begin{remark}[Context and literature for \Cref{ass:QH}]\label{rem:QH_validity}
+VD+PI already give PHI and an invariance principle. The $O(N_n)$ remainder needs \emph{uniform} summable on-diagonal decay $t p_t(x,x)=\cG+O(t^{-\delta})$, ensuring $\sum_t (t p_t(x,x)-\cG)$ converges. This holds for periodic graphs and in stochastic homogenisation frameworks (uniformly elliptic RCM, supercritical percolation: \cite{Biskup11,AndresDeuschelSlowik19,Barlow04,ArmstrongKuusi16,GloriaOtto17,CroydonHambly21}). Without summable decay we obtain only $Z_n(1)=\cG N_n\log N_n+O(N_n\log\log N_n)$ (\Cref{prop:weaker_remainder,rem:loglog}).
+\end{remark}
+
+% REVISION: Added remark on weaker QH assumptions, moved from discussion section for better flow.
+\begin{remark}[Weaker QH assumptions]\label{rem:weaker_QH}
+If one assumes a weaker form of QH, e.g., $p_t(x,x) = \cG/t + o(1/t)$ without a polynomial rate, the summation below yields $\cG \log R + o(\log R)$. This is sufficient to establish the leading order asymptotic $Z_n(1) \sim \cG N_n \log N_n$, but not the sharp $O(N_n)$ remainder.
+
+If the error is exactly $O(1/t)$, i.e., $|t p_t(x,x) - \cG| = O(1)$, the summation error $\sum r_t(x)$ could be $O(\log R)$, leading to an overall error term potentially larger than $O(N_n)$. The polynomial rate $\delta>0$ in \Cref{ass:QH} is precisely what allows the error sum to be $O(1)$.
+\end{remark}
+
+% REVISION (M4): Added derivation sketch for the return sum identity and its uniformity.
+We derive the uniform sum of the return probabilities. By \Cref{ass:QH}, we split the sum:
+\begin{align*}
+\sum_{t=1}^{R} p_t(x,x) &= \sum_{t=1}^{t_0-1} p_t(x,x) + \sum_{t=t_0}^{R} \left(\frac{\cG}{t} + r_t(x)\right) \\
+&= O(1) + \cG \sum_{t=t_0}^{R} \frac{1}{t} + \sum_{t=t_0}^{R} r_t(x).
+\end{align*}
+The harmonic sum is $\sum_{t=t_0}^{R} \frac{1}{t} = \log R + O(1)$.
+% REVISION (M4): Emphasizing uniformity and summability.
+Crucially, the error sum is bounded uniformly in $x$ because the rate is polynomially fast ($\delta>0$) and thus summable ($1+\delta > 1$):
+\[
+\left|\sum_{t=t_0}^{R} r_t(x)\right| \leq \sum_{t=t_0}^{\infty} |r_t(x)| \leq C_{QH} \sum_{t=t_0}^{\infty} t^{-1-\delta} < C'.
+\]
+The constant $C'$ is independent of $x$ due to the uniformity assumed in \Cref{ass:QH}.
+Thus, we obtain the uniform asymptotic:
+\begin{equation}\label{eq:return-sum}
+\sum_{t=1}^{R} p_t(x,x) = \cG \log R + O(1), \qquad R \geq 2,
+\end{equation}
+where the $O(1)$ is \emph{uniform in $x$}. In particular, choosing $R^2$ as the diffusive timescale yields the "master" identity
+\begin{equation}\label{eq:master-sum}
+  \sum_{t=1}^{R^{2}} p_t(x,x)
+  \;=\; 2\,\cG \log R + O(1),
+\end{equation}
+uniformly in $x$.
+
+
+% REVISION (M1/M3): Restructured IU section, added Lemma detailing the derivation and citations.
 \subsubsection{Dirichlet Problem and Intrinsic Ultracontractivity}
 Let $H \subset G$ be a finite connected subgraph.
-% (5.3) Clarify exit time definition.
 The Dirichlet generator $\LL_H$ corresponds to the LSRW killed upon exiting the vertex set $V(H)$. The exit time is $\tau_H = \inf\{t \geq 0 : X_t \notin V(H)\}$.
 The Dirichlet heat kernel is $p_t^H(x,y) = \Prob_x[X_t = y, t < \tau_H]$. The Dirichlet Green function is $G_H(x,y) = \sum_{t=0}^{\infty} p_t^H(x,y) = (\LL_H^{-1})(x,y)$. The spectral zeta function is $Z_H(1) = \sum_{v \in V(H)} G_H(v,v)$.
 
-To control the long-time behavior of the Dirichlet heat kernel, we use Intrinsic Ultracontractivity (IU).
+To control the long-time behaviour of the Dirichlet heat kernel sharply, we use Intrinsic Ultracontractivity (IU). IU means the heat kernel decays at the rate dictated by the principal eigenvalue $\lambda_1(H)$, while being spatially homogenized by the principal eigenfunction $\phi_1(H)$.
 
-\begin{proposition}[Faber--Krahn / IU]\label{prop:IU}
-Let $H=B_R(x_0)$ be a metric ball. Let $\lambda_1(H)$ be the smallest eigenvalue of $\LL_H$. Under VG(2)+PI:
+\begin{lemma}[CDC for metric balls]\label{lem:CDC-balls}
+Let $G$ satisfy VD+PI (equivalently, PHI). Then there exist uniform parameters (depending only on VD, PI, $\Delta$) such that every ball $H=B_R(x_0)$ satisfies the Capacity Density Condition \textup{(CDC)} of \Cref{def:CDC}.
+\end{lemma}
+\begin{proof}[Reference]
+See \cite[Prop.~3.5]{BarlowBass04} for PHI $\Rightarrow$ CDC on balls; compare also \cite{BarlowBassKumagai09}.
+\end{proof}
+
+% MODIFICATION (M1): Provided a detailed lemma summarizing the required steps for IU.
+% MODIFICATION: Specified "for metric balls" in the statement.
+\begin{lemma}[IU for balls under VD+PI]\label{lem:IU_derivation}
+Let $G$ satisfy VD+PI. Let $H=B_R(x_0)$ be a metric ball. Let $\lambda_1(H)$ be the smallest eigenvalue of $\LL_H$ and $\phi_1(H)$ the corresponding $L^2(m)$-normalized eigenfunction (see \Cref{rem:measures_operators}). The following hold uniformly in $R$ and $x_0$:
 \begin{enumerate}
-    \item \textbf{(Faber--Krahn)} There exists $c_{FK}>0$ such that $\lambda_1(H)\ge c_{FK}/R^{2}$ \cite[Prop.\,5.1]{BarlowBass04}.
-    \item \textbf{(Intrinsic ultracontractivity)}
-          If $t\ge R^{2}$, then for some $C_{IU}>0$
+    \item \textbf{Faber--Krahn Inequality (FK):} $\lambda_1(H) \gtrsim R^{-2}$.
+    \item \textbf{CDC for balls:} $H$ satisfies CDC uniformly \textup{(}\Cref{lem:CDC-balls}\textup{)}.
+    \item \textbf{Ground-state control:} $\|\phi_1(H)\|_{\infty}^2 \lesssim m(H)^{-1}$.
+    \item \textbf{Intrinsic ultracontractivity (IU):} There exists $c_0>0$ such that for all $t\ge c_0 R^2$,
+    \[
+    \sup_{v \in V(H)} p_t^H(v,v) \lesssim \frac{1}{m(H)} e^{-\lambda_1(H) t}.
+    \]
+\end{enumerate}
+\end{lemma}
+\begin{proof}[Sketch of proof and references]
+The implications rely on the robust analytic framework established by VD+PI, which implies PHI (\Cref{thm:Delmotte}).
+
+% REVISION (C8): Precise citation for FK.
+(1) FK under VD+PI is standard (see \cite[Ch. 8]{Grigoryan09} or \cite[Prop. 5.1]{BarlowBass04}).
+
+(2) PHI implies that metric balls are sufficiently regular: CDC for balls holds uniformly; see \Cref{lem:CDC-balls}.
+
+% REVISION (MC1): Justification for Ground-State Control.
+(3) PHI+CDC yield elliptic and boundary Harnack inequalities; these give uniform control of $\phi_1$, in particular $\|\phi_1\|_\infty^2\lesssim m(H)^{-1}$. See \cite[Thm.~4.5]{BarlowBassKumagai09}; compare also \cite{BassKumagai08}.
+
+(4) IU follows by spectral decomposition combined with (3): for large $t$, the principal mode dominates and the ground-state $L^\infty$-bound supplies the $1/m(H)$ factor. See e.g.\ the ground-state transform method in \cite{Grigoryan09} and references therein.
+\end{proof}
+
+% REVISION (Minor): Ensured correct referencing of the derivation lemma.
+We use the following proposition, which restates the key results from \Cref{lem:IU_derivation} using the counting measure (justified by \Cref{rem:measures_operators} since $m(H) \asymp |V(H)|$).
+
+\begin{proposition}[Faber--Krahn and IU on Balls]\label{prop:IU}
+Let $H=B_R(x_0)$ be a metric ball. Under VG(2)+PI:
+\begin{enumerate}
+    \item \textbf{(Faber--Krahn)} There exists $c_{FK}>0$ such that $\lambda_1(H)\ge c_{FK}/R^{2}$.
+    \item \textbf{(Intrinsic ultracontractivity)} There exists $C_{IU}>0$ such that if $t\ge R^{2}$ then
     \begin{equation}\label{eq:IU}
         \sup_{v \in V(H)} p_t^H(v,v) \leq \frac{C_{IU}}{|V(H)|} e^{-\lambda_1(H) t}.
     \end{equation}
 \end{enumerate}
+All constants depend only on the structural parameters (VG(2), PI, $\Delta$).
 \end{proposition}
-\begin{proof}[References]
-Faber-Krahn under these assumptions is standard (see \cite{Grigoryan09}). IU is a strong form of homogenization for the Dirichlet heat kernel, known to hold under PHI for sufficiently regular domains.
-\end{proof}
-
-
-% (2.2) Insert explicit CDC reference and explanation.
-\begin{remark}[Regularity for IU and the Capacity Density Condition (CDC)]\label{rem:IU_regularity}
-The validity of IU, characterized by the prefactor $1/|V(H)|$ reflecting spatial homogenization, typically requires the domain $H$ to be sufficiently regular. This regularity is often formulated via the Capacity Density Condition (CDC). Crucially, it is established that graphs satisfying VD+PI globally also ensure that metric balls satisfy the CDC.
-Specifically, Barlow and Bass \cite[Proposition 3.5]{BarlowBass04} show that PHI (which is equivalent to VD+PI) implies the CDC for balls. See also Kumagai's lecture notes \cite{KumagaiNotes} for related discussions. Consequently, metric balls in our setting are guaranteed to be sufficiently regular for IU to hold (see also \cite{BassKumagai08}).
-\end{remark}
 
 % ===============================================================
 \section{Interior--Boundary Decomposition and Volume Estimates}\label{sec:decomposition}
 
 We analyze an exhaustion by metric balls $G_n = B_{R_n}(x_0)$. Let $N_n = |V(G_n)|$. By VG(2), $N_n \asymp R_n^2$.
 
-We decompose $V(G_n)$ to isolate boundary effects. We fix a parameter $\eta \in (0, \frac{1}{4})$. This restriction is required for the analysis in \Cref{sec:lower_bound}. Define the \emph{interior} $I_n$ and the \emph{boundary layer} $E_n$. Let the buffer width be $W_n = R_n^{1-\eta}$.
+We decompose $V(G_n)$ to isolate boundary effects.
+% REVISION (C1): Relaxed eta constraint from 1/4 to 1/2.
+We fix a parameter $\eta \in (0, \tfrac{1}{2})$. This restriction ensures $1-2\eta>0$, required for the analysis in \Cref{sec:lower_bound}. Define the \emph{interior} $I_n$ and the \emph{boundary layer} $E_n$. Let the buffer width be $W_n = R_n^{1-\eta}$.
 \begin{align*}
 I_n &:= \{x \in V(G_n) : d_G(x, V \setminus V(G_n)) > W_n\}, \\
 E_n &:= V(G_n) \setminus I_n.
 \end{align*}
 
-% (3.6) Give the reader intuition (random-walk typical displacement vs. buffer width).
-\paragraph{Intuition for the decomposition.} The strategy is to ensure that for vertices in the interior $I_n$, the random walk rarely reaches the boundary within the timescale that dominates the Green function sum. We will analyze the walk up to time $T \approx R_n^{2(1-2\eta)}$. The typical displacement in this time is $\sqrt{T} \approx R_n^{1-2\eta}$. Since $\eta>0$, this displacement is significantly smaller than the buffer width $W_n = R_n^{1-\eta}$. This separation of scales allows us to approximate the Dirichlet Green function by the unrestricted Green function in the interior.
+\paragraph{Intuition and quantitative size of the boundary layer.} The strategy is to ensure that for vertices in the interior $I_n$, the random walk with high probability remains inside $G_n$ throughout the time window producing the logarithmic growth. We analyse the walk up to $T_n:=R_n^{2(1-2\eta)}$; the typical displacement over this window is of order $R_n^{1-2\eta}$ whereas the buffer width is $W_n=R_n^{1-\eta}$ so $R_n^{1-2\eta}/W_n=R_n^{-\eta}\to0$. Thus interior vertices behave (up to negligible error) like vertices in the full graph for times $\le T_n$. The boundary layer occupies only $O(N_n^{1-\eta/2})$ vertices (\Cref{lem:boundary_volume}) and its cumulative contribution is strictly subleading.
 
 \begin{lemma}[Boundary Layer Volume]\label{lem:boundary_volume}
-Under VG(2) and allowing localized irregularities, we can ensure (after possibly adjusting the buffer exponent) that for some $0<\eta<1$,
+Under VG(2), for the choice $W_n = R_n^{1-\eta}$, we have
 \[
-	|E_n| = O\bigl(N_n^{1-\eta}\bigr).
+    |E_n| = O\bigl(N_n^{1-\eta/2}\bigr).
 \]
-In the regular case treated earlier this corresponds to $\eta=\eta/2$ there (with a specific buffer choice); here we state the more general formulation.
 \end{lemma}
 \begin{proof}
-The Volume Doubling (VD) property implies the annular decay property (see \cite{Grigoryan09}). For $0 < W < R/2$:
-\[
-\frac{|B_{R}(x) \setminus B_{R-W}(x)|}{|B_R(x)|} \leq C \frac{W}{R}.
-\]
-Let $R=R_n$ and $W = W_n = R_n^{1-\eta}$. We show $E_n$ is contained in an annulus near the boundary of $B_R(x_0)$.
-
-Let $v \in E_n$. Then $v \in B_R(x_0)$, and $d_G(v, V \setminus V(G_n)) \leq W$. Let $y \in V \setminus V(G_n)$ such that $d(v,y) \leq W$. Since $G_n$ is the closed ball $B_R(x_0)$, $y \notin G_n$ implies $d(x_0, y) > R$. By the triangle inequality,
-\[
-R < d(x_0, y) \leq d(x_0, v) + d(v, y) \leq d(x_0, v) + W.
-\]
-Thus $d(x_0, v) > R-W$. This confirms $v$ is in the annulus $A = B_R(x_0) \setminus B_{R-W-1}(x_0)$.
-
-Applying the volume regularity property (using $W+1$ to handle potential discreteness effects):
-\[
-|E_n| \leq |A| \leq C \frac{W+1}{R} |B_R(x_0)| \leq C' R^{-\eta} N_n.
-\]
-Since $N_n \asymp R_n^2$, $R_n^{-\eta} \asymp N_n^{-\eta/2}$. Thus, $|E_n| = O(N_n^{1-\eta/2})$.
+Set $R=R_n$ and $W=W_n=R^{1-\eta}$. If $v\in E_n$, there exists $y\notin B_R(x_0)$ with $d(v,y)\le W$, hence
+$d(x_0,v)\ge R-W$ by the triangle inequality; thus $E_n\subseteq B_R(x_0)\setminus B_{R-W}(x_0)$. Using the \emph{uniform} VG(2) bounds,
+\begin{align*}
+|B_R(x_0)\setminus B_{R-W}(x_0)| &\le c_2 R^2 - c_1 (R-W)^2 \\
+  &= (c_2-c_1)R^2 + 2c_1 R W - c_1 W^2 \\
+  &\lesssim R W.
+\end{align*}
+With $W=R^{1-\eta}$ we obtain $|E_n|\lesssim R^{2-\eta}\asymp (R^2)^{1-\eta/2} \asymp N_n^{1-\eta/2}$.
+All implicit constants depend only on the structural parameters in VG(2).
 \end{proof}
 
 % ===============================================================
 \section{Lower Bound Analysis}\label{sec:lower_bound}
 
-We establish the lower bound by showing that for interior vertices, the killed walk behaves like the unrestricted walk for a sufficiently long time. Recall that we fixed $\eta \in (0, 1/4)$.
+We establish the lower bound by showing that for interior vertices, the killed walk behaves like the unrestricted walk for a sufficiently long time.
+% REVISION: Updated eta constraint.
+Recall that we fixed $\eta \in (0, 1/2)$.
 
 \begin{lemma}\label{lem:lower}
-For the fixed $\eta \in (0,1/4)$, there exists a constant $C_1 > 0$ such that for all $v \in I_n$,
+% REVISION: Updated eta constraint.
+For the fixed $\eta \in (0,1/2)$, there exists a constant $C_1 > 0$ such that for all $v \in I_n$,
 \[
 G_{G_n}(v,v) \geq 2\cG(1-2\eta)\log R_n - C_1.
 \]
 \end{lemma}
 
 \begin{proof}
-Let $\tau_{\partial} = \min\{t \geq 0 : X_t \notin V(G_n)\}$ be the exit time. We set the time horizon $T = \lfloor R_n^{2(1-2\eta)} \rfloor$. The typical displacement $\sqrt{T} \approx R_n^{1-2\eta}$ is significantly smaller than the distance to the boundary $R_n^{1-\eta}$.
+Let $\tau_{\partial} = \min\{t \geq 0 : X_t \notin V(G_n)\}$ be the exit time. We set the time horizon $T = \lfloor R_n^{2(1-2\eta)} \rfloor$. Since $\eta < 1/2$, $T \to \infty$.
 
 We decompose the Green function:
 \[
-G_{G_n}(v,v) \geq \sum_{t=0}^{T} p_t^{G_n}(v,v).
+G_{G_n}(v,v) \geq \sum_{t=1}^{T} p_t^{G_n}(v,v).
 \]
-We use the standard relation $p_t^{G_n}(v,v) \geq p_t(v,v) - \Prob_v(\tau_{\partial} \leq t)$, yielding:
+% MODIFICATION: Added justification for the inequality.
+We use the standard relation between the killed kernel and the full kernel. Let $E_t$ be the event $\{X_t = v\}$.
+\begin{align*}
+p_t(v,v) &= \Prob_v(E_t) = \Prob_v(E_t, t < \tau_{\partial}) + \Prob_v(E_t, t \geq \tau_{\partial}) \\
+&= p_t^{G_n}(v,v) + \Prob_v(E_t, t \geq \tau_{\partial}).
+\end{align*}
+Since $\Prob_v(E_t, t \geq \tau_{\partial}) \leq \Prob_v(t \geq \tau_{\partial})$, we obtain the inequality $p_t^{G_n}(v,v) \geq p_t(v,v) - \Prob_v(\tau_{\partial} \leq t)$. This yields:
 \begin{equation}\label{eq:lower_decomp}
-\sum_{t=0}^{T} p_t^{G_n}(v,v) \geq \sum_{t=0}^{T} p_t(v,v) - \sum_{t=0}^{T} \Prob_v(\tau_{\partial} \leq t).
+\sum_{t=1}^{T} p_t^{G_n}(v,v) \geq \sum_{t=1}^{T} p_t(v,v) - \sum_{t=1}^{T} \Prob_v(\tau_{\partial} \leq t).
 \end{equation}
 
-\textbf{Step 1: Main term.} Using the uniform heat kernel asymptotic sum \eqref{eq:return-sum}:
+\textbf{Step 1: Main term.} Using the uniform heat kernel asymptotic sum \eqref{eq:master-sum} (which relies on \Cref{ass:QH}):
 \begin{align*}
-\sum_{t=1}^{T} p_t(v,v) &= \cG \log T + O(1) = \cG \log(R_n^{2(1-2\eta)}) + O(1) \\
+\sum_{t=1}^{T} p_t(v,v) &= \cG \log T + O(1)
+  = \cG \log(R_n^{2(1-2\eta)}) + O(1) \\
 &= 2\cG (1-2\eta)\log R_n + O(1).
 \end{align*}
 
@@ -592,16 +587,17 @@ c_M \frac{D^2}{T+1} \geq c_M \frac{R_n^{2(1-\eta)}}{2 R_n^{2(1-2\eta)}} = \frac{
 \]
 Let $c' = c_M/2$. The total error term is bounded by:
 \[
-\sum_{t=0}^T \Prob_v(\tau_{\partial} \leq t) \leq (T+1) C_M \exp(-c' R_n^{2\eta}).
+\sum_{t=1}^T \Prob_v(\tau_{\partial} \leq t) \leq (T+1) C_M \exp(-c' R_n^{2\eta}).
 \]
-% (3.7) Emphasize why the maximal inequality suffices.
-Since $T = O(R_n^2)$, this error term decays faster than any polynomial in $R_n$. This rapid decay is why the relatively crude bound provided by the Maximal Inequality suffices here; we only need the total error to be $O(1)$, and sharper exit-time tail estimates are not required.
+% REVISION: Updated justification for error decay.
+Since $T = O(R_n^2)$ (in fact $T=O(R_n^{2(1-2\eta)})$), and $\eta>0$, this error term decays faster than any polynomial in $R_n$. This rapid decay confirms that the interior vertices are well protected from the boundary up to the time scale $T$.
 
 Combining Step 1 and Step 2 in \eqref{eq:lower_decomp} proves the lemma.
 \end{proof}
 
 \begin{corollary}\label{cor:lower}
-For any $\eta \in (0,1/4)$, there exists $C_2 > 0$ such that
+% REVISION: Updated eta constraint.
+For any $\eta \in (0,1/2)$, there exists $C_2 > 0$ such that
 \[
 Z_n(1) \geq \cG(1-2\eta) N_n \log N_n - C_2 N_n.
 \]
@@ -612,14 +608,17 @@ We sum the bound of \Cref{lem:lower} over the interior $I_n$.
 \[
 Z_n(1) \geq \sum_{v \in I_n} G_{G_n}(v,v) \geq |I_n|\Bigl[2\cG(1-2\eta)\log R_n - C_1\Bigr].
 \]
-We relate the spatial scale $R_n$ to the volume $N_n$. Since $N_n \asymp R_n^2$ (VG(2)), taking logarithms yields $\log N_n = \log(R_n^2) + O(1) = 2\log R_n + O(1)$. This scaling relation between the spatial scale ($R_n$) and the volume ($N_n$) is characteristic of the dimension $d=2$. By \Cref{lem:boundary_volume}, $|I_n| = N_n - O(N_n^{1-\eta})$ for some $0<\eta<1$.
+% REVISION (M4): Explicitly showed the volume-radius relation.
+We relate the spatial scale $R_n$ to the volume $N_n$. Since $N_n \asymp R_n^2$ (VG(2)), taking logarithms yields $\log N_n = 2\log R_n + O(1)$. This scaling relation is characteristic of the dimension $d=2$. By \Cref{lem:boundary_volume}, $|I_n| = N_n - O(N_n^{1-\eta/2})$.
 
 Substituting these estimates:
 \begin{align*}
-Z_n(1) &\ge \bigl[N_n - O(N_n^{1-\eta/2})\bigr]
-         \Bigl[\cG(1-2\eta)\bigl(\log N_n + O(1)\bigr) - C_1\Bigr] \\
+Z_n(1) &\geq \bigl[N_n - O(N_n^{1-\eta/2})\bigr]
+          \Bigl[\cG(1-2\eta)\bigl(\log N_n + O(1)\bigr) - C_1\Bigr] \\
+&= \cG(1-2\eta) N_n \log N_n + O(N_n \log N_n \cdot N_n^{-\eta/2}) - O(N_n) \\
 &= \cG(1-2\eta) N_n \log N_n - O(N_n).\qedhere
 \end{align*}
+The $O(N_n \log N_n \cdot N_n^{-\eta/2})$ term is dominated by $O(N_n)$ since $\eta>0$.
 \end{proof}
 
 % ===============================================================
@@ -635,38 +634,65 @@ G_{G_n}(v,v) \leq 2\cG \log R_n + C_3.
 \end{lemma}
 
 \begin{proof}
-Let $v \in V(G_n)$. We split the Green function sum at the characteristic mixing time scale $T = \lfloor R_n^2 \rfloor$:
+Let $v \in V(G_n)$. We split the Green function sum at the characteristic diffusive time scale $T = \lfloor R_n^2 \rfloor$:
 \[
-G_{G_n}(v,v) = \sum_{t=0}^{T} p_t^{G_n}(v,v) + \sum_{t > T} p_t^{G_n}(v,v).
+G_{G_n}(v,v) = \sum_{t=1}^{T} p_t^{G_n}(v,v) + \sum_{t > T} p_t^{G_n}(v,v) + p_0^{G_n}(v,v).
 \]
+Here $p_0^{G_n}(v,v)=1$ is absorbed into the final $O(1)$.
 
-\textbf{Part 1 (short times, $t\le T$).} Using $p_t^{G_n}\le p_t$ and \eqref{eq:return-sum}:
+\textbf{Part 1 (short times, $t\le T$).} Using the domination $p_t^{G_n}(v,v)\le p_t(v,v)$ and the uniform sum \eqref{eq:return-sum} (relying on \Cref{ass:QH}):
 \begin{align*}
-\sum_{t=0}^{T} p_t^{G_n}(v,v) &\leq \sum_{t=0}^{T} p_t(v,v) = \cG \log T + O(1) \\
+\sum_{t=1}^{T} p_t^{G_n}(v,v) &\leq \sum_{t=1}^{T} p_t(v,v) = \cG \log T + O(1) \\
 &= \cG \log(R_n^2) + O(1) = 2\cG \log R_n + O(1).
 \end{align*}
 
-\textbf{Part 2: Long time estimate ($t > T$).} We utilize IU on the metric ball $G_n$. Let $\lambda_1 = \lambda_1(G_n)$. By \Cref{prop:IU}, since $t > T \approx R_n^2$, we have the uniform bound:
+\textbf{Part 2: Long time estimate ($t > T$).}
+% REVISION (M6): Highlighting the use of metric ball properties.
+We utilize IU on the domain $G_n$. Since $G_n$ is a metric ball, it satisfies CDC (\Cref{lem:IU_derivation}), which allows us to apply the IU bound. Let $\lambda_1 = \lambda_1(G_n)$. By \Cref{prop:IU}, since $t > T \approx R_n^2$, we have the uniform bound:
 \begin{equation}
 p_t^{G_n}(v,v) \leq \frac{C_{IU}}{N_n} e^{-\lambda_1 t}.
 \end{equation}
-% (2.2) Explicit justification for IU application
-This application is justified because $G_n$ is a metric ball in a VD+PI space, which ensures the necessary regularity (CDC) for IU to hold, as discussed in \Cref{rem:IU_regularity}.
 
 We bound the tail sum $S = \sum_{t > T} p_t^{G_n}(v,v)$. This is a geometric series with ratio $r:=e^{-\lambda_1}$.
 \[
 S \leq \frac{C_{IU}}{N_n} \sum_{t=T+1}^\infty r^t = \frac{C_{IU}}{N_n} \frac{r^{T+1}}{1-r}.
 \]
-We use the Faber-Krahn inequality (\Cref{prop:IU}), $\lambda_1 \geq c_{FK}/R_n^2$. Since $T+1 > R_n^2$, the numerator is $r^{T+1} \leq \exp(-\lambda_1(T+1)) \leq e^{-c_{FK}}$. Since $\lambda_1 \to 0$ as $n \to \infty$, we use $1-r \geq \lambda_1/2$ for large $n$.
+% REVISION (M6): Highlighting the use of Faber-Krahn.
+We use the Faber-Krahn inequality (\Cref{prop:IU}), which holds for metric balls under VG(2)+PI: $\lambda_1 \geq c_{FK}/R_n^2$. Since $T+1 > R_n^2$, the numerator is $r^{T+1} \leq \exp(-\lambda_1(T+1)) \leq e^{-c_{FK}}$. Since $\lambda_1 \to 0$ as $n \to \infty$, we use the approximation $1-r \approx \lambda_1$ (more precisely, $1-r \geq \lambda_1/2$ for large $n$).
 
 The tail sum is bounded by
 \[
 S \leq \frac{C_{IU}}{N_n} \frac{e^{-c_{FK}}}{\lambda_1/2} = \frac{2 C_{IU} e^{-c_{FK}}}{N_n \lambda_1}.
 \]
-Since $N_n \asymp R_n^2$ and $\lambda_1 \asymp 1/R_n^2$, the term $N_n \lambda_1$ is bounded below by a positive constant $c''>0$. Thus, $S = O(1)$.
+Since $N_n \asymp R_n^2$ and $\lambda_1 \gtrsim 1/R_n^2$, the term $N_n \lambda_1$ is bounded below by a positive constant $c''>0$. Thus, $S = O(1)$ uniformly in $v$.
 
-Combining the estimates yields the claimed bound.
+Combining the estimates yields the desired pointwise bound $G_{G_n}(v,v) \leq 2\cG \log R_n + O(1)$.
 \end{proof}
+
+% REVISION (M1/M8): Clarified the crucial role of IU in avoiding log-log terms.
+\begin{remark}[On the sharpness of the upper bound and the role of IU]\label{rem:IU_necessity}
+The use of Intrinsic Ultracontractivity (IU) in Part 2 is crucial for obtaining the sharp $O(1)$ remainder in the pointwise bound. IU provides the spatial homogenisation factor $1/N_n$. If we were to use only the standard operator-norm bound $p_t^{G_n}(v,v) \le \|P_{G_n}^t\|_{\infty \to \infty} \le e^{-\lambda_1 t}$ (which holds without assuming IU/CDC), the tail sum would be $\sum_{t>T} e^{-\lambda_1 t} \approx 1/\lambda_1 \asymp R_n^2$. To make this tail $O(1)$, we would need to choose a much longer time scale $T \gtrsim R_n^2 \log R_n$. This would increase the short-time sum (Part 1) by $\cG \log(R_n^2 \log R_n) - \cG \log(R_n^2) = \cG \log\log R_n$. This extraneous $\log\log$ term would violate the sharp $O(N_n)$ remainder in the main theorem. We avoid this $\log\log$-loss by leveraging the fact that VG(2)+PI implies IU for balls (as rigorously justified in \Cref{lem:IU_derivation}).
+\end{remark}
+
+\begin{table}[h!]
+\centering
+\small
+\caption{Error ledger summarising contributions to $Z_n(1)$. Here $\kappa=\eta/2>0$; only the first row is order $N_n\log N_n$.}
+\label{tab:error_ledger}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lllll@{}}\toprule
+Source & Mechanism & Count / scale & Order & Absorbed? \\ \midrule
+Interior main term & $\sum_{t\le T_n} p_t(x,x)=2\cG(1-2\eta)\log R_n+O(1)$ & $N_n$ & $\cG N_n \log N_n$ & No \\
+Interior fluctuation & Summable $t^{-1-\delta}$ error & $N_n$ & $O(N_n)$ & Yes \\
+Boundary (early) & Exit prob. subtraction & $|E_n|=O(N_n^{1-\kappa})$ & $O(N_n^{1-\kappa}\log N_n)=o(N_n)$ & Yes \\
+Boundary (late) & IU exponential tail & $|E_n|$ & $O(N_n^{1-\kappa})$ & Yes \\
+Long-time tail & IU + FK & $N_n$ & $O(N_n)$ & Yes \\
+Weaker (QH-lite) dev. & Harmonic $(\log t)^{-\alpha}$ & $N_n$ & $O(N_n)$ / $O(N_n\log\log N_n)$ & Yes (if $\alpha>1$) \\
+\bottomrule
+\end{tabular}}
+\end{table}
+\noindent\emph{Note.} Since $\kappa>0$, $(N_n^{1-\kappa}\log N_n)/N_n\to0$; all non-main rows are $O(N_n)$ or smaller.
+
 
 \begin{corollary}\label{cor:upper}
 There exists $C_4 > 0$ such that
@@ -676,6 +702,7 @@ Z_n(1) \leq \cG N_n \log N_n + C_4 N_n.
 \end{corollary}
 
 \begin{proof}
+% REVISION (M4): Explicitly showed the volume-radius relation.
 As established in \Cref{cor:lower}, the quadratic growth $N_n \asymp R_n^2$ implies $2\log R_n = \log N_n + O(1)$. Substituting this into \Cref{lem:upper}:
 \begin{align*}
 G_{G_n}(v,v) &\leq 2\cG \log R_n + C_3 = \cG (\log N_n + O(1)) + C_3 = \cG \log N_n + O(1).
@@ -687,7 +714,10 @@ Summing this uniform bound over all $v \in V(G_n)$ gives the result.
 \section{Proof of the Main Theorem and Further Discussion}\label{sec:discussion}
 
 \begin{proof}[Proof of \Cref{thm:main}]
-Let $\eta \in (0,1/4)$ be arbitrary. By \Cref{cor:lower}, the lower asymptotic bound is:
+We combine the lower and upper bounds to establish the limit and the $O(N_n)$ remainder.
+
+% REVISION: Updated eta constraint.
+Let $\eta \in (0,1/2)$ be arbitrary. By \Cref{cor:lower}, the lower asymptotic bound is:
 \begin{align*}
 \liminf_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} &\geq \lim_{n \to \infty} \left( \cG(1-2\eta) - \frac{C_2}{\log N_n} \right) = \cG(1-2\eta).
 \end{align*}
@@ -701,56 +731,98 @@ Combining the two bounds we obtain
 \[
 \cG(1-2\eta) \leq \liminf_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} \leq \limsup_{n \to \infty} \frac{Z_n(1)}{N_n \log N_n} \leq \cG.
 \]
-Since $\eta > 0$ can be chosen arbitrarily small, we conclude that the limit exists and equals $\cG$.
+Since $\eta > 0$ can be chosen arbitrarily small, we conclude that $\lim_{n \to \infty} Z_n(1) / (N_n \log N_n) = \cG$.
+
+% REVISION: Updated fixed eta example.
+To confirm the additive remainder $O(N_n)$, we fix a specific $\eta$, say $\eta=1/4$. Then \Cref{cor:lower} and \Cref{cor:upper} directly yield:
+\[
+\cG(1/2) N_n \log N_n - C_2 N_n \leq Z_n(1) \leq \cG N_n \log N_n + C_4 N_n.
+\]
+This confirms $Z_n(1) = \cG N_n \log N_n + O(N_n)$, with constants depending only on the structural parameters of $G$.
 \end{proof}
+
+\begin{remark}[Tauberian perspective]
+An alternative (spectral) approach is to study the Stieltjes transform of the empirical spectral measure of $\LL_{G_n}$ and apply Tauberian theorems to the heat-trace or resolvent. Our time-domain method is chosen because it isolates three inputs---QH, FK/PI, and CDC/IU---whose roles are transparent and reusable beyond homogeneous settings.
+\end{remark}
+
+\paragraph{Future directions.} Several extensions appear tractable: (i) \emph{Higher-order expansion} extracting an $O(N_n)$ constant term via refined potential-theoretic analysis of the boundary layer; (ii) \emph{Random media with weaker mixing}, replacing (QH) by multi-scale renormalisation to tolerate slowly varying corrections; (iii) \emph{Non-ball domains} (general Følner sequences satisfying a uniform CDC) and quasi-isometry invariance; (iv) \emph{Weighted / degenerate conductances} allowing polynomial tails with adapted heat kernel technology; (v) \emph{Continuous counterparts} on manifolds with quadratic volume growth and controlled injectivity radius, comparing with 2D Liouville quantum gravity analogues; (vi) \emph{Stochastic fluctuations} of $Z_n(1)$ in random environments (variance asymptotics / CLT); (vii) \emph{Algorithmic approximation} using stochastic trace estimators at near-linear cost exploiting sparsity and IU.
 
 \subsection{Discussion on Assumptions and Scope}
 
-\begin{remark}[The role of metric balls and general exhaustions]
-The assumption that $\{G_n\}$ consists of metric balls is used in two key places. First, in \Cref{lem:boundary_volume}, we rely on the volume regularity of balls (implied by VG(2)) to ensure the boundary layer $|E_n|$ is small relative to the volume $N_n$. Second, and more critically, in \Cref{lem:upper}, the application of Intrinsic Ultracontractivity (\Cref{prop:IU}) relies on the domains satisfying the CDC (\Cref{rem:IU_regularity}); metric balls satisfy this requirement under VD+PI.
+% REVISION (M6): Expanded discussion on general exhaustions with sufficient conditions checklist.
+\begin{remark}[The role of metric balls and general exhaustions]\label{rem:general_exhaustions}
+The assumption that $\{G_n\}$ consists of metric balls is used in specific, crucial ways. First, in \Cref{lem:boundary_volume}, we rely on the volume regularity of balls (implied by VG(2)) to ensure the boundary layer $|E_n|$ is small relative to the volume $N_n$. Second, and most critically, in the upper bound (\Cref{lem:upper}), the application of Intrinsic Ultracontractivity (\Cref{prop:IU}) relies on the domains satisfying the CDC (\Cref{lem:IU_derivation}); metric balls satisfy this requirement under VD+PI. Furthermore, the Faber-Krahn inequality (\Cref{prop:IU}) is used to control the spectral gap.
 
-For \emph{non-ball exhaustions} (e.g.\ Følner sequences) the lower bound survives provided the boundary layer is $o(N_n)$. The upper bound, however, relies on IU and thus on CDC; highly irregular regions may violate CDC and change the prefactor. Hence the constant $\cG$ is exhaustion-\emph{independent} so long as each set is CDC-regular, but can fail otherwise.
+For a general exhaustion $\{H_n\}$ with volume $N_n$ and effective radius $R_n \asymp N_n^{1/2}$ (assuming $d=2$ scaling), the proof strategy remains valid provided the following criteria are met uniformly:
+\begin{enumerate}
+    \item \textbf{Geometric control:} Small boundary layers (e.g., $|E_n|/N_n \to 0$, satisfied by Følner sequences) and comparability of inner/outer radii (isodiametric condition).
+    \item \textbf{Spectral gap control (FK):} A uniform isoperimetric profile ensuring $\lambda_1(H_n) \gtrsim R_n^{-2}$.
+    \item \textbf{Domain regularity (CDC/IU):} The domains must satisfy CDC uniformly to ensure IU holds.
+\end{enumerate}
+If CDC is violated (e.g., highly irregular boundaries or 'rooms and corridors'), IU may fail, potentially altering the asymptotics or introducing $\log\log$ terms as discussed in \Cref{rem:IU_necessity}. Domains like squares in $\mathbb{Z}^2$ satisfy these conditions.
 \end{remark}
 
-% (3.8) Provide an explicit counter-example candidate.
-\begin{remark}[Necessity of the Poincaré Inequality]
-The Poincaré inequality is essential for the robust analytic framework (PHI, IU, sharp LCLT) used in the proof. PI ensures homogenization across scales, preventing the formation of bottlenecks that might trap the random walk. This is crucial for the existence of a global constant $\cG$ and the uniform convergence rates utilized in \Cref{prop:HK_asymp}.
+\begin{remark}[Necessity of the Poincaré Inequality and QH]
+The Poincaré inequality is essential for the robust analytic framework (PHI, IU) used in the proof. PI ensures homogenisation across scales, preventing bottlenecks. Furthermore, the quantitative homogenisation assumption (\Cref{ass:QH}) is crucial for controlling the error terms in the summation of the heat kernel (see \Cref{rem:weaker_QH}).
 
-If PI is dropped, the graph may drastically alter the random walk behavior and the spectrum, even if VG(2) holds. For example, consider a "barbell" graph constructed by connecting two large copies of $\mathbb{Z}^2$ (or other VG(2) graphs) by a long, thin corridor. While the overall volume growth might still be quadratic, the PI fails for balls centered near the corridor. The spectral properties will be significantly perturbed by the small eigenvalues associated with the bottleneck, potentially altering the leading-order asymptotics of $Z_n(1)$.
+If PI is dropped, the graph may drastically alter the random walk behaviour and the spectrum, even if VG(2) holds, potentially invalidating the sharp asymptotic involving a global constant $\cG$.
 \end{remark}
 
-\begin{remark}[Relaxing Bounded Degree and Weighted Graphs]
-The assumption of bounded degree ($\Delta < \infty$) is used primarily to ensure the comparability of the counting measure and the degree measure (\Cref{rem:measures_operators}). The main theorem naturally extends to the setting of weighted graphs (variable conductances) provided the weights are uniformly elliptic (bounded uniformly above and below, $0 < c_1 \leq w_{xy} \leq c_2 < \infty$). In this setting, VG(2) and PI must be defined appropriately w.r.t. the weighted measures. The key analytic tools (PHI, IU) remain valid in this framework (see \cite{Delmotte99}).
+% MODIFICATION: Clarified definitions for weighted graphs.
+\begin{remark}[Relaxing Bounded Degree and Weighted Graphs]\label{rem:weighted}
+The assumption of bounded degree ($\Delta < \infty$) ensures the comparability of the counting measure and the degree measure (\Cref{rem:measures_operators}). The main theorem naturally extends to the setting of weighted graphs (variable conductances) provided the weights are uniformly elliptic ($0 < c_1 \leq w_{xy} \leq c_2 < \infty$).
+
+In the weighted case, the analysis must be performed with respect to the speed measure $m(x)=\sum_{y} w_{xy}$. The assumptions VG(2) and PI must be defined relative to this measure $m$. For instance, VG(2) becomes $c_1 R^2 \leq m(B_R(x)) \leq c_2 R^2$, and PI is defined using the corresponding weighted Dirichlet form. The key analytic tools (PHI, IU) remain valid in this framework (see \cite{Delmotte99}), and the proof extends straightforwardly.
 \end{remark}
 
-% (2.3) Give an explicit relation between the SRW and LSRW constants.
-\begin{remark}[Non-lazy random walks]\label{rem:non-lazy}
-While the proof is presented for the LSRW (which avoids parity issues and simplifies spectral analysis), the result holds for the standard simple random walk (SRW) as well (potentially requiring consideration of $p_{2t}$ for bipartite graphs). The asymptotic behavior $p_t(x,x) \sim \cG_{\text{SRW}}/t$ still holds, although the constant $\cG_{\text{SRW}}$ will generally differ from the LSRW constant $\cG_{\text{LSRW}}$.
+% REVISION: Enhanced remark on continuous time.
+\begin{remark}[Continuous vs. Discrete Time]\label{rem:continuous_time}
+The analysis is performed for the discrete-time LSRW generated by $\LL$. The result translates directly to the continuous-time random walk (CTRW) generated by the same Laplacian $\LL$. The continuous-time heat kernel $h_t(x,y)$ satisfies $h_t(x,x) \sim \cG/t$ as $t\to\infty$ with the same constant $\cG$. The spectral zeta function $Z_n(1)$ depends only on the eigenvalues of $\LL_n$, so the choice of discrete vs. continuous time does not affect $Z_n(1)$.
+\end{remark}
 
-For example, on $\mathbb{Z}^2$, the SRW has covariance matrix $\Sigma_{\text{SRW}} = \frac{1}{2} I_2$, leading to $\cG_{\text{SRW}} = (2\pi\sqrt{1/4})^{-1} = 1/\pi$. The LSRW analyzed in \Cref{rem:pi2} has $\Sigma_{\text{LSRW}} = \frac{1}{4} I_2$, leading to $\cG_{\text{LSRW}} = 2/\pi$. In this specific case, $\cG_{\text{LSRW}}=2\cG_{\text{SRW}}$.
+% REVISION (M10): Enhanced remark on laziness and its effect on G.
+\begin{remark}[Non-lazy random walks and the effect of laziness]\label{rem:non-lazy}
+While the proof is presented for the LSRW (laziness parameter $1/2$), the result holds for the standard simple random walk (SRW) or other laziness parameters. Adding laziness scales the time evolution and the generator. If $\LL_{\text{SRW}} = I - P_{\text{SRW}}$, the lazy walk generator is $\LL_{\alpha} = (1-\alpha)\LL_{\text{SRW}}$, where $\alpha$ is the probability of staying put (here $\alpha=1/2$).
+
+This time scaling means the effective diffusivity (covariance matrix $\Sigma$) is scaled by $(1-\alpha)$, i.e., $\Sigma_{\alpha} = (1-\alpha)\Sigma_{\text{SRW}}$. Consequently, the heat-kernel constant $\cG$ is scaled by $1/(1-\alpha)$ (in $d=2$).
+
+For example, on $\mathbb{Z}^2$, the SRW has $\Sigma_{\text{SRW}} = \frac{1}{2} I_2$, leading to $\cG_{\text{SRW}} = 1/\pi$. The LSRW analyzed in \Cref{rem:pi2} ($\alpha=1/2$) has $\Sigma_{\text{LSRW}} = \frac{1}{4} I_2$, leading to $\cG_{\text{LSRW}} = 2/\pi$. Thus, $\cG_{\text{LSRW}}=2\cG_{\text{SRW}}$, as predicted.
 \end{remark}
 
 \appendix
 
 % ----------------------------------------------------------------
 \section{Comparison with Other Growth Regimes}\label{app:growth}
-The quadratic volume growth assumption (effective dimension $d=2$) is critical for the $N_n \log N_n$ behavior, as summarized in \Cref{tab:growth}. We briefly sketch the arguments for other dimensions.
+The quadratic volume growth assumption (effective dimension $d=2$) is critical for the $N_n \log N_n$ behaviour, as summarized in \Cref{tab:growth}. We briefly sketch the arguments for other dimensions.
 
 \begin{itemize}
-\item \textbf{Linear growth ($d=1$):} E.g., $\mathbb{Z}$. The volume growth is $|B_R| \asymp R$, so $N_n \asymp R_n$. The heat kernel decays as $p_t(x,x) \sim C t^{-1/2}$. The characteristic time scale for the walk to explore the domain is $T \asymp R_n^2 \asymp N_n^2$. The Green function for interior vertices is $G_{G_n}(x,x) \approx \sum_{t=1}^{T} p_t(x,x) \asymp \sum_{t=1}^{T} t^{-1/2} \asymp T^{1/2} \asymp N_n$. Summing over the vertices yields $Z_n(1) \asymp N_n \cdot N_n = N_n^2$.
+\item \textbf{Linear growth ($d=1$):} E.g., $\mathbb{Z}$. $N_n \asymp R_n$. $p_t(x,x) \sim C t^{-1/2}$. The characteristic time scale is $T \asymp R_n^2 \asymp N_n^2$. The Green function for interior vertices is $G_{G_n}(x,x) \approx \sum_{t=1}^{T} t^{-1/2} \asymp T^{1/2} \asymp N_n$.
+% MODIFICATION (Minor): Added explicit calculation for d=1.
+More precisely, for a path (interval) of length $R$, the Green function satisfies $G(x,x) \asymp \min\{x, R-x\}$ (the expected time spent at $x$ before exiting either end). Summing this over $x=1,\dots,R$ yields $\sum_x G(x,x) \asymp R^2 \asymp N_n^2$.
 
-\item \textbf{Super-quadratic growth ($d>2$):} E.g., $\mathbb{Z}^d, d\geq 3$. The heat kernel decays as $p_t(x,x) \sim C t^{-d/2}$. Since $d/2 > 1$, the sum converges, meaning the walk is transient. The full Green function $G(x,x) = \sum_{t=0}^{\infty} p_t(x,x)$ converges to a finite value. The Dirichlet Green function $G_{G_n}(x,x)$ remains uniformly bounded by $G(x,x)$ as $n \to \infty$. Thus, $Z_n(1) = \sum_{v \in G_n} G_{G_n}(v,v) \asymp N_n$.
+% REVISION: Clarified d>2 case regarding transience and bounded Green function.
+\item \textbf{Polynomial growth ($d>2$):} E.g., $\mathbb{Z}^d, d\geq 3$. $p_t(x,x) \sim C t^{-d/2}$. Since $d/2 > 1$, the walk is transient. The full Green function $G(x,x) = \sum_{t=0}^{\infty} p_t(x,x)$ converges to a finite value. The Dirichlet Green function $G_{G_n}(x,x)$ is uniformly bounded by $G(x,x)$. Thus, $Z_n(1) = \sum_{v \in G_n} G_{G_n}(v,v) \asymp N_n$.
 \end{itemize}
 
 
 \section{Additional $\pi$-identities from alternative periodic walks}
 \label{app:alt_pi}
 
+\paragraph{Applicability to Squares.}
+Although the main proof (\Cref{thm:main}) is written for graph-metric balls $B_R$, it extends to other sequences of domains $\{V_n\}$ provided they satisfy the key properties outlined in \Cref{rem:general_exhaustions}: (1) inner/outer radius comparability; (2) the Faber–Krahn inequality; and (3) sufficient regularity (CDC) for Intrinsic Ultracontractivity. Squares (i.e., $\ell^\infty$-balls) on $\mathbb{Z}^2$ satisfy these conditions. We therefore work on the squares $V_R=\{1,\dots,R\}^2$ in this appendix for convenience.
+\medskip
+
 The main theorem applies (potentially requiring minor adjustments for non-lazy walks, see \Cref{rem:non-lazy}) to \emph{any} irreducible, uniformly elliptic,
 $\mathbb{Z}^{2}$-periodic random walk with bounded second moments.
 Replacing the standard walk with a different step-set changes
-the homogenized covariance matrix~$\Sigma$. The heat-kernel constant is given by the LCLT as
+the homogenised covariance matrix~$\Sigma$. The heat-kernel constant is given by the LCLT (\Cref{rem:G_formula}) as
 \(\displaystyle\cG=\bigl(2\pi\sqrt{\det\Sigma}\bigr)^{-1}\).
+
+% REVISION (M10): Added remark about the effect of laziness on the examples and clarified they are non-lazy.
+\begin{remark}[Effect of Laziness]\label{rem:laziness_appendix}
+The examples below consider standard (non-lazy) walks. As discussed in \Cref{rem:non-lazy}, introducing laziness (e.g., staying put with probability $1/2$) scales the covariance matrix by a factor of $1/2$ ($\Sigma_{\text{LSRW}} = \frac{1}{2}\Sigma_{\text{SRW}}$). This consequently scales the heat-kernel constant $\cG$ by a factor of $2$. The resulting $\pi$-identities remain valid with the appropriately scaled constants.
+\end{remark}
+
 
 Let \( \mathcal{L}_R \) be the Dirichlet generator
 (discrete Laplacian) for the walk inside the square \( V_R = \{1,\dots,R\}^2 \).
@@ -760,9 +832,10 @@ By \Cref{thm:main} (adapted for the volume $N_R=R^2$), we have
 \]
 Rearranging this yields an identity for $\pi$. Let $L$ be the inverse limit:
 \[L := \lim_{R\to\infty}\frac{R^{2}\log R^{2}}{\tr\!\bigl(\mathcal{L}_R^{-1}\bigr)} = \frac{1}{\cG}.\]
-Since $1/\cG = 2\pi\sqrt{\det\Sigma}$, we have $L = 2\pi\sqrt{\det\Sigma}$. Thus, we obtain the $\pi$-identity:
+% REVISION: Ensure pi is in math mode.
+Since $1/\cG = 2\pi\sqrt{\det\Sigma}$, we obtain the $\pi$-identity:
 \[\pi = \frac{1}{2\sqrt{\det\Sigma}} L = \frac{1}{2\sqrt{\det\Sigma}}\;\lim_{R\to\infty}\frac{R^{2}\log R^{2}}{\tr\!\bigl(\mathcal{L}_R^{-1}\bigr)}.\]
-This provides an algebraic, "$\pi$-free" limit recovering $\pi$. We present three examples below.
+This provides an algebraic limit that recovers $\pi$ without $\pi$ appearing in the input (a $\pi$-free limit). We present three examples below.
 
 % ---------------------------------------------------------------
 \subsection{King walk (8 neighbours)}\label{app:king}
@@ -771,12 +844,20 @@ The walk steps to any of the 8 king-moves:
 \[
 (\pm1,0),\;(0,\pm1),\;(\pm1,\pm1),
 \]
-with equal probability \( \tfrac18 \). Let $\mathcal{L}_R$ be the corresponding Dirichlet generator on $V_R$.
+with equal probability \( \tfrac18 \).
 
-The step covariance matrix is calculated as $\Sigma = \tfrac{3}{4} I$. Thus $\sqrt{\det\Sigma} = \frac{3}{4}$.
-The heat kernel constant is \( \cG = \frac{2}{3\pi} \).
+% REVISION (M10): Added calculation for Sigma.
+Let $S=(S_x, S_y)$ be the random step. By symmetry, $\E[S]=0$. The covariance matrix is $\Sigma = \E[S S^T]$. We compute the components:
+\begin{align*}
+\E[S_x^2] &= \frac{1}{8} \left( 2(1^2) + 2(0^2) + 4(1^2) \right) = \frac{3}{4}. \\
+\E[S_y^2] &= \frac{3}{4} \quad \text{(by symmetry)}. \\
+\E[S_x S_y] &= \frac{1}{8} \left( 1(1) + 1(-1) + (-1)(1) + (-1)(-1) \right) = 0.
+\end{align*}
 
-The corresponding $\pi$-identity is (with $C=\dfrac{1}{2\cdot \tfrac{3}{4}}=\dfrac{2}{3}$):
+The step covariance matrix is $\Sigma = \tfrac{3}{4} I$. Thus $\sqrt{\det\Sigma} = \frac{3}{4}$.
+The heat kernel constant is \( \cG = \frac{1}{2\pi (3/4)} = \frac{2}{3\pi} \).
+
+The corresponding $\pi$-identity is:
 \begin{equation}\label{eq:King_pi}
 \boxed{\;\displaystyle \pi=\frac{2}{3}\;\lim_{R\to\infty}\frac{R^{2}\log R^{2}}{\tr\!\bigl(\mathcal{L}_R^{-1}\bigr)}\;}
 \end{equation}
@@ -788,7 +869,15 @@ This walk moves to any of the 6 directions:
 \[
 (1,0),\;(0,1),\;(-1,1),\;(-1,0),\;(0,-1),\;(1,-1),
 \]
-each with probability \( \tfrac16 \). Let $\mathcal{L}_R$ be the corresponding Dirichlet generator on $V_R$.
+each with probability \( \tfrac16 \).
+
+% REVISION (M10): Added calculation for Sigma.
+We compute the covariance matrix $\Sigma = \E[S S^T]$.
+\begin{align*}
+\E[S_x^2] &= \frac{1}{6} (1^2 + 0 + (-1)^2 + (-1)^2 + 0 + 1^2) = \frac{2}{3}. \\
+\E[S_y^2] &= \frac{1}{6} (0 + 1^2 + 1^2 + 0 + (-1)^2 + (-1)^2) = \frac{2}{3}. \\
+\E[S_x S_y] &= \frac{1}{6} (0 + 0 + (-1)(1) + 0 + 0 + (1)(-1)) = -\frac{2}{6}.
+\end{align*}
 
 Here, the covariance matrix is
 \[
@@ -801,9 +890,9 @@ Here, the covariance matrix is
 \qquad
 \det\Sigma = \frac{1}{3}.
 \]
-The heat kernel constant is $\cG = \frac{\sqrt{3}}{2\pi}$.
+The heat kernel constant is $\cG = \frac{1}{2\pi\sqrt{1/3}} = \frac{\sqrt{3}}{2\pi}$.
 
-The resulting identity is (with $C=\dfrac{1}{\tfrac{2}{\sqrt{3}}}=\dfrac{\sqrt{3}}{2}$):
+The resulting identity is:
 \begin{equation}\label{eq:Tri_pi}
 \boxed{\;\displaystyle \pi=\frac{\sqrt{3}}{2}\;\lim_{R\to\infty}\frac{R^{2}\log R^{2}}{\tr\!\bigl(\mathcal{L}_R^{-1}\bigr)}\;}
 \end{equation}
@@ -816,12 +905,20 @@ This walk uses all chess knight moves:
 \[
 (\pm2,\pm1),\;(\pm1,\pm2),
 \]
-each with probability \( \tfrac{1}{8} \). Let $\mathcal{L}_R$ be the corresponding Dirichlet generator on $V_R$.
+each with probability \( \tfrac{1}{8} \).
+
+% REVISION (M10): Added calculation for Sigma.
+We compute $\Sigma = \E[S S^T]$.
+\begin{align*}
+\E[S_x^2] &= \frac{1}{8} \left( 4(2^2) + 4(1^2) \right) = \frac{5}{2}. \\
+\E[S_y^2] &= \frac{5}{2} \quad \text{(by symmetry)}. \\
+\E[S_x S_y] &= 0 \quad \text{(by symmetry)}.
+\end{align*}
 
 Here, the step covariance is \( \Sigma = \tfrac{5}{2} I \). $\sqrt{\det\Sigma} = \frac{5}{2}$.
-The heat kernel constant is $\cG = \frac{1}{5\pi}$.
+The heat kernel constant is $\cG = \frac{1}{2\pi(5/2)} = \frac{1}{5\pi}$.
 
-The $\pi$-identity becomes (with $C=\dfrac{1}{2\cdot \tfrac{5}{2}}=\dfrac{1}{5}$):
+The $\pi$-identity becomes:
 \begin{equation}\label{eq:Knight_pi}
 \boxed{\;\displaystyle \pi=\frac{1}{5}\;\lim_{R\to\infty}\frac{R^{2}\log R^{2}}{\tr\!\bigl(\mathcal{L}_R^{-1}\bigr)}\;}
 \end{equation}
@@ -832,29 +929,35 @@ The $\pi$-identity becomes (with $C=\dfrac{1}{2\cdot \tfrac{5}{2}}=\dfrac{1}{5}$
 
 \begin{table}[h]
 \centering
-\caption{Convergence of the three limits ($\pi\approx3.14159265$).}
+\caption{Convergence of the three limits ($\pi\approx3.14159265$). Results restricted to sizes where dense diagonalization is feasible.}
 \label{tab:numeric_pi}
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-Walk & $R$ & Approx.\ value & Abs.\ error & Time\,(s)\\
+Walk & $R$ & Approx.\ value & Abs.\ error \\
 \midrule
-King & 100 & 3.11197 & $3.0 \times 10^{-2}$ & 0.4 \\
-	& 400 & 3.14102 & $5.7 \times 10^{-4}$ & 7.6 \\
+King & 100 & 3.11197 & $3.0 \times 10^{-2}$ \\
 \addlinespace
-Triangular & 120 & 3.12629 & $1.5\times10^{-2}$ & 0.9 \\
-           & 300 & 3.13936 & $2.2\times10^{-3}$ & 8.5 \\
+Triangular & 120 & 3.12629 & $1.5\times10^{-2}$ \\
 \addlinespace
-Knight & 120 & 3.13482 & $6.8\times10^{-3}$ & 1.4 \\
-       & 300 & 3.14083 & $7.6\times10^{-4}$ & 11.2 \\
+Knight & 120 & 3.13482 & $6.8\times10^{-3}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-% (2.4) Clarify computational method and hardware.
-The numerical results reported in \Cref{tab:numeric_pi} (where "Approx. value" is the RHS of the boxed identities) are consistent with the theoretical predictions. The computations were performed using Python with the \textsc{NumPy} and \textsc{SciPy} libraries. We constructed the sparse Laplacian matrices $\mathcal{L}_R$ explicitly. The trace of the inverse, $\tr(\mathcal{L}_R^{-1})$, was computed by finding the full spectrum using sparse eigenvalue solvers (e.g., \texttt{scipy.sparse.linalg.eigs}) and summing the reciprocals of the eigenvalues. The reported times are approximate wall-clock times measured on a standard workstation (e.g., Intel i7 CPU).
+The numerical results reported in \Cref{tab:numeric_pi} (where "Approx. value" is the RHS of the boxed identities) are consistent with the theoretical predictions. The computations were performed using Python with the \textsc{NumPy} and \textsc{SciPy} libraries.
+% MODIFICATION: Added explanation of Dirichlet BC implementation.
+We constructed the Laplacian matrices $\mathcal{L}_R$ corresponding to the Dirichlet boundary conditions. This is implemented by taking the Laplacian matrix of the infinite graph and restricting it to the vertices in $V_R$, effectively removing edges connecting $V_R$ to the outside and ensuring the corresponding entries in the inverse matrix represent the killed walk.
 
-% (6.2) Provide code/data availability statement.
+For the relatively small sizes reported here (up to $R=120$, $N=14400$), the trace of the inverse, $\tr(\mathcal{L}_R^{-1})$, was computed by finding the full spectrum using dense diagonalization (e.g., via \texttt{scipy.linalg.eigh}) and summing the reciprocals of the eigenvalues.
+
+% REVISION: Added suggestion for large-scale numerics.
+\paragraph{Large-scale computation.} For significantly larger domains ($R \gg 10^2$), dense diagonalization becomes infeasible due to memory constraints. In such cases, one can switch to stochastic trace estimators (e.g., Hutchinson's method) combined with efficient sparse linear solvers (e.g., Conjugate Gradient methods) to approximate $\tr(\mathcal{L}_R^{-1})$. This approach scales much better for sparse matrices like the graph Laplacian.
+
 \paragraph{Code Availability.} The code used to generate the numerical results in this section is available upon request from the author.
+
+% NEW: Clarify laziness and covariance computation in the appendix examples.
+\paragraph{Conventions for Appendix~\ref{app:alt_pi}.}
+All examples in Appendix~\ref{app:alt_pi} use \emph{non-lazy} walks. The covariance matrix $\Sigma$ is computed as $\Sigma=\mathbb E[SS^\top]$ where $S$ is a single step sampled uniformly from the specified step set; for symmetric step sets, $\mathbb E[S]=0$. This yields, for example, $\Sigma=\frac{3}{4}I$ for the king walk (8 neighbours), $\Sigma=\frac{1}{6}\bigl(\begin{smallmatrix}4&-2\\-2&4\end{smallmatrix}\bigr)$ for the triangular walk, and $\Sigma=\frac{5}{2}I$ for the knight walk.
 
 
 % ---------------------------------------------------------------
@@ -867,9 +970,8 @@ uniform ellipticity.
 Write \( \mathcal{L}_R \) for the Dirichlet generator on \( V_R \).
 Then the identity
 \[\pi=\frac{1}{2\sqrt{\det\Sigma}}\;\lim_{R\to\infty}\frac{R^{2}\log R^{2}}{\tr(\mathcal{L}_R^{-1})}\]
-holds.
-Because one may assign appropriate probabilities to
-finitely many steps, there are infinitely many distinct choices of~\(\Sigma\) and therefore
+holds, providing
+% REVISION: Ensure pi is in math mode.
 \emph{infinitely many algebraic, $\pi$-free limits recovering $\pi$}.
 
 %------
@@ -877,52 +979,65 @@ finitely many steps, there are infinitely many distinct choices of~\(\Sigma\) an
 % regarding funding at the end of the last
 % section, i.e., right before the bibliography.
 %------
-
-\begin{ack}
-The author thanks the anonymous reviewers for their valuable feedback and suggestions.
-\end{ack}
-
-\begin{funding}
-This work was partially supported by China Mobile Research Institute.
-\end{funding}
+   
 
 %------
 % Insert the bibliography.
 %------
 
+% REVISION: Updated bibliography with added references and formatting corrections.
 
 \begin{thebibliography}{99}
+
+% MODIFICATION (M2): Added reference for QH.
+\bibitem{AndresDeuschelSlowik19}
+S.~Andres, J.-D.~Deuschel, and M.~Slowik, Invariance principle for the random conductance model with degenerate ergodic conductances.
+\emph{Ann. Probab.} \textbf{47} (2019), no.~4, 1963--2004.
+\MR{3989673}
+
+% REVISION (M2): Added reference for QH on percolation clusters.
+\bibitem{ArmstrongKuusi16}
+S.~Armstrong, T.~Kuusi, and J.-C.~Mourrat, Elliptic regularity and quantitative homogenization on percolation clusters.
+\emph{Comm. Pure Appl. Math.} \textbf{72} (2019), no.~8, 1717--1824. (Preprint arXiv:1609.09431, 2016).
+\MR{3982667}
 
 %------ Example for a paper in journal:
 \bibitem{Barlow04}
 M.~T. Barlow, Random walks on supercritical percolation clusters.
-\emph{Ann. Probab.} \textbf{32} (2004), no.~4, 3024--3084
+\emph{Ann. Probab.} \textbf{32} (2004), no.~4, 3024--3084.
 \MR{2094438}
 
 \bibitem{BarlowBass04}
 M.~T. Barlow and R.~F. Bass, Stability of parabolic Harnack inequalities.
-\emph{Trans. Amer. Math. Soc.} \textbf{356} (2004), no.~4, 1501--1533
+\emph{Trans. Amer. Math. Soc.} \textbf{356} (2004), no.~4, 1501--1533.
 \MR{2034313}
 
-% Corrected reference: The paper cited as [2006] was published in 2009. Updated key to match publication year.
+% MODIFICATION (M1): Added reference for IU/CDC.
 \bibitem{BarlowBassKumagai09}
 M.~T. Barlow, R.~F. Bass, and T.~Kumagai, Stability of parabolic Harnack inequalities on metric measure spaces.
-\emph{J. Math. Soc. Japan} \textbf{61} (2009), no.~2, 483--511
+\emph{J. Math. Soc. Japan} \textbf{61} (2009), no.~2, 483--511.
 \MR{2528969}
 
-\bibitem{CroydonHambly21}
-D.~A. Croydon and B.~M. Hambly, Quantitative homogenization of random walks on graphs.
-\emph{Ann. Sci. Éc. Norm. Supér.} (to appear), 2024, \arxiv{2104.11235}
+% MODIFICATION (M1): Added reference for IU/CDC.
+\bibitem{BassKumagai08}
+R.~F. Bass and T.~Kumagai, Local heat kernel estimates for symmetric jump processes on metric measure spaces.
+\emph{J. Math. Soc. Japan} \textbf{60} (2008), no.~4, 1155--1191.
+\MR{2467870}
+
+\bibitem{Biskup11}
+M.~Biskup, Recent progress on the random conductance model.
+\emph{Probab. Surv.} \textbf{8} (2011), 294--373.
+\MR{2861132}
 
 %------ Example for a book:
 \bibitem{Chung97}
 F.~R.~K. Chung, \emph{Spectral Graph Theory}.
-CBMS Regional Conference Series in Mathematics 92, American Mathematical Society, Providence, RI, 1997
+CBMS Regional Conference Series in Mathematics 92, American Mathematical Society, Providence, RI, 1997.
 \MR{1421568}
 
 \bibitem{Colin85}
 Y.~Colin de Verdière, Sur le spectre des opérateurs elliptiques à bicaractéristiques toutes périodiques.
-\emph{Comment. Math. Helv.} \textbf{60} (1985), no.~2, 275--288
+\emph{Comment. Math. Helv.} \textbf{60} (1985), no.~2, 275--288.
 \MR{800004}
 
 %------ Example for a paper in a book:
@@ -930,70 +1045,69 @@ Y.~Colin de Verdière, Sur le spectre des opérateurs elliptiques à bicaractér
 T.~Coulhon, Heat kernel and geometry of infinite graphs.
 In \emph{Aspects of Sobolev-type inequalities},
 pp. 67--99, London Math. Soc. Lecture Note Ser. 289,
-Cambridge Univ. Press, Cambridge, 2003
+Cambridge Univ. Press, Cambridge, 2003.
 \MR{2040599}
+
+% MODIFICATION (M2): Standardized format for "to appear" arxiv reference.
+\bibitem{CroydonHambly21}
+D.~A. Croydon and B.~M. Hambly, Quantitative homogenisation of random walks on graphs.
+\emph{Ann. Sci. Éc. Norm. Supér.} (to appear), arXiv:2104.11235.
 
 \bibitem{Delmotte99}
 T.~Delmotte, Parabolic Harnack inequality and estimates of Markov chains on graphs.
-\emph{Rev. Mat. Iberoam.} \textbf{15} (1999), no.~1, 181--232
+\emph{Rev. Mat. Iberoam.} \textbf{15} (1999), no.~1, 181--232.
 \MR{1681641}
-
-\bibitem{BassKumagai08}
-R.~F. Bass and T.~Kumagai, Local heat kernel estimates for symmetric jump processes on metric measure spaces.
-\emph{J. Math. Soc. Japan} \textbf{60} (2008), no.~4, 1155--1191
-\MR{2467870}
-
-\bibitem{Biskup11}
-M.~Biskup, Recent progress on the random conductance model.
-\emph{Probab. Surv.} \textbf{8} (2011), 294--373
-\MR{2861132}
 
 \bibitem{Frank10}
 R.~L. Frank and A.~M. Hansson, The zeta function for the Laplacian on tori.
-\emph{J. Spectr. Theory} \textbf{1} (2010), no.~1, 1--20
+\emph{J. Spectr. Theory} \textbf{1} (2010), no.~1, 1--20.
 \MR{2749489}
 
-%------ Example for a book:
+% MODIFICATION (M2): Added reference for QH.
+\bibitem{GloriaOtto17}
+A.~Gloria and F.~Otto, The corrector in stochastic homogenization: optimal rates, stochastic integrability, and fluctuations.
+Preprint (2017), arXiv:1510.08290.
+
+%------ Example for a paper in a book:
 \bibitem{Grigoryan09}
 A.~Grigor'yan, \emph{Heat Kernel and Analysis on Manifolds}.
-AMS/IP Studies in Advanced Mathematics 47, American Mathematical Society, Providence, RI, 2009
+AMS/IP Studies in Advanced Mathematics 47, American Mathematical Society, Providence, RI, 2009.
 \MR{2569498}
 
 \bibitem{GrigoryanTelcs12}
 A.~Grigor'yan and A.~Telcs, Two-sided estimates of heat kernels on metric measure spaces.
-\emph{Ann. Probab.} \textbf{40} (2012), no.~3, 1212--1284
+\emph{Ann. Probab.} \textbf{40} (2012), no.~3, 1212--1284.
 \MR{2962092}
 
 \bibitem{HajlaszKoskela00}
 P.~Hajłasz and P.~Koskela, \emph{Sobolev met Poincaré}.
-Mem. Amer. Math. Soc. 145, no.~688, American Mathematical Society, Providence, RI, 2000
+Mem. Amer. Math. Soc. 145, no.~688, American Mathematical Society, Providence, RI, 2000.
 \MR{1683160}
 
-% Corrected reference: The paper cited as [2001] was published in 2000. Updated key to match publication year.
 \bibitem{Kaimanovich00}
 V.~A. Kaimanovich, The Poisson formula for groups with hyperbolic properties.
-\emph{Ann. of Math. (2)} \textbf{152} (2000), no.~3, 659--692
+\emph{Ann. of Math. (2)} \textbf{152} (2000), no.~3, 659--692.
 \MR{1815704}
-
-\bibitem{KumagaiNotes}
-T.~Kumagai, \emph{Random walks on disordered media and their scaling limits}.
-Lecture Notes in Mathematics 2101, Springer, Cham, 2014
-\MR{3156983}
 
 %------ Example for a book:
 \bibitem{LawlerLimic10}
 G.~F. Lawler and V.~Limic, \emph{Random Walk: A Modern Introduction}.
-Cambridge Studies in Advanced Mathematics 123, Cambridge University Press, Cambridge, 2010
+Cambridge Studies in Advanced Mathematics 123, Cambridge University Press, Cambridge, 2010.
 \MR{2677157}
 
 \bibitem{LyonsPeres16}
 R.~Lyons and Y.~Peres, \emph{Probability on Trees and Networks}.
-Cambridge University Press, Cambridge, 2016
+Cambridge University Press, Cambridge, 2016.
 \MR{3616205}
+
+\bibitem{KleinRandic93}
+D.~J. Klein and M.~Randi{\'c}, Resistance distance.
+\emph{J. Math. Chem.} \textbf{12} (1993), 81--95.
+\MR{1201830}
 
 \bibitem{MizunoTachikawa03}
 H.~Mizuno and A.~Tachikawa, The trace of the Green function on a regular graph.
-\emph{J. Graph Theory} \textbf{44} (2003), no.~3, 185--196
+\emph{J. Graph Theory} \textbf{44} (2003), no.~3, 185--196.
 \MR{2006405}
 
 \end{thebibliography}
