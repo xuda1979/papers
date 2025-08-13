@@ -33,10 +33,9 @@ def main():
         writer = csv.writer(f)
         writer.writerow(['m', 'S_rad'])
         writer.writerows(data)
-        writer.writerow(['max', max_s])
-    for row in data:
-        print(row)
-    print(f'max entropy at m={max_m}: {max_s:.4f}')
+
+    print("Page curve data written to page_curve.csv")
+    print(f'Max entropy at m={max_m}: {max_s:.4f}')
 
 
 if __name__ == '__main__':

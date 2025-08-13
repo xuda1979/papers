@@ -218,16 +218,13 @@ def run_default_demo() -> None:
     with out_file.open("w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "p_z_base",
-            "p_x_base",
-            "p_z_eff",
-            "p_x_eff",
-            "p_eff",
-            "p_L",
-            "F_e",
-            "runtime_sec",
+            "length_km", "classical_power_dBm", "p_z_base", "p_x_base",
+            "p_z_eff", "p_x_eff", "p_eff", "p_L", "F_e", "runtime_sec"
         ])
-        writer.writerow([p_z_base, p_x_base, p_z_eff, p_x_eff, p_eff, p_L, F_e, runtime])
+        writer.writerow([
+            length_km, classical_power_dBm, p_z_base, p_x_base,
+            p_z_eff, p_x_eff, p_eff, p_L, F_e, runtime
+        ])
     print(f"Wrote {out_file}")
 
 
