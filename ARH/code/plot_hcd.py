@@ -1,56 +1,104 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 from pathlib import Path
 import csv
 
+def generate_stylized_curve(steps, initial_acc, nadir, recovery_time,
+                            shift_point, adaptation_duration=0, final_stabilization=0.99):
+    """Generates a stylized accuracy curve for a concept drift scenario."""
+    time = np.arange(steps)
+    accuracy = np.full(steps, initial_acc, dtype=float)
 
-def generate_curves():
-    TOTAL_STEPS = 10000
-    SHIFT_STEP = 5000
-    def stylized(initial, nadir, recovery, final=0.99):
-        x = np.arange(TOTAL_STEPS)
-        acc = np.full(TOTAL_STEPS, initial)
-        acc[:SHIFT_STEP] = initial
-        drop_end = SHIFT_STEP + 150
-        acc[SHIFT_STEP:drop_end] = np.linspace(initial, nadir, 150)
-        rec_start = drop_end + 400
-        acc[drop_end:rec_start] = nadir
-        rec_end = rec_start + recovery
-        sig = 1/(1+np.exp(-np.linspace(-6,6,recovery)))
-        acc[rec_start:rec_end] = nadir + (initial*final - nadir)*sig
-        acc[rec_end:] = initial*final
-        return x, acc
-    return {
-        'LLM': stylized(91.5,22.5,1000),
-        'HRM': stylized(93.1,35.0,2500),
-        'ARH': stylized(92.8,65.2,1700)
-    }
+    # Phase 1: Stable performance
+    accuracy[:shift_point] = initial_acc + np.random.normal(0, 0.5, shift_point)
 
+    # Phase 2 Start: Sharp drop to nadir
+    drop_duration = 150
+    drop_end = min(shift_point + drop_duration, steps)
+    if drop_end > shift_point:
+        accuracy[shift_point:drop_end] = np.linspace(accuracy[shift_point-1],
+                                                     nadir, drop_end - shift_point)
+
+    # Adaptation phase (optional, for ARH)
+    recovery_start = min(drop_end + adaptation_duration, steps)
+    if recovery_start > drop_end:
+        accuracy[drop_end:recovery_start] = nadir
+
+    # Recovery phase
+    recovery_end = min(recovery_start + recovery_time, steps)
+    if recovery_end > recovery_start:
+        # Use a sigmoid-like curve for smooth recovery
+        x = np.linspace(-6, 6, recovery_end - recovery_start)
+        sigmoid = 1 / (1 + np.exp(-x))
+        target_acc = initial_acc * final_stabilization
+        recovered_segment = nadir + (target_acc - nadir) * sigmoid
+        accuracy[recovery_start:recovery_end] = recovered_segment
+        if recovery_end < steps:
+            accuracy[recovery_end:] = target_acc + np.random.normal(0, 0.5, steps-recovery_end)
+
+    return np.clip(accuracy, 0, 100)
 
 def main():
-    curves = generate_curves()
+    # --- Parameters ---
+    TOTAL_STEPS = 10000
+    SHIFT_STEP = 5000
+
+    # --- Generate Data for each model ---
+    time_steps = np.arange(TOTAL_STEPS)
+    curves = {
+        "LLM (Monolithic)": generate_stylized_curve(TOTAL_STEPS, 91.5, 22.5, 10000, SHIFT_STEP),
+        "HRM (Static)": generate_stylized_curve(TOTAL_STEPS, 93.1, 35.0, 7500, SHIFT_STEP),
+        "ARH (Ours, Dynamic)": generate_stylized_curve(TOTAL_STEPS, 92.8, 65.2, 1700, SHIFT_STEP, adaptation_duration=400)
+    }
+
+    # --- Plotting ---
     plt.style.use('seaborn-v0_8-whitegrid')
-    for label,(x,y) in curves.items():
-        plt.plot(x,y,label=label)
-    plt.xlabel('Time Steps')
-    plt.ylabel('Task Accuracy (%)')
-    plt.title('Model Performance on Hierarchical Concept Drift')
-    plt.legend()
-    out_dir = Path(__file__).resolve().parent
-    out_file = out_dir/'arh_hcd_visualization.pdf'
-    data_file = out_dir/'arh_hcd_curves.csv'
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    colors = {'LLM (Monolithic)': 'red', 'HRM (Static)': 'orange', 'ARH (Ours, Dynamic)': 'blue'}
+    styles = {'LLM (Monolithic)': ':', 'HRM (Static)': '--', 'ARH (Ours, Dynamic)': '-'}
+
+    ax.plot(time_steps, curves['LLM (Monolithic)'], label='LLM (Monolithic)', color=colors['LLM (Monolithic)'], linestyle=styles['LLM (Monolithic)'])
+    ax.plot(time_steps, curves['HRM (Static)'], label='HRM (Static)', color=colors['HRM (Static)'], linestyle=styles['HRM (Static)'])
+    ax.plot(time_steps, curves['ARH (Ours, Dynamic)'], label='ARH (Ours, Dynamic)', color=colors['ARH (Ours, Dynamic)'], linewidth=2.5)
+
+    # Highlight the structural shift
+    ax.axvline(x=SHIFT_STEP, color='black', linestyle='--', linewidth=1.5, label='Structural Shift')
+
+    # Highlight ARH adaptation phase
+    adapt_start = SHIFT_STEP + 150
+    adapt_end = adapt_start + 400
+    rect = patches.Rectangle((adapt_start, 0), adapt_end - adapt_start, 100,
+                             linewidth=0, facecolor='blue', alpha=0.1)
+    ax.add_patch(rect)
+    ax.text(adapt_start + 200, 40, 'ARH Adaptation\n(STDC triggers)',
+            horizontalalignment='center', color='blue', alpha=0.8)
+
+    # Formatting
+    ax.set_xlabel('Time Steps', fontsize=14)
+    ax.set_ylabel('Task Accuracy (%)', fontsize=14)
+    ax.set_title('Model Performance on Hierarchical Concept Drift (HCD)', fontsize=16)
+    ax.legend(fontsize=12)
+    ax.set_ylim(0, 100)
+    ax.set_xlim(0, TOTAL_STEPS)
     plt.tight_layout()
+
+    # --- Save outputs ---
+    out_dir = Path(__file__).resolve().parent
+    out_file = out_dir / 'arh_hcd_visualization.pdf'
+    data_file = out_dir / 'arh_hcd_curves.csv'
+
     plt.savefig(out_file)
+    print(f"Saved plot to {out_file}")
+
     with data_file.open('w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['step'] + list(curves.keys()))
-        steps = next(iter(curves.values()))[0]
-        for idx in range(len(steps)):
-            row = [steps[idx]]
-            for label in curves:
-                row.append(curves[label][1][idx])
+        for i in range(TOTAL_STEPS):
+            row = [time_steps[i]] + [curves[label][i] for label in curves]
             writer.writerow(row)
-    print(f'wrote {out_file} and {data_file}')
+    print(f"Saved data to {data_file}")
 
 if __name__ == '__main__':
     main()

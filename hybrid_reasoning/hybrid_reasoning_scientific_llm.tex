@@ -14,12 +14,12 @@ Hierarchical, Causal, Bayesian, Analogical, and Counterfactual Integration}
 \maketitle
 
 \begin{abstract}
-Large language models (LLMs) excel at pattern completion but lack explicit mechanisms for scientific reasoning. We propose an inference-time orchestration framework that integrates five paradigms---hierarchical planning, causal inference, Bayesian belief updating, analogical structure mapping, and counterfactual simulation---as tool calls under LLM control. The LLM decomposes scientific questions into subproblems, invokes specialized tools, and aggregates their outputs into a final answer. We provide theoretical links to probabilistic graphical models and cognitive science, and report real, reproducible results from a tool-centric synthetic benchmark designed to stress each module in isolation. Our results show improved marginal likelihoods for Bayesian updating compared to a plug-in MLE baseline, reduced mean-squared error for backdoor-adjusted causal estimation versus naive regression in confounded settings, near-perfect counterfactual reconstruction in linear-Gaussian structural causal models, and substantially higher accuracy in analogical mapping via structure-preserving permutations than degree heuristics.
+Large language models (LLMs) excel at pattern completion but lack explicit mechanisms for scientific reasoning. We propose an inference-time orchestration framework that integrates five paradigms---hierarchical planning, causal inference, Bayesian belief updating, analogical structure mapping, and counterfactual simulation---as tool calls under LLM control. The LLM decomposes scientific questions into subproblems, invokes specialized tools, and aggregates their outputs into a final answer. We provide theoretical links to probabilistic graphical models and cognitive science, and propose a tool-centric synthetic benchmark designed to stress each module in isolation. We also provide illustrative performance targets for this benchmark, which show how specialized tools for Bayesian updating, causal adjustment, counterfactual simulation, and analogical mapping are expected to outperform simpler baselines.
 \end{abstract}
 
 \section{Introduction}
 LLMs trained via next-token prediction implicitly encode broad statistical knowledge, yet they often struggle with structured scientific tasks that require decomposition, causality, uncertainty quantification, analogical generalization, and counterfactual analysis. A promising direction is \emph{inference-time augmentation}: the LLM acts as a planner and controller that decomposes a query and calls specialized reasoning tools, returning their results to compose a final answer \citep{rajaraman2024orchestration, zelikman2022star, yao2022react}. We formalize a unified framework for five reasoning paradigms that are central to scientific method and show tool-level evaluations.
-This paper makes three contributions: (i) a general orchestration operator unifying hierarchical, causal, Bayesian, analogical, and counterfactual tools; (ii) a synthetic benchmark that isolates module competence with reproducible metrics; and (iii) theoretical and empirical analysis connecting probabilistic graphical models and cognitive science.
+This paper makes three contributions: (i) a general orchestration operator unifying hierarchical, causal, Bayesian, analogical, and counterfactual tools; (ii) a proposal for a synthetic benchmark to isolate module competence, with illustrative metrics; and (iii) theoretical analysis connecting the framework to probabilistic graphical models and cognitive science.
 
 \section{Related Work}
 \paragraph{Hierarchical planning and cognitive architectures.}
@@ -62,42 +62,41 @@ This connects to role discovery and graph matching.
 \subsection{Counterfactual Simulation}
 Given observation $o$, counterfactuals follow abduction--action--prediction \citep{pearl2009causality}. In linear-Gaussian SCMs, conditional means admit closed-form updates, enabling fast counterfactual queries.
 
-\section{Synthetic Benchmark and Metrics}
-We design a tool-centric synthetic benchmark that isolates each module:
+\section{Proposed Synthetic Benchmark and Illustrative Metrics}
+To evaluate the framework, we propose a tool-centric synthetic benchmark designed to isolate each reasoning module:
 \begin{enumerate}
-\item \textbf{Bayesian:} Beta--Binomial estimation evaluated by per-trial log marginal likelihood vs a plug-in MLE baseline.
-\item \textbf{Causal:} Linear Gaussian SCM with confounding; compare naive OLS $Y\!\sim\!X$ to backdoor-adjusted $Y\!\sim\!X{+}Z$ via MSE to the true structural coefficient $a$.
-\item \textbf{Counterfactual:} Linear Gaussian SCM counterfactual mean squared error.
-\item \textbf{Analogical:} Accuracy of structure-preserving permutation vs degree-based heuristic on directed acyclic graphs.
+\item \textbf{Bayesian:} Beta--Binomial estimation, to be evaluated by per-trial log marginal likelihood vs a plug-in MLE baseline.
+\item \textbf{Causal:} A linear Gaussian SCM with confounding; compare naive OLS $Y\!\sim\!X$ to backdoor-adjusted $Y\!\sim\!X{+}Z$ via MSE relative to the true structural coefficient.
+\item \textbf{Counterfactual:} A linear Gaussian SCM to be evaluated by counterfactual mean squared error.
+\item \textbf{Analogical:} Accuracy of a structure-preserving permutation algorithm versus a degree-based heuristic on directed acyclic graphs.
 \end{enumerate}
-This benchmark is reproducible and stresses formal competence of the tool modules that an LLM controller would invoke at inference time.
+This proposed benchmark would stress the formal competence of the tool modules that an LLM controller would invoke.
 
-\section{Results}
-Table~\ref{tab:results} summarizes empirical results over thousands of instances. Bayesian updating yields higher marginal likelihood than MLE plug-in estimates; backdoor adjustment reduces causal MSE vs naive regression; counterfactual simulation achieves low error under correct model assumptions; structure mapping strongly outperforms degree heuristics.
-
+\section{Illustrative Performance}
+Table~\ref{tab:results} provides illustrative target metrics for the proposed benchmark. These are not empirical results, but rather plausible values that demonstrate the expected advantages of each specialized reasoning tool over simpler baselines. For example, Bayesian updating should yield a higher marginal likelihood than a simple MLE plug-in, and backdoor adjustment on a confounded causal model should dramatically reduce MSE.
 
 \begin{table}[t]
 \centering
 \begin{tabular}{l r}
 \toprule
-\textbf{Module / Metric} & \textbf{Score} \\ \midrule
-Bayesian per-trial log-likelihood (marginal) & -0.0457 \\
-MLE per-trial log-likelihood (plug-in) & -0.5748 \\
-Delta (Bayes $-$ MLE) & 0.5292 \\
-Causal MSE (naive OLS $Y\!\sim\!X$) & 0.352470 \\
-Causal MSE (adjusted $Y\!\sim\!X{+}Z$) & 0.002345 \\
-Delta MSE (naive $-$ adjusted) & 0.350125 \\
-Counterfactual MSE (linear-Gaussian SCM) & 0.000000 \\
-Analogical accuracy (structure mapping) & 1.0000 \\
-Analogical accuracy (degree heuristic) & 0.7747 \\
+\textbf{Module / Metric} & \textbf{Illustrative Score} \\ \midrule
+Bayesian per-trial log-likelihood (marginal) & -0.05 \\
+MLE per-trial log-likelihood (plug-in) & -0.57 \\
+\textit{Expected Delta (Bayes $-$ MLE)} & \textit{+0.52} \\
+\addlinespace
+Causal MSE (naive OLS $Y\!\sim\!X$) & 0.35 \\
+Causal MSE (adjusted $Y\!\sim\!X{+}Z$) & 0.002 \\
+\textit{Expected Delta MSE (naive $-$ adjusted)} & \textit{+0.348} \\
+\addlinespace
+Counterfactual MSE (linear-Gaussian SCM) & $\approx 0$ \\
+\addlinespace
+Analogical accuracy (structure mapping) & 1.00 \\
+Analogical accuracy (degree heuristic) & 0.77 \\
 \bottomrule
 \end{tabular}
-\caption{Tool-centric synthetic benchmark. $n_\text{Bayes}=400$ tasks; $n_\text{Causal}=300$ tasks; Counterfactual cases=1800; Analogical queries=1500. Metrics summarized from \texttt{reasoning\_tools\_benchmark\_summary.csv}.}
+\caption{Illustrative target metrics for the proposed tool-centric synthetic benchmark. These values are conceptual targets and not the result of a real experiment.}
 \label{tab:results}
 \end{table}
-
-
-Running the benchmark writes summary metrics to \texttt{reasoning_tools_benchmark_summary.csv}.
 \section{Theory: Why Integration Helps}
 \paragraph{Inductive bias complementarity.}
 Each module contributes constraints that reduce the effective hypothesis class $\mathcal{H}$, lowering generalization error bounds while preserving expressivity for scientific tasks.
@@ -107,10 +106,10 @@ Let $R_i$ be module transcripts; the hybrid transcript $R_\mathrm{hyb}$ increase
 For estimators $\hat{\theta}_i$ with bias--variance tradeoffs tailored to substructures (causal, probabilistic, relational), orthogonalization of errors reduces aggregate risk when composed with hierarchical planning.
 
 \section{Discussion and Limitations}
-Our evaluation is \emph{tool-centric and synthetic}, designed for offline reproducibility. In a full LLM agent, the planner would call these modules on real datasets (e.g., ScienceQA, PubMedQA) and integrate outputs into natural language answers with calibrated uncertainties. Hybrid reasoning incurs additional compute for tool calls and planning; mitigating latency and enforcing resource-aware scheduling remain open challenges. Future work will (i) plug this orchestration into an LLM controller, (ii) evaluate on real benchmarks, and (iii) extend analogical mapping beyond exact permutations to noisy relational correspondences.
+Our proposed evaluation is \emph{tool-centric and synthetic}. In a full LLM agent, the planner would call these modules on real datasets (e.g., ScienceQA, PubMedQA) and integrate outputs into natural language answers with calibrated uncertainties. Hybrid reasoning incurs additional compute for tool calls and planning; mitigating latency and enforcing resource-aware scheduling remain open challenges. Future work will (i) plug this orchestration into an LLM controller, (ii) evaluate on real benchmarks, and (iii) extend analogical mapping beyond exact permutations to noisy relational correspondences.
 
 \section{Conclusion}
-Inference-time hybrid reasoning via hierarchical, causal, Bayesian, analogical, and counterfactual modules forms a principled path toward scientific LLM agents. Our theory and empirical results support the viability of this approach and provide a reproducible foundation for larger-scale studies.
+Inference-time hybrid reasoning via hierarchical, causal, Bayesian, analogical, and counterfactual modules forms a principled path toward scientific LLM agents. Our theory and illustrative examples suggest the viability of this approach and provide a conceptual foundation for larger-scale empirical studies.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
