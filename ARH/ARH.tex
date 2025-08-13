@@ -15,6 +15,7 @@
 \usepackage{algpseudocode}
 \usepackage{xcolor}
 \usepackage{mathtools}
+\usepackage{pgfplotstable}
 
 % Define hyperlink colors for a professional look
 \hypersetup{
@@ -41,7 +42,7 @@
 
 % --- Title & Author ---
 \title{Adaptive Resonance Hierarchies (ARH): \\ A Framework for Dynamic Structural Learning}
-\author{Agentic Research Group \\ \texttt{agent@research.com}}
+\author{Agentic Research Group}
 \date{August 10, 2025}
 
 \begin{document}
@@ -49,7 +50,7 @@
 \maketitle
 
 \begin{abstract}
-The pursuit of artificial general intelligence necessitates models that can autonomously adapt their internal \emph{structure} in response to non-stationary environments. Prevailing deep learning architectures rely on fixed hierarchies, rendering them brittle when faced with novel abstractions that require new reasoning pathways. This leads to catastrophic forgetting or an inability to learn. We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganizes its own reasoning hierarchy during inference. Inspired by principles from Predictive Coding (PC) and Adaptive Resonance Theory (ART), ARH operates by testing top-down predictions against bottom-up evidence. A sufficient match (a state of \emph{resonance}) permits learning, while persistent mismatch (\emph{dissonance}) triggers structural adaptation. The core of the architecture is the \emph{Gated Resonant Unit} (GRU-R), a recurrent unit that couples temporal sequence processing with a vigilance-gated plasticity mechanism. The hierarchy adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes for new patterns) and \emph{Vertical Expansion} (spawning new layers for new abstractions). The latter is driven by a process we term \emph{Spatio-Temporal Dissonance Consolidation} (STDC). We formalize the ARH framework, derive theoretical guarantees for its stability and growth, and present illustrative results from a stylized simulation of a challenging hierarchical concept-drift benchmark. In this simulation, ARH demonstrates significantly faster adaptation than static baselines.
+The pursuit of artificial general intelligence necessitates models that can autonomously adapt their internal \emph{structure} in response to non-stationary environments. Prevailing deep learning architectures rely on fixed hierarchies, rendering them brittle when faced with novel abstractions that require new reasoning pathways. This leads to catastrophic forgetting or an inability to learn. We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganizes its own reasoning hierarchy during inference. Inspired by principles from Predictive Coding (PC) and Adaptive Resonance Theory (ART), ARH operates by testing top-down predictions against bottom-up evidence. A sufficient match (a state of \emph{resonance}) permits learning, while persistent mismatch (\emph{dissonance}) triggers structural adaptation. The core of the architecture is the \emph{Gated Resonant Unit} (GRU-R), a recurrent unit that couples temporal sequence processing with a vigilance-gated plasticity mechanism. The hierarchy adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes for new patterns) and \emph{Vertical Expansion} (spawning new layers for new abstractions). The latter is driven by a process we term \emph{Spatio-Temporal Dissonance Consolidation} (STDC). We formalize the ARH framework, derive theoretical guarantees for its stability and growth, and present illustrative results from a stylized simulation of a challenging hierarchical concept-drift benchmark. In this simulation, ARH is modeled to demonstrate significantly faster adaptation than static baselines.
 \end{abstract}
 
 \keywords{Hierarchical Reasoning, Predictive Coding, Adaptive Resonance Theory, Dynamic Architectures, Structural Learning, Continual Learning, Stability–Plasticity Dilemma}
@@ -65,7 +66,7 @@ Our primary contributions are:
     \item \textbf{The Gated Resonant Unit (GRU-R):} We introduce a novel recurrent unit that combines the temporal processing power of a GRU with a resonance-gated plasticity mechanism, ensuring that learning only occurs when predictions match evidence.
     \item \textbf{Spatio-Temporal Dissonance Consolidation (STDC):} We propose a concrete mechanism that transforms accumulated dissonance into new hierarchical layers by clustering buffered activation trajectories that consistently failed to resonate.
     \item \textbf{Theoretical Guarantees:} We provide formal results on (i) the stability of learned weights under non-resonant conditions, and (ii) a closed-form bound on the expected time-to-spawn a new layer under persistent mismatch, enabling principled parameterization.
-    \item \textbf{Illustrative Validation:} We demonstrate the potential efficacy of ARH on a stylized Hierarchical Concept Drift (HCD) benchmark, where it is modeled to significantly outperform static baselines in recovery speed and adaptation. We also provide a full complexity analysis and a policy for budgeted growth.
+\item \textbf{Illustrative Validation:} We test the potential efficacy of ARH on a stylized Hierarchical Concept Drift (HCD) benchmark, where it is modeled to significantly outperform static baselines in recovery speed and adaptation. We also provide a full complexity analysis and a policy for budgeted growth.
 \end{enumerate}
 
 \section{Preliminaries and Notation}
@@ -287,24 +288,24 @@ Let $n_i$ be the number of nodes at layer $i$, $d_i$ the hidden state dimension,
 
 \paragraph{Budgeted ARH.} Unbounded growth is impractical. We introduce a budgeted variant by adding a complexity penalty to the loss function: $\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda_n \sum_i n_i + \lambda_d K(t)$. Pruning is achieved via \emph{resonant consolidation}: periodically, nodes with low resonant utilization are removed. A node's utilization can be defined as its resonant frequency multiplied by its average match score when chosen. Nodes with utilization below a threshold are pruned. Additionally, redundant nodes (whose recognition weight vectors have a cosine similarity above a high threshold, e.g., 0.99) can be merged. This maintains performance while respecting computational budgets.
 
-\section{Experiments: A Stylized Simulation}
+\section{Illustrative Simulation}
 \subsection{Task Description: Hierarchical Concept Drift (HCD)}
-To illustrate ARH's structural adaptation capability, we use a stylized simulation of a Hierarchical Concept Drift (HCD) benchmark. It is a continual classification task presented as a stream of data. The task has two phases:
+To illustrate the theoretical advantages of ARH's structural adaptation, we designed a stylized simulation of a Hierarchical Concept Drift (HCD) benchmark. This simulation is not a full implementation of the model, but rather a scripted demonstration of its expected behavior based on the principles outlined in this paper. The task is a continual classification stream with two phases:
 \begin{itemize}
-    \item \textbf{Phase 1 (Steps 0-4999):} The classification label depends on a low-level feature of an object in the input scene (e.g., its color). A single-layer model can solve this.
-    \item \textbf{Phase 2 (Steps 5000+):} The labeling rule abruptly changes to depend on an abstract, relational property between two objects (e.g., "is the circle to the left of the square?"). This new rule would render the old features useless and require a new hierarchical layer to first identify the objects and then compute their relation.
+    \item \textbf{Phase 1 (Steps 0-4999):} The classification label depends on a low-level feature (e.g., color). A single-layer model can solve this.
+    \item \textbf{Phase 2 (Steps 5000+):} The labeling rule abruptly changes to depend on an abstract, relational property (e.g., "is the circle to the left of the square?"). This new rule is designed to render the old features useless and explicitly require a new hierarchical layer to first identify the objects and then compute their relation.
 \end{itemize}
-This shift is designed to make a static, shallow model fail and to explicitly require the creation of new abstract representations.
+This shift is designed to make a static, shallow model fail and to showcase the necessity of creating new abstract representations, a core capability of ARH.
 
 \subsection{Simulated Baselines and Metrics}
-We compare ARH against two strong baselines in our stylized simulation:
+We model the behavior of ARH against two strong baselines:
 \begin{enumerate}
     \item \textbf{Monolithic Transformer:} A standard Transformer model (LLM-style), representing a powerful but structurally static architecture.
     \item \textbf{Static HRM:} The Hierarchical Reasoning Model from \citet{HRM2025}, which uses a fixed, hand-designed two-layer hierarchy.
 \end{enumerate}
-We measure: (1) \textbf{Phase 1 Accuracy}, (2) \textbf{Post-Shift Nadir} (the lowest accuracy after the shift), and (3) \textbf{Recovery Speed} (number of steps to return to 90\% of pre-shift accuracy).
+We measure the modeled performance based on: (1) \textbf{Phase 1 Accuracy}, (2) \textbf{Post-Shift Nadir} (the lowest accuracy after the shift), and (3) \textbf{Recovery Speed} (number of steps to return to 90\% of pre-shift accuracy).
 
-The Python script \texttt{code/plot\_hcd.py} generates the stylized performance curves shown in Figure~\ref{fig:performance_plot}, which are intended to be illustrative of the model's theoretical behavior. The script saves the visualization to \texttt{code/arh\_hcd\_visualization.pdf} and the underlying data to \texttt{code/arh\_hcd\_curves.csv}.
+The Python script \texttt{code/plot\_hcd.py} generates the performance curves shown in Figure~\ref{fig:performance_plot}. These curves are intended to be illustrative of the model's theoretical behavior. The script saves the visualization to \texttt{code/arh\_hcd\_visualization.pdf} and the underlying data to \texttt{code/arh\_hcd\_curves.csv}.
 
 \begin{figure}[h!]
     \centering
@@ -315,20 +316,22 @@ The Python script \texttt{code/plot\_hcd.py} generates the stylized performance 
 
 \begin{table}[h!]
 \centering
-\caption{Parameters for the stylized HCD benchmark simulation. These values define the curves in Figure~\ref{fig:performance_plot} and are chosen for illustrative purposes.}
+\caption{Parameters for the stylized HCD benchmark simulation. These values, generated by the accompanying script, define the curves in Figure~\ref{fig:performance_plot} and are chosen for illustrative purposes.}
 \label{tab:results_hcd}
-\begin{tabular}{@{}lccc@{}}
-\toprule
-Model & Phase 1 Accuracy (\%) & Post-Shift Nadir (\%) & Recovery Speed (steps to 90\%) \\
-\midrule
-LLM (Monolithic) & 91.5 & 22.5 & > 10,000 (failed) \\
-HRM (Static, 2-layer) & 93.1 & 35.0 & $\approx$ 7,500 \\
-\textbf{ARH (Ours, dynamic)} & \textbf{92.8} & \textbf{65.2} & \textbf{1,700} \\
-\bottomrule
-\end{tabular}
+\pgfplotstabletypeset[
+    col sep=comma,
+    string type,
+    header=true,
+    every head row/.style={before row=\toprule, after row=\midrule},
+    every last row/.style={after row=\bottomrule},
+    display columns/0/.style={string type, column name=Model},
+    display columns/1/.style={string type, column name=Phase 1 Accuracy (\%)},
+    display columns/2/.style={string type, column name=Post-Shift Nadir (\%)},
+    display columns/3/.style={string type, column name=Recovery Speed (steps to 90\%)},
+]{ARH/code/hcd_results_table.csv}
 \end{table}
 
-\subsection{Results and Analysis}
+\subsection{Analysis of Modeled Results}
 As shown in our stylized simulation (Figure \ref{fig:performance_plot} and Table \ref{tab:results_hcd}), ARH is modeled to demonstrate superior adaptability. In Phase 1, it performs on par with the baselines by learning a flat (single-layer) representation. At the shift, all models suffer, but the static models are crippled. Their fixed architectures would lead to catastrophic interference. ARH, however, is modeled to detect the persistent mismatch. Its dissonance level $D_1$ rises, triggering vertical expansion. The newly created layer $L_2$ would then learn to represent the abstract relations needed for Phase 2, leading to a much higher nadir and a >4x faster recovery than the static HRM.
 
 \subsection{Stylized Model Details}

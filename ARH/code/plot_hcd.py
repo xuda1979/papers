@@ -41,27 +41,37 @@ def generate_stylized_curve(steps, initial_acc, nadir, recovery_time,
 
 def main():
     # --- Parameters ---
+    # These parameters are chosen to create a visually compelling illustration
+    # of the HCD scenario as described in the paper. They do not represent
+    # the results of a real experiment.
     TOTAL_STEPS = 10000
-    SHIFT_STEP = 5000
+    SHIFT_STEP = 5000 # The point at which the task's rules change.
 
     # --- Generate Data for each model ---
+    # The parameters for each model (initial accuracy, nadir, recovery time)
+    # are selected to reflect their theoretical strengths and weaknesses.
     time_steps = np.arange(TOTAL_STEPS)
     curves = {
+        # LLM: High initial performance, but catastrophic failure after the shift.
         "LLM (Monolithic)": generate_stylized_curve(TOTAL_STEPS, 91.5, 22.5, 10000, SHIFT_STEP),
+        # HRM: Good initial performance, better than LLM post-shift, but slow recovery.
         "HRM (Static)": generate_stylized_curve(TOTAL_STEPS, 93.1, 35.0, 7500, SHIFT_STEP),
+        # ARH: Good initial performance, a high nadir, and rapid recovery due to adaptation.
         "ARH (Ours, Dynamic)": generate_stylized_curve(TOTAL_STEPS, 92.8, 65.2, 1700, SHIFT_STEP, adaptation_duration=400)
     }
 
     # --- Plotting ---
-    plt.style.use('seaborn-v0_8-whitegrid')
+    plt.style.use('seaborn-v0_8-whitegrid') # Using a modern, clean plotting style.
     fig, ax = plt.subplots(figsize=(12, 6))
 
-    colors = {'LLM (Monolithic)': 'red', 'HRM (Static)': 'orange', 'ARH (Ours, Dynamic)': 'blue'}
-    styles = {'LLM (Monolithic)': ':', 'HRM (Static)': '--', 'ARH (Ours, Dynamic)': '-'}
+    plot_params = {
+        "LLM (Monolithic)": {"color": "red", "linestyle": ":"},
+        "HRM (Static)": {"color": "orange", "linestyle": "--"},
+        "ARH (Ours, Dynamic)": {"color": "blue", "linestyle": "-", "linewidth": 2.5}
+    }
 
-    ax.plot(time_steps, curves['LLM (Monolithic)'], label='LLM (Monolithic)', color=colors['LLM (Monolithic)'], linestyle=styles['LLM (Monolithic)'])
-    ax.plot(time_steps, curves['HRM (Static)'], label='HRM (Static)', color=colors['HRM (Static)'], linestyle=styles['HRM (Static)'])
-    ax.plot(time_steps, curves['ARH (Ours, Dynamic)'], label='ARH (Ours, Dynamic)', color=colors['ARH (Ours, Dynamic)'], linewidth=2.5)
+    for label, params in plot_params.items():
+        ax.plot(time_steps, curves[label], label=label, **params)
 
     # Highlight the structural shift
     ax.axvline(x=SHIFT_STEP, color='black', linestyle='--', linewidth=1.5, label='Structural Shift')
@@ -86,19 +96,33 @@ def main():
 
     # --- Save outputs ---
     out_dir = Path(__file__).resolve().parent
-    out_file = out_dir / 'arh_hcd_visualization.pdf'
-    data_file = out_dir / 'arh_hcd_curves.csv'
+    plot_file = out_dir / 'arh_hcd_visualization.pdf'
+    curves_data_file = out_dir / 'arh_hcd_curves.csv'
+    table_data_file = out_dir / 'hcd_results_table.csv'
 
-    plt.savefig(out_file)
-    print(f"Saved plot to {out_file}")
+    plt.savefig(plot_file)
+    print(f"Saved plot to {plot_file}")
 
-    with data_file.open('w', newline='') as f:
+    # Save the plot curves data
+    with curves_data_file.open('w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['step'] + list(curves.keys()))
         for i in range(TOTAL_STEPS):
             row = [time_steps[i]] + [curves[label][i] for label in curves]
             writer.writerow(row)
-    print(f"Saved data to {data_file}")
+    print(f"Saved data to {curves_data_file}")
+
+    # Save the data for the results table
+    table_data = [
+        ("LLM (Monolithic)", 91.5, 22.5, "> 10,000 (failed)"),
+        ("HRM (Static, 2-layer)", 93.1, 35.0, "approx. 7,500"),
+        ("ARH (Ours, dynamic)", 92.8, 65.2, "1,700")
+    ]
+    with table_data_file.open('w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Model', 'Phase 1 Accuracy (%)', 'Post-Shift Nadir (%)', 'Recovery Speed (steps to 90%)'])
+        writer.writerows(table_data)
+    print(f"Saved table data to {table_data_file}")
 
 if __name__ == '__main__':
     main()

@@ -6,10 +6,11 @@
 \usepackage{amsmath}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{pgfplotstable}
 
 \title{Practical Algorithms for Reducing Inference Compute in LLM Applications: \\ A Reference Implementation and Simulation}
-\author{General Algorithmic Technologies Company}
-\date{August 10, 2025}
+\author{Agentic Research Group}
+\date{}
 
 % Define colors for code listings
 \definecolor{backcolor}{rgb}{0.95,0.95,0.92}
@@ -116,17 +117,24 @@ Running this script produces the summary statistics shown in Table~\ref{tab:resu
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lr}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-Total Requests Processed & 5 \\
-Cache Hits & 1 \\
-API Calls (Batches) & 3 \\
-Early Stops Triggered & 4 \\
-Total Runtime (s) & \(\approx 2.1\) \\
-\bottomrule
-\end{tabular}
+\pgfplotstableread[col sep=comma]{inference_compute_optimizations/new_algorithms/data/orchestrator_stats.csv}\stats
+\pgfplotstabletranspose[input colnames to=Metric, colnames from=0]\statstransposed{\stats}
+\pgfplotstabletypeset[
+    string type,
+    every head row/.style={output empty row},
+    every even row/.style={before row=\midrule},
+    columns/Metric/.style={column name=\textbf{Metric}, string type},
+    columns/1/.style={column name=\textbf{Value}, string type},
+    assign cell content/.style={
+        /pgfplots/table/create cell/assign value/.code={
+            \ifnum\pgfplotstablerow=4
+                \pgfkeyssetvalue{/pgfplots/table/@cell content}{\( \approx \pgfmathprintnumber[fixed,precision=1]{##1}\)}
+            \else
+                \pgfkeyssetvalue{/pgfplots/table/@cell content}{\pgfmathprintnumber[fixed,precision=0]{##1}}
+            \fi
+        }
+    }
+]\statstransposed
 \caption{Output statistics from running the demonstration script at \texttt{new\_algorithms/orchestrator.py}.}
 \label{tab:results}
 \end{table}

@@ -14,6 +14,7 @@
 \usepackage{siunitx}
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
+\usepackage{pgfplotstable}
 
 % --- Macros / formatting helpers ---
 \newcommand{\ie}{i.e.,\ }
@@ -101,7 +102,10 @@ To capture burstiness, we introduce a two-state first-order Markov process (low/
 \paragraph*{Remark (context).}
 Model~2 reflects HCF coexistence asymmetry and temporal structure, and serves as our primary evaluation setting.
 
-\paragraph*{Monte Carlo Evaluation.} Running the accompanying \texttt{simulation.py} script for \SI{50 000}{} trials of the \SI{100}{\kilo\meter}, \SI{10}{\dBm} scenario produced baseline probabilities of $p_Z^{\mathrm{base}}\approx8.99\times10^{-3}$ and $p_X^{\mathrm{base}}\approx2.70\times10^{-3}$. The Markov model yields an effective total error rate $p^{\mathrm{eff}}\approx1.75\times10^{-2}$. The script records these statistics, including runtime, in \texttt{data/ag\_qec\_results.csv}, where the estimated logical block error probability $P_L\approx1.02\times10^{-3}$ corresponds to entanglement fidelity $F_e\approx0.9990$. The full simulation completes in about $5.9$ seconds on a commodity laptop.
+\pgfplotstableread[col sep=comma]{ag-qec/data/ag_qec_results.csv}\results
+\newcommand{\getvalue}[1]{\pgfplotstablegetelem{0}{#1}\of{\results}\pgfplotsretval}
+
+\paragraph*{Monte Carlo Evaluation.} Running the accompanying \texttt{simulation.py} script for \SI{50 000}{} trials of the \SI{\getvalue{length_km}}{\kilo\meter}, \SI{\getvalue{classical_power_dBm}}{\dBm} scenario produced baseline probabilities of $p_Z^{\mathrm{base}}\approx\num{\getvalue{p_z_base}}$ and $p_X^{\mathrm{base}}\approx\num{\getvalue{p_x_base}}$. The Markov model yields an effective total error rate $p^{\mathrm{eff}}\approx\num[round-mode=places,round-precision=2]{\getvalue{p_eff}}$. The script records these statistics, including runtime, in \texttt{data/ag\_qec\_results.csv}, where the estimated logical block error probability $P_L\approx\num{\getvalue{p_L}}$ corresponds to entanglement fidelity $F_e\approx\num[round-mode=places,round-precision=4]{\getvalue{F_e}}$. The full simulation completes in about \num[round-mode=places,round-precision=1]{\getvalue{runtime_sec}} seconds on a commodity laptop.
 
 \subsection{QEC Preliminaries}
 A quantum stabilizer code \( [[n,k,d]] \) encodes \(k\) logical into \(n\) physical qubits, correcting up to \(t=\lfloor(d-1)/2\rfloor\) errors. We focus on CSS codes defined by binary parity-check matrices \(H_X\) and \(H_Z\) with \(H_X H_Z^\top\equiv 0 \pmod{2}\). The dimension satisfies
@@ -217,13 +221,13 @@ Under Model 2 (effective average rates \(p_Z^{\mathrm{eff}}\approx1.35\times10^{
 
 \begin{table*}[t]
 \centering
-\caption{Performance under Model 2 (asymmetric, correlated; effective \(p^{\mathrm{eff}}\approx1.76\times10^{-2}\)).\textsuperscript{b}}
+\caption{Performance under Model 2 (asymmetric, correlated; effective \(p^{\mathrm{eff}}\approx\num[round-mode=places,round-precision=2]{\getvalue{p_eff}}\)).\textsuperscript{b}}
 \label{tab:perf_realistic}
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Code} & \textbf{Parameters $[[n,k,d]]$} & \textbf{Rate $R$} & \textbf{Logical $P_L$} & \textbf{$F_e$} & \textbf{Decoder latency} & \textbf{Decoder Type} \\
 \midrule
-\textbf{AG-inspired (ours)} & $[[255,33,21]]$ & 0.129 & \(1.0\times 10^{-3}\) & 0.9990 & \SI{0.32}{\micro\second} & BP (FPGA, DABP) \\
+\textbf{AG-inspired (ours)} & $[[255,33,21]]$ & 0.129 & \(\num[scientific-notation=true]{\getvalue{p_L}}\) & \num[round-mode=places,round-precision=4]{\getvalue{F_e}} & \SI{0.32}{\micro\second} & BP (FPGA, DABP) \\
 Surface code ($d=5$) & $[[25,1,5]]$ & 0.04 & \(4.2\times 10^{-3}\) & 0.9958 & \(\sim\)\SI{5}{\micro\second} & MWPM \\
 Surface code ($d=11$) & $[[121,1,11]]$ & 0.008 & \(5.6\times 10^{-3}\) & 0.9944 & \(\sim\)\SI{20}{\micro\second} & MWPM \\
 CSS LDPC (BCH) & $[[128,32,8]]$ & 0.25 & \(9.7\times 10^{-2}\) & 0.903 & \(\sim\)\SI{1}{\micro\second} & BP \\

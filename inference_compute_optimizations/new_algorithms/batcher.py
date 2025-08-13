@@ -54,6 +54,7 @@ class DynamicMicroBatcher:
 
     def _dispatch(self, model: str, executor_func: Callable):
         """Executes the batch and resolves the futures. Assumes lock is held."""
+        assert self.locks[model].locked(), "Dispatch must be called under lock"
         batch = self.queues[model]
         futures = self.futures[model]
 
