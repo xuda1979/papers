@@ -7,6 +7,10 @@ authors: Your Team
 
 > **Revision note (2025-08-18)** — This version replaces any hand‑wavy “let an LLM decide compute” policy with **runtime primitives** and **enforceable mechanisms** that sit **below** any planner/orchestrator (LLM or not). These mechanisms use OS/runtime/hardware controls and externally verified signals. They are practical to build now and directly useful for **math/algorithms/theoretical physics with simulations**.
 
+## Abstract
+
+We present twelve **runtime-enforced primitives** for allocating compute in math, code, and physics workloads. Each primitive operates below any planner or large language model, wielding OS, runtime, or hardware mechanisms to **preempt, gate, or splice** computation deterministically. To demonstrate the approach, we deploy a **compute-budgeted Growing RBF network** in a drifting contextual bandit. A runtime growth gate caps structural expansion while retaining reward, highlighting how verifiers can steer FLOPs toward the most promising reasoning branches. Together these primitives form a minimal architecture that lets external signals decide where compute is spent, enabling reproducible control over long reasoning chains and multi-fidelity simulations.
+
 ## 1. Motivation
 
 Heuristic, policy‑only approaches (e.g., “smart LLM allocators”) cannot *enforce* where compute goes, nor preempt live kernels, nor gate expensive calls against verifiers. We therefore shift the locus of control to the **runtime**: the place that owns **GPU streams, memory, processes, and verifiers**.
@@ -179,7 +183,7 @@ Each primitive below is (i) practical today, (ii) hard for a generic LLM allocat
 ## 4. How These Win in Practice
 
 - **Math / proofs.** PSC‑CR + RoI‑S slash retries by repairing only broken spans and reusing verified lemmas. CSS drives compute to the tightest contradictions first.
-- **Algorithms / coding.** TTC prevents long solvers you won’t consume; IDS splices quick unit tests/results mid‑decode.
+- **Algorithms / coding.** TTC prevents long solvers you won’t consume; IDS splices quick unit tests/results mid‑decode; our budgeted GRBF network keeps reward steady under prototype caps.
 - **Physics sims.** IGMS localizes fidelity upgrades; CPCS funnels GPUs to time‑critical cell blocks; KVT‑P makes ultra‑long contexts feasible (derivations + logs).
 
 ## 5. Interfaces & Snippets
@@ -207,6 +211,16 @@ if coordinator.will_consume(call_id):
     coordinator.attach(result, step42)
 else:
     tool.abort(call_id)  # nothing heavy executed
+```
+
+### 5.3 Budgeted Prototype Growth
+
+```python
+net = GrowingRBFNet(d=2, k=3, growth_budget=32)
+for x, y in stream:
+    net.update(x, y)
+    if net.growth_budget is not None and net.growth_budget <= 0:
+        break  # runtime gate stops further structural growth
 ```
 
 ## 6. Fast Validation Plan (2–3 days per item)
