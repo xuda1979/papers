@@ -1,9 +1,9 @@
 
 import numpy as np, pandas as pd, matplotlib.pyplot as plt, os, time
-from data_generators import MixtureDriftGaussians
-from baselines import LogisticSGD, MLPOnline
-from growing_rbf_net import GrowingRBFNet
-from growing_rbf_net_plastic import GrowingRBFNetPlastic
+from .data_generators import MixtureDriftGaussians
+from .baselines import LogisticSGD, MLPOnline
+from .growing_rbf_net import GrowingRBFNet, RuntimeGate
+from .growing_rbf_net_plastic import GrowingRBFNetPlastic
 
 def moving_average(arr, w=200):
     if w <= 1: return arr.copy()
@@ -19,9 +19,12 @@ def run_experiment(out_dir, seed=21):
 
     logreg = LogisticSGD(d=d, k=k, lr=0.05, wd=1e-4, name="LogReg")
     mlp    = MLPOnline(d=d, k=k, h=32, lr=0.01, wd=1e-5, name="MLP(32)")
-    grbfn  = GrowingRBFNet(d=d, k=k, sigma=0.65, lr_w=0.25, lr_c=0.06, min_phi_to_cover=0.25, max_prototypes=90, name="GRBFN")
+    # In this experiment, we allow unlimited growth to test adaptation speed.
+    grbfn_gate = RuntimeGate(None)
+    grbfnp_gate = RuntimeGate(None)
+    grbfn  = GrowingRBFNet(d=d, k=k, sigma=0.65, lr_w=0.25, lr_c=0.06, min_phi_to_cover=0.25, max_prototypes=90, growth_gate=grbfn_gate, name="GRBFN")
     grbfnp = GrowingRBFNetPlastic(d=d, k=k, sigma=0.65, lr_w=0.25, lr_c=0.06, min_phi_to_cover=0.25,
-                                  hebb_eta=0.6, hebb_decay=0.94, gate_beta=1.2, gate_top=16, key_lr=0.03,
+                                  growth_gate=grbfnp_gate, hebb_eta=0.6, hebb_decay=0.94, gate_beta=1.2, gate_top=16, key_lr=0.03,
                                   r_merge=0.35, merge_every=600, max_prototypes=90, name="GRBFN+Plastic")
 
     models = [logreg, mlp, grbfn, grbfnp]

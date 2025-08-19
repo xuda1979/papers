@@ -5,6 +5,30 @@ from typing import Tuple
 import numpy as np
 
 
+class RuntimeGate:
+    """A simple runtime-enforced gate based on a consumable budget.
+
+    This class explicitly implements the concept of a runtime-enforced
+    constraint as described in the paper. The model's internal logic can
+    query this gate to see if an action (like structural growth) is
+    permitted. The gate's state is controlled externally.
+    """
+    def __init__(self, budget: int | None):
+        self._budget = budget
+
+    def is_open(self) -> bool:
+        """Returns True if the gate allows the action."""
+        if self._budget is None:
+            return True
+        return self._budget > 0
+
+    def consume(self):
+        """Consumes one unit from the budget, effectively closing the gate
+        by one step."""
+        if self._budget is not None:
+            self._budget -= 1
+
+
 class GrowingRBFNet:
     """Self-assembling RBF classifier with prototype growth and pruning.
 
@@ -30,9 +54,9 @@ class GrowingRBFNet:
         Exponential decay applied to prototype usage counts.
     max_prototypes : int, optional
         Hard limit on the number of prototypes maintained.
-    growth_budget : int, optional
-        Maximum number of new prototypes allowed to spawn after
-        initialization. ``None`` means unlimited growth.
+    growth_gate : RuntimeGate, optional
+        A runtime-enforced gate to control structural growth. If None,
+        growth is unlimited.
     seed : int, optional
         Random seed for reproducibility.
     name : str, optional
@@ -50,7 +74,7 @@ class GrowingRBFNet:
         min_phi_to_cover: float = 0.25,
         usage_decay: float = 0.995,
         max_prototypes: int = 90,
-        growth_budget: int | None = None,
+        growth_gate: RuntimeGate | None = None,
         seed: int = 0,
         name: str = "GRBFN",
     ) -> None:
@@ -63,7 +87,7 @@ class GrowingRBFNet:
         self.min_phi_to_cover = min_phi_to_cover
         self.usage_decay = usage_decay
         self.max_prototypes = max_prototypes
-        self.growth_budget = growth_budget
+        self.growth_gate = growth_gate if growth_gate is not None else RuntimeGate(None)
         self.name = name
         rng = np.random.RandomState(seed)
         self.centers = rng.randn(k, d) * 0.01
@@ -91,20 +115,22 @@ class GrowingRBFNet:
 
     def _spawn(self, x: np.ndarray, y: int) -> None:
         """Create a new prototype centered at ``x`` for class ``y``."""
-        if self.growth_budget is not None and self.growth_budget <= 0:
+        # This is the runtime-enforced gate in action.
+        if not self.growth_gate.is_open():
             return
+
         if self.M >= self.max_prototypes:
             self._prune()
             if self.M >= self.max_prototypes:
                 return
+
         self.centers = np.vstack([self.centers, x.reshape(1, -1)])
         new_w = np.zeros((1, self.k))
         new_w[0, y] = 1.0
         self.W = np.vstack([self.W, new_w])
         self.usage = np.concatenate([self.usage, np.array([1.0])])
         self.M += 1
-        if self.growth_budget is not None:
-            self.growth_budget -= 1
+        self.growth_gate.consume() # Consume budget after growth
 
     def _prune(self) -> None:
         """Remove the least-used prototype when capacity is exceeded."""

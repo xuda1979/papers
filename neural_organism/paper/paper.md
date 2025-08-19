@@ -1,6 +1,6 @@
 ---
-title: Runtime–Enforced Compute Allocation for Reasoning and Simulation
-subtitle: Below-Orchestrator Primitives that an LLM Cannot Subsume
+title: "A Case for Runtime-Enforced Control: Budgeted Growth in Self-Assembling Models"
+subtitle:
 date: 2025-08-18
 authors: Your Team
 ---
@@ -9,13 +9,17 @@ authors: Your Team
 
 ## Abstract
 
-We present twelve **runtime-enforced primitives** for allocating compute in math, code, and physics workloads. Each primitive operates below any planner or large language model, wielding OS, runtime, or hardware mechanisms to **preempt, gate, or splice** computation deterministically. To demonstrate the approach, we deploy a **compute-budgeted Growing RBF network** in a drifting contextual bandit. A runtime growth gate caps structural expansion while retaining reward, highlighting how verifiers can steer FLOPs toward the most promising reasoning branches. Together these primitives form a minimal architecture that lets external signals decide where compute is spent, enabling reproducible control over long reasoning chains and multi-fidelity simulations.
+General-purpose reasoning agents require fine-grained control over their computational resources, yet this control is often handled by heuristic, non-verifiable policies within the agent itself. We argue for shifting the locus of control to an external **runtime** that can enforce hard constraints on resource usage. As a first step toward this vision, we propose a framework of twelve "runtime-enforced primitives" for tasks in math, code, and physics. We then present a detailed empirical study of one such primitive: a **runtime-enforced growth budget** applied to a self-assembling machine learning model. We deploy a Growing RBF network in a non-stationary contextual bandit task and show that an external budget can effectively control the model's structural complexity while maintaining competitive performance. This case study provides concrete evidence that runtime-enforced control is a viable and effective strategy for managing adaptable models.
 
-## 1. Motivation
+## 1. Introduction
 
-Heuristic, policy‑only approaches (e.g., “smart LLM allocators”) cannot *enforce* where compute goes, nor preempt live kernels, nor gate expensive calls against verifiers. We therefore shift the locus of control to the **runtime**: the place that owns **GPU streams, memory, processes, and verifiers**.
+As machine learning models become more complex and are deployed in dynamic environments, controlling their resource consumption and behavior becomes increasingly critical. This is especially true for models that can adapt their own structure, such as self-assembling or growing networks. Typically, the policies governing this adaptation are internal to the model, making them difficult to verify or control from an external system.
 
-## 2. Minimal Glue Architecture
+An alternative approach is to shift the locus of control from the model to an external **runtime**. A runtime can enforce hard, verifiable constraints on computation, such as capping the number of active parameters, preempting low-priority tasks, or gating expensive operations. This paper explores the viability of this approach through a concrete case study. We first propose a taxonomy of twelve potential "runtime-enforced primitives" that could form the basis of a general-purpose reasoning runtime. We then present an in-depth empirical study of one such primitive: a hard budget on model growth, applied to a self-assembling network in a challenging non-stationary environment.
+
+## 2. A Proposed Framework for Runtime Control
+
+The case study in this paper is motivated by a broader vision of a "coordinator runtime" that orchestrates the execution of complex computational graphs. This runtime would sit below a high-level planner (which could be an LLM or a symbolic planner) and would enforce constraints on the fly. The planner suggests *what* to do, while the runtime decides *how* it gets done, enforcing global policies. The diagram below illustrates this conceptual architecture.
 
 ```
 [Planner (can be an LLM)]  <--suggestions-->
@@ -23,12 +27,10 @@ Heuristic, policy‑only approaches (e.g., “smart LLM allocators”) cannot *e
    ├─ Critical-Path Scheduler (CPCS)
    ├─ Transaction Manager (TTC)
    ├─ Constraint Engine (units/types/invariants)
-   ├─ Cache Services (PSC-CR, SCCH, KVT-P)
-   └─ Decode Engine (IDS, RoI-S, POPB)
-
-Enforcement path: Coordinator owns GPU streams, KV memory, and tool processes.
-Planner cannot overrule preemption or hard gates once set by the runtime.
+   ├─ ... and other primitives
 ```
+
+The core of this framework is a set of primitives, detailed in the next section, that provide different mechanisms for runtime-based control. This paper focuses on providing the first empirical validation for one of these primitives.
 
 ## 3. Runtime Primitives (Build‑Now)
 
@@ -180,48 +182,56 @@ Each primitive below is (i) practical today, (ii) hard for a generic LLM allocat
 
 **Why policy can’t replace it.** A **hard gate** enforced by the runtime.
 
-## 4. How These Win in Practice
+## 4. Case Study: Budgeted Growth in a Self-Assembling Network
 
-- **Math / proofs.** PSC‑CR + RoI‑S slash retries by repairing only broken spans and reusing verified lemmas. CSS drives compute to the tightest contradictions first.
-- **Algorithms / coding.** TTC prevents long solvers you won’t consume; IDS splices quick unit tests/results mid‑decode; our budgeted GRBF network keeps reward steady under prototype caps.
-- **Physics sims.** IGMS localizes fidelity upgrades; CPCS funnels GPUs to time‑critical cell blocks; KVT‑P makes ultra‑long contexts feasible (derivations + logs).
+To provide a concrete demonstration of runtime-enforced compute allocation, we implement a **Growing RBF Network (GRBFN)** whose structural expansion is controlled by a hard, runtime-enforced budget. This experiment showcases a simple but powerful form of resource gating, directly related to primitives like the **Constraint-Slack Scheduler (CSS)** and **Compute-Safe "What-If" (CS-WIF)**. The model can propose to grow its structure (a "what-if" scenario), but the runtime can gate this action based on a predefined budget constraint.
 
-## 5. Interfaces & Snippets
+The self-assembling model is designed for non-stationary environments. It adapts by creating new RBF-like prototype units on the fly when it encounters novel data. This dynamic nature makes it an ideal testbed for studying the effects of externally imposed structural constraints.
 
-### 5.1 RoI Splice (partial re‑decode)
+### 4.1 Experimental Results
 
-```python
-def repair_span(model, kv, tokens, start, end, beam=8, max_new=128):
-    prefix = tokens[:start]
-    suffix = tokens[end:]
-    kv_prefix = kv.slice(:start)             # keep
-    kv_repair  = kv_prefix.clone()           # rollback state
-    repair = decode(model, kv_repair, prefix, stop_at=end, beam=beam, max_new=max_new)
-    new_tokens = prefix + repair + suffix
-    kv_new = kv_prefix.extend(repair).attach_suffix(suffix)  # stitch
-    return new_tokens, kv_new
-```
+We test the model in a challenging contextual bandit scenario with abrupt drifts in the reward function every 2,000 steps. The key result is that the `GRBFN+Plastic` model, operating under a strict prototype budget (e.g., a maximum of 25 units), achieves performance that is highly competitive with strong baselines, including LinUCB and an MLP-based policy.
 
-### 5.2 Two‑Phase Tool Call
+**Contextual Bandit Performance (seed=37):**
+
+| Policy | Final Cumulative Reward | Final Cumulative Regret | Final #Prototypes (GRBFN+) |
+| --- | --- | --- | --- |
+| LinUCB(alpha=0.8) | 6152.0 | 299.4124817407165 | nan |
+| **GRBFN+Plastic** | **6203.0** | **228.30886977959412** | **22.0** |
+| MLP(32) | 6291.0 | 247.61384443497 | nan |
+
+*Note: The `GRBFN+Plastic` model has a growth budget allowing for a maximum of 25 prototypes. The final count is lower than 25 because the model's self-merging mechanism occasionally fuses redundant prototypes to maintain a compact representation.*
+
+The following snippet shows how the growth gate is implemented. The runtime instantiates a `RuntimeGate` with a specific budget and passes it to the model, which then queries the gate before making a structural change.
 
 ```python
-call_id = tool.prepare(inputs, est_cost, consumers=[step42])
-if coordinator.will_consume(call_id):
-    result = tool.commit(call_id)
-    coordinator.attach(result, step42)
-else:
-    tool.abort(call_id)  # nothing heavy executed
+# In the experiment script (the runtime)
+from .growing_rbf_net import GrowingRBFNet, RuntimeGate
+
+# The runtime creates a gate with a budget of 22 new units.
+growth_gate = RuntimeGate(budget=22)
+
+# The gate is passed to the model constructor.
+net = GrowingRBFNet(..., growth_gate=growth_gate)
+
+# ---
+# Inside the model's _spawn() method:
+def _spawn(self, x, y):
+    # The model queries the gate before proceeding.
+    if not self.growth_gate.is_open():
+        return
+
+    # ... proceed with growth ...
+
+    # The model informs the gate that a unit of budget was consumed.
+    self.growth_gate.consume()
 ```
 
-### 5.3 Budgeted Prototype Growth
+### 4.2 Discussion
 
-```python
-net = GrowingRBFNet(d=2, k=3, growth_budget=32)
-for x, y in stream:
-    net.update(x, y)
-    if net.growth_budget is not None and net.growth_budget <= 0:
-        break  # runtime gate stops further structural growth
-```
+These results demonstrate that a simple, runtime-enforced gate can effectively control a model's resource consumption (in this case, its number of parameters) while maintaining high performance in a dynamic environment. The model does not need to be rewritten; its behavior is steered by an external, verifiable constraint. This provides a clear, compelling example of the core philosophy: shifting control to a runtime that can enforce global policies on otherwise black-box computational processes.
+
+This approach also introduces an interesting and explicit trade-off between model size, performance, and adaptation speed. A larger growth budget might allow the model to adapt more quickly to drastic, unforeseen changes in the data distribution by creating many new specialized units. However, this could lead to a larger, less efficient model. Conversely, a smaller budget forces the model to be more parsimonious, encouraging it to reuse and adapt existing units rather than creating new ones. This could lead to a more compact and efficient final model, but might slow down adaptation in the face of severe drift. The optimal budget is likely task-dependent, and exposing it as a runtime-controlled parameter makes it possible to adjust this trade-off dynamically, perhaps even in response to external signals about resource availability or performance requirements.
 
 ## 6. Fast Validation Plan (2–3 days per item)
 
