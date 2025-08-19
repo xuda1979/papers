@@ -97,5 +97,5 @@ def run_experiment(out_dir, seed=37, growth_gate: RuntimeGate | None = None):
 if __name__ == "__main__":
     # This run is also cited in the paper's case study and README.
     gate = RuntimeGate(22) # 3 initial + 22 new = 25 total
-    out = run_experiment(out_dir='../results', seed=37, growth_gate=gate)
+    out = run_experiment(out_dir="neural_organism/results", seed=37, growth_gate=gate)
     print(out["summary"])

@@ -1,11 +1,10 @@
-
 import os
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from .data_generators import ContextualBanditDrift
 from .baselines import LinUCB
-from .growing_rbf_net import GrowingRBFNet, RuntimeGate
+from .growing_rbf_net_plastic import GrowingRBFNetPlastic, RuntimeGate
+from .experiment_utils import plot_bandit_results, save_bandit_summary
 
 
 def run_experiment(
@@ -49,7 +48,7 @@ def run_experiment(
     )
 
     linucb = LinUCB(d=d, A=A, alpha=0.8, lam=1.0)
-    grbf = GrowingRBFNet(
+    grbf = GrowingRBFNetPlastic(
         d=d,
         k=A,
         sigma=0.7,
@@ -58,86 +57,87 @@ def run_experiment(
         min_phi_to_cover=0.25,
         max_prototypes=90,
         growth_gate=growth_gate,
-        name="GRBFN+Budget",
+        name="GRBFN+Plastic",
     )
 
     T = steps_per_phase * num_phases
-    cumr_lin = np.zeros(T)
-    cumr_grb = np.zeros(T)
-    regret_lin = np.zeros(T)
-    regret_grb = np.zeros(T)
+    results = {
+        linucb.name: {"cum_rewards": np.zeros(T), "cum_regrets": np.zeros(T)},
+        grbf.name: {"cum_rewards": np.zeros(T), "cum_regrets": np.zeros(T)},
+    }
     protos = np.zeros(T, dtype=int)
 
     for t in range(T):
         x = env.sample(t)
-        # LinUCB
+
+        # --- LinUCB ---
         a_lin = linucb.select(x)
         r_lin, _ = env.pull(x, a_lin)
         linucb.update(x, a_lin, r_lin)
 
-        # GRBFN+Plastic policy: argmax p(a|x)
+        # --- GRBFN+Plastic ---
+        # The policy is to select the arm with the highest predicted reward.
         a_grb = grbf.predict(x)
         r_grb, _ = env.pull(x, a_grb)
 
-        # convert bandit feedback to a supervised-like signal
-        phi, _ = grbf._phi(x)
-        scores = phi @ grbf.W
-        zmax = np.max(scores)
-        p = np.exp(scores - zmax)
-        p /= np.sum(p)
-        if r_grb == 1:
+        # Convert bandit feedback to a supervised-like signal for update.
+        # This is a heuristic: if reward is positive, treat the chosen action
+        # as the correct label. If reward is negative, we need to infer a
+        # "better" action. Here, we use the second-best action as the target.
+        # This encourages exploration away from bad choices.
+        if r_grb > 0:
             y = a_grb
         else:
+            # A simple heuristic to find a better action to move towards.
+            phi, _ = grbf._phi(x)
+            scores = (phi * grbf._gate(x, phi)[1]) @ (grbf.W + grbf.H)
+            p = np.exp(scores - np.max(scores))
+            p /= np.sum(p)
             y = int(np.argsort(p)[-2])
         grbf.update(x, y)
 
+        # --- Logging ---
         ps = [env._reward_prob(x, a) for a in range(A)]
-        best = np.max(ps)
-        regret_lin[t] = (best - ps[a_lin])
-        regret_grb[t] = (best - ps[a_grb])
+        best_r = np.max(ps)
 
-        cumr_lin[t] = r_lin if t == 0 else cumr_lin[t - 1] + r_lin
-        cumr_grb[t] = r_grb if t == 0 else cumr_grb[t - 1] + r_grb
+        results[linucb.name]["cum_rewards"][t] = r_lin if t == 0 else results[linucb.name]["cum_rewards"][t-1] + r_lin
+        results[linucb.name]["cum_regrets"][t] = (best_r - ps[a_lin]) if t == 0 else results[linucb.name]["cum_regrets"][t-1] + (best_r - ps[a_lin])
+
+        results[grbf.name]["cum_rewards"][t] = r_grb if t == 0 else results[grbf.name]["cum_rewards"][t-1] + r_grb
+        results[grbf.name]["cum_regrets"][t] = (best_r - ps[a_grb]) if t == 0 else results[grbf.name]["cum_regrets"][t-1] + (best_r - ps[a_grb])
         protos[t] = grbf.M
 
-    # Plots
-    x = np.arange(T)
-    plt.figure(figsize=(8,5))
-    plt.plot(x, cumr_lin, label=linucb.name)
-    plt.plot(x, cumr_grb, label=grbf.name)
-    for dp in [i*steps_per_phase for i in range(1, num_phases)]:
-        plt.axvline(dp, linestyle='--', linewidth=1)
-    plt.title("Contextual bandit: cumulative reward under drift")
-    plt.xlabel("Step"); plt.ylabel("Cumulative reward"); plt.legend()
-    cumr_path = os.path.join(out_dir, "bandit_cumreward.png")
-    plt.tight_layout(); plt.savefig(cumr_path); plt.close()
+    # Plotting
+    cumr_path, regret_path = plot_bandit_results(
+        results, out_dir, "bandit"
+    )
 
-    plt.figure(figsize=(8,5))
-    plt.plot(x, np.cumsum(regret_lin), label=linucb.name)
-    plt.plot(x, np.cumsum(regret_grb), label=grbf.name)
-    for dp in [i*steps_per_phase for i in range(1, num_phases)]:
-        plt.axvline(dp, linestyle='--', linewidth=1)
-    plt.title("Contextual bandit: cumulative regret under drift")
-    plt.xlabel("Step"); plt.ylabel("Cumulative regret"); plt.legend()
-    regret_path = os.path.join(out_dir, "bandit_cumregret.png")
-    plt.tight_layout(); plt.savefig(regret_path); plt.close()
+    # Summary
+    summary_data = [
+        {
+            "Policy": linucb.name,
+            "Final Cumulative Reward": results[linucb.name]["cum_rewards"][-1],
+            "Final Cumulative Regret": results[linucb.name]["cum_regrets"][-1],
+            "Final #Prototypes": np.nan,
+            "Growth Budget Remaining": np.nan,
+        },
+        {
+            "Policy": grbf.name,
+            "Final Cumulative Reward": results[grbf.name]["cum_rewards"][-1],
+            "Final Cumulative Regret": results[grbf.name]["cum_regrets"][-1],
+            "Final #Prototypes": protos[-1],
+            "Growth Budget Remaining": grbf.growth_gate._budget,
+        },
+    ]
+    summary_path = save_bandit_summary(summary_data, out_dir, "bandit_summary.csv")
 
-    summary = pd.DataFrame({
-        "Policy": [linucb.name, grbf.name],
-        "Final Cumulative Reward": [float(cumr_lin[-1]), float(cumr_grb[-1])],
-        "Final Cumulative Regret": [float(np.cumsum(regret_lin)[-1]), float(np.cumsum(regret_grb)[-1])],
-        "Final #Prototypes (GRBFN)": [np.nan, int(protos[-1])],
-        "Growth Budget Remaining": [np.nan, grbf.growth_gate._budget],
-    })
-    summary_path = os.path.join(out_dir, "bandit_summary.csv")
-    summary.to_csv(summary_path, index=False)
+    return {"summary_path": summary_path, "cumr_path": cumr_path, "regret_path": regret_path}
 
-    return {"summary": summary, "cumr_path": cumr_path, "regret_path": regret_path}
 
 if __name__ == "__main__":
     # This run is cited in the paper's case study.
     # We instantiate a gate with a fixed budget of 22 new units,
     # for a total of k=3 initial + 22 new = 25 max prototypes.
     gate = RuntimeGate(22)
-    out = run_experiment(out_dir='../results', seed=33, growth_gate=gate)
-    print(out["summary"])
+    out = run_experiment(out_dir="neural_organism/results", seed=33, growth_gate=gate)
+    print(f"Results saved to {out['summary_path']}")

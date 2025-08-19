@@ -184,35 +184,39 @@ Each primitive below is (i) practical today, (ii) hard for a generic LLM allocat
 
 ## 4. Case Study: Budgeted Growth in a Self-Assembling Network
 
-To provide a concrete demonstration of runtime-enforced compute allocation, we implement a **Growing RBF Network (GRBFN)** whose structural expansion is controlled by a hard, runtime-enforced budget. This experiment showcases a simple but powerful form of resource gating, directly related to primitives like the **Constraint-Slack Scheduler (CSS)** and **Compute-Safe "What-If" (CS-WIF)**. The model can propose to grow its structure (a "what-if" scenario), but the runtime can gate this action based on a predefined budget constraint.
+To provide a concrete, foundational demonstration of the runtime-enforced philosophy, we implement and test one of the simplest but most fundamental primitives: a hard budget on model growth. We apply this primitive to a **Growing RBF Network (GRBFN)** whose structural expansion is controlled by a runtime-enforced budget. This experiment showcases a powerful form of resource gating, directly related to primitives like the **Constraint-Slack Scheduler (CSS)** and **Compute-Safe "What-If" (CS-WIF)**. The model can propose to grow its structure (a "what-if" scenario), but the runtime can gate this action based on a predefined budget constraint.
 
 The self-assembling model is designed for non-stationary environments. It adapts by creating new RBF-like prototype units on the fly when it encounters novel data. This dynamic nature makes it an ideal testbed for studying the effects of externally imposed structural constraints.
 
 ### 4.1 Experimental Results
 
-We test the model in a challenging contextual bandit scenario with abrupt drifts in the reward function every 2,000 steps. The key result is that the `GRBFN+Plastic` model, operating under a strict prototype budget (e.g., a maximum of 25 units), achieves performance that is highly competitive with strong baselines, including LinUCB and an MLP-based policy.
+We test the model in a challenging contextual bandit scenario with abrupt drifts in the reward function every 2,000 steps. The key result is that the `GRBFN+Plastic` model, operating under a strict prototype budget, achieves performance that is highly competitive with strong baselines. The table below shows the final performance, while the figures illustrate the dynamics of reward and regret over time.
 
 **Contextual Bandit Performance (seed=37):**
 
 | Policy | Final Cumulative Reward | Final Cumulative Regret | Final #Prototypes (GRBFN+) |
 | --- | --- | --- | --- |
-| LinUCB(alpha=0.8) | 6152.0 | 299.4124817407165 | nan |
-| **GRBFN+Plastic** | **6203.0** | **228.30886977959412** | **22.0** |
-| MLP(32) | 6291.0 | 247.61384443497 | nan |
+| LinUCB(alpha=0.8) | 6152.0 | 299.41 | nan |
+| **GRBFN+Plastic** | **6190.0** | **239.16** | **22.0** |
+| MLP(32) | 6291.0 | 247.61 | nan |
 
-*Note: The `GRBFN+Plastic` model has a growth budget allowing for a maximum of 25 prototypes. The final count is lower than 25 because the model's self-merging mechanism occasionally fuses redundant prototypes to maintain a compact representation.*
+*Note: The `GRBFN+Plastic` model starts with 3 prototypes and has a growth budget for 22 **new** prototypes. The final count is 22, indicating it did not use its full budget. This is because the model's self-merging mechanism occasionally fuses redundant prototypes. Results are from a run in a reproduced environment and may differ slightly from the original due to dependency updates.*
+
+![Cumulative Reward](../results/bandit_cumreward_plusmlp.png)
+![Cumulative Regret](../results/bandit_cumregret_plusmlp.png)
 
 The following snippet shows how the growth gate is implemented. The runtime instantiates a `RuntimeGate` with a specific budget and passes it to the model, which then queries the gate before making a structural change.
 
 ```python
-# In the experiment script (the runtime)
-from .growing_rbf_net import GrowingRBFNet, RuntimeGate
+# In the experiment script (the "runtime")
+from .growing_rbf_net_plastic import GrowingRBFNetPlastic, RuntimeGate
 
-# The runtime creates a gate with a budget of 22 new units.
+# The runtime creates a gate with a budget for 22 new units.
+# The model itself starts with k=3 initial units.
 growth_gate = RuntimeGate(budget=22)
 
 # The gate is passed to the model constructor.
-net = GrowingRBFNet(..., growth_gate=growth_gate)
+net = GrowingRBFNetPlastic(..., growth_gate=growth_gate)
 
 # ---
 # Inside the model's _spawn() method:
