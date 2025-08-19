@@ -119,14 +119,30 @@ class GrowingRBFNetPlastic:
             mask = np.zeros(self.M, dtype=bool); mask[idx] = True
         return s, mask
 
-    def predict(self, x):
-        """Predicts the class label for a given input."""
+    def predict(self, x, return_proba=False):
+        """Predicts the class label for a given input.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            The input vector.
+        return_proba : bool, optional
+            If True, also returns the softmax probabilities.
+
+        Returns
+        -------
+        int or (int, np.ndarray)
+            The predicted class label, and optionally the probabilities.
+        """
         phi, _ = self._phi(x)
         s, mask = self._gate(x, phi)
         # Prediction uses both slow and fast weights
         scores = (phi * mask) @ (self.W + self.H)
         zmax = np.max(scores); p = np.exp(scores - zmax); p /= np.sum(p)
-        return int(np.argmax(p))
+        pred = int(np.argmax(p))
+        if return_proba:
+            return pred, p
+        return pred
 
     def _spawn(self, x, y):
         """Creates a new prototype, subject to the runtime gate and capacity."""
@@ -186,24 +202,11 @@ class GrowingRBFNetPlastic:
             self.usage = self.usage[keep]
             self.M = self.centers.shape[0]
 
-    def update(self, x, y):
-        """Performs a full online update step."""
-        self.t += 1
-        self.usage *= self.usage_decay
-
-        phi, dist2 = self._phi(x)
-        s, mask = self._gate(x, phi)
-
-        # If input is not well-covered by any prototype, spawn a new one
-        if np.max(s) < self.min_phi_to_cover:
-            self._spawn(x, y)
-            # Re-compute activations after spawning
-            phi, dist2 = self._phi(x)
-            s, mask = self._gate(x, phi)
-
-        # --- Standard supervised update using cross-entropy loss ---
+    def _update_weights_and_centers(self, x, y, phi, mask):
+        """Performs a supervised update on slow weights and prototype centers."""
         scores = (phi * mask) @ (self.W + self.H)
-        zmax = np.max(scores); exp_scores = np.exp(scores - zmax); p = exp_scores / np.sum(exp_scores)
+        zmax = np.max(scores); exp_scores = np.exp(scores - zmax)
+        p = exp_scores / np.sum(exp_scores)
         y_one = np.zeros(self.k); y_one[y] = 1.0
         ds = p - y_one  # Gradient of loss w.r.t. scores
 
@@ -215,17 +218,44 @@ class GrowingRBFNetPlastic:
         dphi = ((self.W + self.H) @ ds) * mask
         dcenters = (phi[:, None] * (x - self.centers) / (self.sigma ** 2)) * dphi[:, None]
         self.centers -= self.lr_c * dcenters
+        return p, ds
 
-        # --- Plasticity updates ---
+    def _update_plasticity(self, x, y, phi, mask, p, ds):
+        """Updates the fast Hebbian weights and the gating keys."""
+        y_one = np.zeros(self.k); y_one[y] = 1.0
         # Update fast (Hebbian) weights
         self.H *= self.hebb_decay
         self.H += self.hebb_eta * np.outer(phi * mask, (y_one - p))
 
         # Update gating keys to be more responsive to this input
-        corr = -np.sum(ds) # A measure of correctness
+        corr = -np.sum(ds)  # A measure of correctness
         self.K += self.key_lr * ((phi * mask)[:, None] * (x - self.K)) * corr
 
-        # --- Structural maintenance ---
+    def _perform_structural_maintenance(self, s):
+        """Updates usage counters and performs pruning and merging."""
         self.usage += s * 0.05
-        if self.M > self.max_prototypes: self._prune()
+        if self.M > self.max_prototypes:
+            self._prune()
         self._maybe_merge()
+
+    def update(self, x, y):
+        """Performs a full online update step."""
+        self.t += 1
+        self.usage *= self.usage_decay
+
+        phi, dist2 = self._phi(x)
+        s, mask = self._gate(x, phi)
+
+        # If input is not well-covered, spawn a new prototype
+        if np.max(s) < self.min_phi_to_cover:
+            self._spawn(x, y)
+            # Re-compute activations after potential spawn
+            phi, dist2 = self._phi(x)
+            s, mask = self._gate(x, phi)
+
+        # --- Learning Updates ---
+        p, ds = self._update_weights_and_centers(x, y, phi, mask)
+        self._update_plasticity(x, y, phi, mask, p, ds)
+
+        # --- Structural Maintenance ---
+        self._perform_structural_maintenance(s)

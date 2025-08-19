@@ -77,23 +77,18 @@ def run_experiment(
 
         # --- GRBFN+Plastic ---
         # The policy is to select the arm with the highest predicted reward.
-        a_grb = grbf.predict(x)
+        a_grb, p_grb = grbf.predict(x, return_proba=True)
         r_grb, _ = env.pull(x, a_grb)
 
         # Convert bandit feedback to a supervised-like signal for update.
         # This is a heuristic: if reward is positive, treat the chosen action
-        # as the correct label. If reward is negative, we need to infer a
-        # "better" action. Here, we use the second-best action as the target.
-        # This encourages exploration away from bad choices.
+        # as the correct label. If reward is not positive, we infer a "better"
+        # action to encourage exploration away from bad choices.
         if r_grb > 0:
             y = a_grb
         else:
-            # A simple heuristic to find a better action to move towards.
-            phi, _ = grbf._phi(x)
-            scores = (phi * grbf._gate(x, phi)[1]) @ (grbf.W + grbf.H)
-            p = np.exp(scores - np.max(scores))
-            p /= np.sum(p)
-            y = int(np.argsort(p)[-2])
+            # Move towards the second-best action.
+            y = int(np.argsort(p_grb)[-2])
         grbf.update(x, y)
 
         # --- Logging ---

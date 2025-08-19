@@ -30,13 +30,9 @@ def run_experiment(out_dir, seed=37, growth_gate: RuntimeGate | None = None):
         linucb.update(x, a_lin, r_lin)
 
         # GRBFN+Plastic
-        phi, _ = grbfnp._phi(x)
-        s, mask = grbfnp._gate(x, phi)
-        scores = (phi * mask) @ (grbfnp.W + grbfnp.H)
-        zmax = np.max(scores); p = np.exp(scores - zmax); p /= np.sum(p)
-        a_grb = int(np.argmax(p))
+        a_grb, p_grb = grbfnp.predict(x, return_proba=True)
         r_grb, _ = env.pull(x, a_grb)
-        y_grb = a_grb if r_grb == 1 else int(np.argsort(p)[-2])
+        y_grb = a_grb if r_grb == 1 else int(np.argsort(p_grb)[-2])
         grbfnp.update(x, y_grb)
 
         # MLP policy

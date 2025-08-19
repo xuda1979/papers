@@ -75,8 +75,8 @@ We compare our policy (`GRBFN+Plastic`) against strong baselines on cumulative r
 
 | Policy | Final Cumulative Reward | Final Cumulative Regret | Final #Prototypes (GRBFN+) |
 | --- | --- | --- | --- |
-| LinUCB(alpha=0.8) | 6256.0 | 222.6492386884768 | nan |
-| GRBFN+Plastic | 6200.0 | 271.04147275534183 | 25.0 |
+| LinUCB(alpha=0.8) | 6256.0 | 222.65 | nan |
+| GRBFN+Plastic | 6188.0 | 267.74 | 22.0 |
 
 - Figures: [results/bandit_cumreward.png](results/bandit_cumreward.png), [results/bandit_cumregret.png](results/bandit_cumregret.png)
 
@@ -84,9 +84,9 @@ We compare our policy (`GRBFN+Plastic`) against strong baselines on cumulative r
 
 | Policy | Final Cumulative Reward | Final Cumulative Regret | Final #Prototypes (GRBFN+) |
 | --- | --- | --- | --- |
-| LinUCB(alpha=0.8) | 6152.0 | 299.4124817407165 | nan |
-| GRBFN+Plastic | 6203.0 | 228.30886977959412 | 22.0 |
-| MLP(32) | 6291.0 | 247.61384443497 | nan |
+| LinUCB(alpha=0.8) | 6152.0 | 299.41 | nan |
+| GRBFN+Plastic | 6190.0 | 239.16 | 22.0 |
+| MLP(32) | 6291.0 | 247.61 | nan |
 
 **Takeaways**
 - The `GRBFN+Plastic` model is highly competitive with strong bandit baselines under drift. The key finding is that it achieves this performance while operating under a structural budget. The budget allows for a maximum of 25 prototypes, but the final count is slightly lower due to a self-merging mechanism that fuses redundant units. This demonstrates the effectiveness of runtime-enforced resource gating.
