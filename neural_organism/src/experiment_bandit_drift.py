@@ -3,9 +3,9 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from data_generators import ContextualBanditDrift
-from baselines import LinUCB
-from growing_rbf_net import GrowingRBFNet
+from .data_generators import ContextualBanditDrift
+from .baselines import LinUCB
+from .growing_rbf_net import GrowingRBFNet, RuntimeGate
 
 
 def run_experiment(
@@ -13,7 +13,7 @@ def run_experiment(
     seed: int = 33,
     steps_per_phase: int = 2000,
     num_phases: int = 6,
-    growth_budget: int | None = None,
+    growth_gate: RuntimeGate | None = None,
 ) -> dict:
     """Run the contextual bandit experiment with non-stationary drift.
 
@@ -27,9 +27,9 @@ def run_experiment(
         Number of interaction steps before a drift occurs.
     num_phases : int, optional
         Number of drift phases in the experiment.
-    growth_budget : int, optional
-        Maximum number of prototypes the GRBF network may spawn after
-        initialization. ``None`` means no growth limit.
+    growth_gate : RuntimeGate, optional
+        A runtime-enforced gate to control structural growth. If None,
+        growth is unlimited.
 
     Returns
     -------
@@ -57,7 +57,7 @@ def run_experiment(
         lr_c=0.06,
         min_phi_to_cover=0.25,
         max_prototypes=90,
-        growth_budget=growth_budget,
+        growth_gate=growth_gate,
         name="GRBFN+Budget",
     )
 
@@ -127,7 +127,7 @@ def run_experiment(
         "Final Cumulative Reward": [float(cumr_lin[-1]), float(cumr_grb[-1])],
         "Final Cumulative Regret": [float(np.cumsum(regret_lin)[-1]), float(np.cumsum(regret_grb)[-1])],
         "Final #Prototypes (GRBFN)": [np.nan, int(protos[-1])],
-        "Growth Budget Remaining": [np.nan, grbf.growth_budget],
+        "Growth Budget Remaining": [np.nan, grbf.growth_gate._budget],
     })
     summary_path = os.path.join(out_dir, "bandit_summary.csv")
     summary.to_csv(summary_path, index=False)
@@ -135,5 +135,9 @@ def run_experiment(
     return {"summary": summary, "cumr_path": cumr_path, "regret_path": regret_path}
 
 if __name__ == "__main__":
-    out = run_experiment(out_dir='../results', seed=33)
+    # This run is cited in the paper's case study.
+    # We instantiate a gate with a fixed budget of 22 new units,
+    # for a total of k=3 initial + 22 new = 25 max prototypes.
+    gate = RuntimeGate(22)
+    out = run_experiment(out_dir='../results', seed=33, growth_gate=gate)
     print(out["summary"])

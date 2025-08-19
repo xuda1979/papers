@@ -1,17 +1,21 @@
 
 import numpy as np
+# We need the RuntimeGate definition, let's import it from the other file.
+from .growing_rbf_net import RuntimeGate
 
 class GrowingRBFNetPlastic:
     # GRBFN with dual timescales (slow weights + Hebbian fast weights), context-key gating,
     # and simple structural merges of nearby prototypes.
     def __init__(self, d, k, sigma=0.65, lr_w=0.25, lr_c=0.06, wd=1e-5,
                  min_phi_to_cover=0.25, usage_decay=0.995, max_prototypes=90,
+                 growth_gate: RuntimeGate | None = None,
                  hebb_eta=0.5, hebb_decay=0.95, gate_beta=1.0, gate_top=16, key_lr=0.02,
                  r_merge=0.4, merge_every=500, name="GRBFN+Plastic"):
         self.d = d; self.k = k; self.sigma = sigma
         self.lr_w = lr_w; self.lr_c = lr_c; self.wd = wd
         self.min_phi_to_cover = min_phi_to_cover
         self.usage_decay = usage_decay; self.max_prototypes = max_prototypes; self.name = name
+        self.growth_gate = growth_gate if growth_gate is not None else RuntimeGate(None)
         self.hebb_eta = hebb_eta; self.hebb_decay = hebb_decay
         self.gate_beta = gate_beta; self.gate_top = gate_top; self.key_lr = key_lr
         self.r_merge = r_merge; self.merge_every = merge_every
@@ -49,6 +53,8 @@ class GrowingRBFNetPlastic:
         return int(np.argmax(p))
 
     def _spawn(self, x, y):
+        if not self.growth_gate.is_open():
+            return
         if self.M >= self.max_prototypes:
             self._prune()
             if self.M >= self.max_prototypes: return
@@ -60,6 +66,7 @@ class GrowingRBFNetPlastic:
         self.K = np.vstack([self.K, x.reshape(1,-1)])
         self.usage = np.concatenate([self.usage, np.array([1.0])])
         self.M += 1
+        self.growth_gate.consume()
 
     def _prune(self):
         if self.M <= self.k: return

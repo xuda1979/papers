@@ -1,10 +1,10 @@
 
 import numpy as np, pandas as pd, matplotlib.pyplot as plt, os
-from data_generators import ContextualBanditDrift
-from baselines import LinUCB, MLPOnline
-from growing_rbf_net_plastic import GrowingRBFNetPlastic
+from .data_generators import ContextualBanditDrift
+from .baselines import LinUCB, MLPOnline
+from .growing_rbf_net_plastic import GrowingRBFNetPlastic, RuntimeGate
 
-def run_experiment(out_dir, seed=37):
+def run_experiment(out_dir, seed=37, growth_gate: RuntimeGate | None = None):
     os.makedirs(out_dir, exist_ok=True)
     d, A = 2, 3
     steps_per_phase = 2000; num_phases = 6
@@ -13,7 +13,7 @@ def run_experiment(out_dir, seed=37):
 
     linucb = LinUCB(d=d, A=A, alpha=0.8, lam=1.0)
     grbfnp = GrowingRBFNetPlastic(d=d, k=A, sigma=0.7, lr_w=0.25, lr_c=0.06, min_phi_to_cover=0.25,
-                                  hebb_eta=0.6, hebb_decay=0.94, gate_beta=1.2, gate_top=16, key_lr=0.03,
+                                  growth_gate=growth_gate, hebb_eta=0.6, hebb_decay=0.94, gate_beta=1.2, gate_top=16, key_lr=0.03,
                                   r_merge=0.4, merge_every=600, max_prototypes=90, name="GRBFN+Plastic")
     mlp = MLPOnline(d=d, k=A, h=32, lr=0.01, wd=1e-5, name="MLP(32)")
 
@@ -95,5 +95,7 @@ def run_experiment(out_dir, seed=37):
     return {"summary": summary, "cumr_path": cumr_path, "regret_path": regret_path}
 
 if __name__ == "__main__":
-    out = run_experiment(out_dir='../results', seed=37)
+    # This run is also cited in the paper's case study and README.
+    gate = RuntimeGate(22) # 3 initial + 22 new = 25 total
+    out = run_experiment(out_dir='../results', seed=37, growth_gate=gate)
     print(out["summary"])
