@@ -73,14 +73,14 @@ class MLPOnline:
 
 class LinUCB:
     # Standard LinUCB for contextual bandits.
-    def __init__(self, d, A, alpha=0.8, lam=1.0):
+    def __init__(self, d, A, alpha=0.8, lam=1.0, name: str | None = None):
         self.d = d + 1  # bias
         self.A = A
         self.alpha = alpha
         self.lam = lam
         self.As = [lam * np.eye(self.d) for _ in range(A)]
         self.bs = [np.zeros(self.d) for _ in range(A)]
-        self.name = f"LinUCB(alpha={alpha})"
+        self.name = name if name is not None else f"LinUCB(alpha={alpha})"
 
     def _feat(self, x):
         return np.concatenate([x, [1.0]])
