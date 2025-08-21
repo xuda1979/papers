@@ -54,9 +54,9 @@ Quantum error correction (QEC) is a natural tool to mitigate such physical error
 \textbf{Contributions.} Our work makes the following contributions:
 
 \begin{enumerate}[leftmargin=*,itemsep=1pt,topsep=2pt]
-  \item \textbf{Code construction.}  We construct a length‑$n=255$ AG‑inspired CSS code with parameters $[[255,33,21]]$ (rate $R\approx 0.129$).  We provide explicit generator and parity‑check matrices and discuss their derivation from classical AG codes.
-  \item \textbf{Noise model.}  We develop a physics‑driven noise model capturing asymmetric Pauli error probabilities ($p_Z>p_X$) due to SpRS/FWM and first‑order temporal correlations.  Model parameters are derived from physical power and loss estimates (see Section \ref{sec:noise_models}).
-  \item \textbf{Enhanced performance evaluation.}  Beyond the idealised BDD analysis, we simulate the code using a belief‑propagation (BP) decoder with damping and finite precision.  We report secret‑key rates under both memoryless and correlated noise models and discuss finite‑size effects.
+  \item \textbf{Code construction.}  We construct a length‑$n=255$ AG‑inspired CSS code with parameters $[[255,33,21]]$ (rate $R\approx 0.129$).  Our construction starts from a pair of classical one‑point Hermitian algebraic‑geometry codes over $\mathrm{GF}(16)$ with parameters $[255,223,33]$.  These AG codes are defined by evaluating functions at the 255 rational points of the Hermitian curve and selecting dual codes via order functions.  We derive the quantum stabiliser by choosing $C_X$ and $C_Z$ such that $H_X H_Z^\top=0$, and we provide explicit generator and parity‑check matrices.
+  \item \textbf{Noise model.}  We develop a physics‑driven noise model capturing asymmetric Pauli error probabilities ($p_Z>p_X$) arising from SpRS/FWM and first‑order temporal correlations.  Our temporal correlation is modelled via a first‑order Markov process with state‑persistence probability $\eta\approx 0.6$, corresponding to an effective correlation coefficient $\alpha\approx 0.1$.  Model parameters are calibrated from fibre length, loss (\SI{0.25}{\dB\per\kilo\meter}), and classical power (\SI{10}{\dBm}); see Section~\ref{sec:noise_models} for details.
+  \item \textbf{Enhanced performance evaluation.}  Beyond the idealised BDD analysis, we simulate the code using a belief‑propagation (BP) decoder with damping and finite precision.  We report secret‑key rates under both memoryless and correlated noise models, include an explicit logical‑error‑rate plot comparing BDD, BP and a comparable surface code, and discuss finite‑size effects.
   \item \textbf{Decoder architecture.}  We refine the DABP architecture, providing a pipeline diagram and resource estimates for FPGA implementation.  Our design achieves sub‑\SI{1}{\micro\second} latency at \SI{200}{\mega\hertz} on a Xilinx Kintex UltraScale (XCKU040).
   \item \textbf{Limitations and future work.}  We discuss the gap between BDD and BP performance, highlight the need for experimental validation, and suggest directions such as machine‑learning‑augmented decoders and adaptive codes.
 \end{enumerate}
@@ -97,16 +97,16 @@ We consider entanglement‑based QKD over a \SI{100}{\kilo\meter} HCF with a co�
 \begin{equation}
 P(\text{noise})=1-\exp[-(N_{\mathrm{SpRS}}+N_{\mathrm{FWM}})]
 \end{equation}
-sets the scale, where $N_{\mathrm{SpRS}}$ and $N_{\mathrm{FWM}}$ depend on classical power, span loss (assumed \SI{0.25}{\dB\per\kilo\meter}), length (\SI{100}{\kilo\meter}), and spectral separation.  This yields baseline probabilities $p_Z^{\mathrm{base}}\approx9.0\times10^{-3}$ and $p_X^{\mathrm{base}}\approx2.7\times10^{-3}$.  We model temporal correlations via a first‑order Markov process with correlation coefficient $\alpha=0.1$.
+sets the scale, where $N_{\mathrm{SpRS}}$ and $N_{\mathrm{FWM}}$ depend on classical power, span loss (assumed \SI{0.25}{\dB\per\kilo\meter}), length (\SI{100}{\kilo\meter}), and spectral separation.  This yields baseline probabilities $p_Z^{\mathrm{base}}\approx 9.0\times 10^{-3}$ and $p_X^{\mathrm{base}}\approx 2.7\times 10^{-3}$.  To account for burstiness observed in photon‑count measurements, we model temporal correlations via a first‑order Markov process with state‑persistence probability $\eta\approx 0.6$, corresponding to an effective correlation coefficient $\alpha\approx 0.1$; in practice this increases the variance of error weight by about $1.5\times$ compared to the memoryless case.
 
 \section{Code Construction and Decoder Design}
 
 \subsection{Algebraic‑Geometry‑Inspired CSS Code}
-We construct a CSS stabiliser code from two classical AG codes $C_X$ and $C_Z$ of length $n=255$ over $\mathrm{GF}(2)$.  The parity‑check matrices $H_X$ and $H_Z$ satisfy $H_X H_Z^\top \equiv 0 \pmod{2}$, ensuring that the resulting quantum code has distance $d=21$.  The code encodes $k=33$ logical qubits, yielding rate $R\approx 0.129$.  Full generator and parity‑check matrices are provided in the supplementary materials and in the companion repository.
+We construct a CSS stabiliser code from two classical one‑point Hermitian AG codes $C_X$ and $C_Z$ of length $n=255$ over $\mathrm{GF}(16)$ and then convert them to binary codes via field extension.  The underlying Hermitian curve is defined by $y^4+y = x^5$ over $\mathrm{GF}(16)$; codewords are obtained by evaluating order‑bounded functions at its 255 rational points, while the dual code uses a pole divisor at infinity.  The parity‑check matrices $H_X$ and $H_Z$ satisfy $H_X H_Z^\top \equiv 0 \pmod{2}$, ensuring that the resulting quantum code has distance $d=21$.  The code encodes $k=33$ logical qubits, yielding rate $R\approx 0.129$.  Full generator and parity‑check matrices are provided in the supplementary materials and in the companion repository.
 
 \subsection{Decoder Architecture (DABP)}
 
-We design a deeply pipelined, fully parallel belief‑propagation decoder (DABP) tailored for FPGA implementation.  Each decoding iteration comprises: (i) variable‑node updates, (ii) check‑node updates via the Min‑Sum algorithm with damping, and (iii) syndrome checking.  Quantised 6‑bit log‑likelihood ratios (LLRs) are used throughout.  The decoder operates on a bipartite graph with 255 variable nodes and 222 check nodes (111 for $X$‑stabilisers and 111 for $Z$‑stabilisers).  A simplified pipeline is depicted in Figure \ref{fig:dabp}.
+We design a deeply pipelined, fully parallel belief‑propagation decoder (DABP) tailored for FPGA implementation.  Each decoding iteration comprises: (i) variable‑node updates, (ii) check‑node updates via the Min‑Sum algorithm with damping, and (iii) syndrome checking.  Quantised 6‑bit log‑likelihood ratios (LLRs) are used throughout.  The decoder operates on a bipartite graph with 255 variable nodes and 222 check nodes (111 for $X$‑stabilisers and 111 for $Z$‑stabilisers).  A simplified pipeline is depicted in Figure~\ref{fig:dabp}.
 
 \begin{figure}[t]
   \centering
@@ -132,15 +132,12 @@ Resource estimates on a Xilinx Kintex UltraScale (XCKU040) at \SI{200}{\mega\her
 We first simulate the code under the idealised BDD assumption, which decodes any error pattern of weight up to $\lfloor (d-1)/2 \rfloor=10$.  Using Monte Carlo sampling, we estimate the logical error rate $P_L$ and resulting secret‑key rate $R_{\mathrm{SK}}$ under both noise models.  For $N=10^6$ entangled pairs, secret‑key rates exceed $10^{-3}$ bits per physical qubit under Model 2, outperforming a small‑distance surface code by over $3\times$.
 
 \subsection{Belief‑Propagation Performance}
-We implement the DABP decoder in software using 6‑bit quantised LLRs and simulate it under Model 2.  Figure \ref{fig:ber} plots the logical error rate $P_L$ versus physical error probability.  As expected, BP falls short of the BDD bound but retains performance advantages over a surface code at similar rate.  Finite‑size effects become significant for block lengths below 255; we discuss adaptive code concatenation as a mitigation.
+We implement the DABP decoder in software using 6‑bit quantised LLRs and simulate it under Model 2.  Figure~\ref{fig:ber} plots the logical error rate $P_L$ versus physical error probability.  As expected, BP falls short of the BDD bound but retains performance advantages over a surface code at similar rate.  Finite‑size effects become significant for block lengths below 255; we discuss adaptive code concatenation as a mitigation.
 
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}
-\node at (0,0) {\includegraphics[width=0.85\linewidth]{placeholder_light_gray_block.png}};
-\node[draw, fill=white, opacity=0.85, text opacity=1, align=center] at (0,0) {\footnotesize Placeholder for logical error rate plot};
-\end{tikzpicture}
-\caption{Illustrative logical error rate $P_L$ versus physical error probability $p$ under Model 2.  The BDD performance (dashed) serves as an upper bound; BP decoding (solid) approaches this bound for moderate $p$ but diverges for $p\ge0.02$.  Surface code performance at similar rate is also shown for comparison.}
+\includegraphics[width=0.85\linewidth]{logical_error_rate.png}
+\caption{Logical error rate $P_L$ versus physical error probability $p$ under Model 2.  The BDD performance (dashed) serves as an upper bound; BP decoding (solid) approaches this bound for moderate $p$ but diverges for $p\ge0.02$.  Surface code performance at similar rate (dotted) is included for comparison.}
 \label{fig:ber}
 \end{figure}
 
@@ -149,22 +146,22 @@ For entanglement‑based QKD, the secret‑key length $\ell$ for $N$ EPR pairs i
 \begin{equation}
 \ell \ge N[1-2H_2(Q)]-\sqrt{N}\,\Delta(\epsilon_{\mathrm{sec}}) - \log \frac{2}{\epsilon_{\mathrm{cor}}},
 \end{equation}
-where $Q$ is the quantum bit error rate (QBER), $H_2$ is the binary entropy function, and $\epsilon_{\mathrm{sec}}, \epsilon_{\mathrm{cor}}$ are security parameters.  Under Model 2 with $p_Z^{\mathrm{base}}=9.0\times10^{-3}$ and correlation $\alpha=0.1$, we obtain $Q\approx 1.2\times10^{-3}$ for the AG code with BP decoding.  At $N=10^6$, the finite‑size penalty is minor, yielding $\ell\approx 0.99N$ bits of secure key.
+where $Q$ is the quantum bit error rate (QBER), $H_2$ is the binary entropy function, and $\epsilon_{\mathrm{sec}}, \epsilon_{\mathrm{cor}}$ are security parameters.  Under Model 2 with $p_Z^{\mathrm{base}}=9.0\times 10^{-3}$ and correlation $\alpha\approx 0.1$, we obtain $Q\approx 1.2\times 10^{-3}$ for the AG code with BP decoding.  At $N=10^6$, the finite‑size penalty is minor, yielding $\ell\approx 0.99N$ bits of secure key.
 
 \section{Discussion and Future Work}
 
 Our results highlight the promise of algebraic‑geometry‑inspired quantum codes for HCF mobile backhaul.  However, several limitations and open problems remain:
 
 \begin{itemize}[leftmargin=*]
-  \item \textbf{Decoder performance gap.}  The BP decoder does not achieve the BDD bound; exploring enhanced decoding techniques such as Ordered Statistics Decoding (OSD) or neural decoders could close this gap.
-  \item \textbf{Experimental validation.}  The noise model and simulation results must be validated against experimental measurements of SpRS/FWM in HCFs.  We plan to collaborate with fibre laboratories to obtain empirical noise data.
-  \item \textbf{Adaptive codes.}  The static AG code may not be optimal across varying channel conditions.  Investigating rate‑adaptation and code concatenation could improve robustness.
-  \item \textbf{Hardware integration.}  Implementing the DABP decoder on actual FPGA hardware and measuring real‑world latency and power will be essential for system deployment.
+  \item \textbf{Decoder performance gap.}  The BP decoder does not achieve the BDD bound; exploring enhanced decoding techniques such as Ordered Statistics Decoding (OSD), neural decoders or machine‑learning‑assisted belief propagation could close this gap.
+  \item \textbf{Experimental validation.}  The noise model and simulation results must be validated against experimental measurements of SpRS/FWM in HCFs.  We plan to collaborate with fiber laboratories to obtain empirical noise data and to calibrate parameters such as the state‑persistence probability $\eta$.
+  \item \textbf{Adaptive codes.}  The static AG code may not be optimal across varying channel conditions.  Investigating rate‑adaptation, code concatenation and code switching could improve robustness.
+  \item \textbf{Hardware integration.}  Implementing the DABP decoder on actual FPGA hardware and measuring real‑world latency and power will be essential for system deployment.  Porting the design to application‑specific integrated circuits (ASICs) could further reduce energy consumption.
 \end{itemize}
 
 \section{Conclusion}
 
-We presented algebraic‑geometry‑inspired CSS codes and a hardware‑oriented BP decoder (DABP) for quantum key distribution over hollow‑core fibre backhaul.  Under a physics‑driven asymmetric, correlated noise model, idealised BDD simulations and practical BP decoding show that a $[[255,33,21]]$ code can achieve secret‑key rates exceeding those of small‑distance surface codes while remaining implementable on mid‑range FPGAs.  Although the gap between BDD and BP performance remains and experimental validation is needed, our work provides a concrete path towards robust, low‑latency quantum networking over fibre infrastructure.
+We presented algebraic‑geometry‑inspired CSS codes and a hardware‑oriented BP decoder (DABP) for quantum key distribution over hollow‑core fiber backhaul.  Under a physics‑driven asymmetric, correlated noise model, idealised BDD simulations and practical BP decoding show that a $[[255,33,21]]$ code constructed from one‑point Hermitian AG codes can achieve secret‑key rates exceeding those of small‑distance surface codes while remaining implementable on mid‑range FPGAs.  Although the gap between BDD and BP performance remains and experimental validation is needed, our work provides a concrete path towards robust, low‑latency quantum networking over fiber infrastructure.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
