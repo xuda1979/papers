@@ -103,13 +103,17 @@ def sweep_p_for_distance(
             if run_trial(distance=distance, p=p, noise=noise, **kwargs):
                 failures += 1
         lo, hi = wilson_interval(failures, trials)
-        yield {
+        row = {
             "distance": distance,
             "p": p,
             "logical_error_rate": failures / float(trials),
             "ci_low": lo,
             "ci_high": hi,
         }
+        for key in ("damping", "llr_bits", "max_iters", "early_stop"):
+            if key in kwargs:
+                row[key] = kwargs[key]
+        yield row
 
 
 def logspaced(min_p: float, max_p: float, num: int) -> Iterable[float]:
@@ -178,7 +182,30 @@ def paper_experiments_main(argv: Iterable[str] | None = None) -> None:
         "--bias",
         type=float,
         default=1.0,
-        help="Z/X bias used for biased dephasing (ignored otherwise)."
+        help="Z/X bias used for biased dephasing (ignored otherwise).",
+    )
+    parser.add_argument(
+        "--damping",
+        type=float,
+        default=0.5,
+        help="Belief-propagation damping factor.",
+    )
+    parser.add_argument(
+        "--llr-bits",
+        type=int,
+        default=6,
+        help="Quantization bits for LLR representation.",
+    )
+    parser.add_argument(
+        "--max-iters",
+        type=int,
+        default=10,
+        help="Maximum BP iterations.",
+    )
+    parser.add_argument(
+        "--early-stop",
+        action="store_true",
+        help="Enable early stopping when syndrome is satisfied.",
     )
     parser.add_argument("--pmin", type=float, required=True, help="Minimum p (log-scale).")
     parser.add_argument("--pmax", type=float, required=True, help="Maximum p (log-scale).")
@@ -230,6 +257,10 @@ def paper_experiments_main(argv: Iterable[str] | None = None) -> None:
                 trials=args.trials,
                 noise=args.noise,
                 bias=args.bias,
+                damping=args.damping,
+                llr_bits=args.llr_bits,
+                max_iters=args.max_iters,
+                early_stop=args.early_stop,
             )
         )
         all_rows.extend(rows)
