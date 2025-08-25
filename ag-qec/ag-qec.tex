@@ -1,274 +1,137 @@
-\documentclass[conference]{IEEEtran}
+% AG-QEC: Analog-Guided, Hardware-Connectivity-Friendly QEC
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{authblk}
+\sisetup{round-mode=places,round-precision=3}
+\title{\textbf{AG-QEC: Analog-Guided, Hardware-Connectivity-Friendly Quantum Error Correction}}
+\author[1]{\normalsize David Xu}
+\affil[1]{\small General Algorithmic Technologies Company}
+\date{\small \today}
+\begin{document}
+\maketitle
 
-    % --- Packages ---
-    \usepackage[utf8]{inputenc}
-    \usepackage[T1]{fontenc}
-    \usepackage{amsmath, amssymb}
-    \usepackage{graphicx}
-    \usepackage{tikz}
-    \usetikzlibrary{positioning}
-    \usepackage[ruled,vlined]{algorithm2e}
-    \usepackage{booktabs}
-    \usepackage{url}
-    \usepackage{xcolor}
-    \usepackage{siunitx}
-    \usepackage{enumitem}
-    \usepackage[hidelinks]{hyperref}
-    \usepackage{pgfplotstable}
-    \usepackage[numbers,sort&compress]{natbib}
+\begin{abstract}
+We present \emph{AG-QEC}, a decoding and scheduling framework that fuses analog measurement information with stabilizer syndromes while respecting nearest-neighbor constraints. We (i) formalize a simple analog-likelihood fusion step, (ii) provide layout-aware resource accounting (qubits, 1q/2q gates, SWAPs, circuit depth), and (iii) evaluate logical error vs.\ physical error under depolarizing, biased-dephasing, and leakage-augmented models. A reproducible pipeline (\texttt{Makefile}, pinned \texttt{requirements}, YAML configs) regenerates all figures and tables.
+\end{abstract}
 
-    % --- Macros / formatting helpers ---
-    \newcommand{\ie}{i.e.,\ }
-    \newcommand{\eg}{e.g.,\ }
-    \newcommand{\etal}{\emph{et al.}}
-    \newcommand{\KL}{\mathrm{D}}
-    \sisetup{detect-all=true}
+\section{Introduction}
+Fault-tolerant quantum computation requires codes and circuits that both suppress error and \emph{respect hardware connectivity}. Two complementary directions have proven impactful: (1) \emph{analog-assisted} decoding that uses real-valued readout information to improve inference for GKP and stabilizer codes~\cite{FukuiPRL2017,FukuiMBQC2017}, and (2) \emph{flag/bridge} syndrome-extraction circuits that reduce ancilla overhead and map to constrained topologies~\cite{ChamberlandBeverland2018,LaoAlmudever2020}. In biased dephasing regimes, XZZX-type layouts further improve thresholds~\cite{XZZXNatComms2021}.
 
-    % --- Metadata for PDF ---
-    \hypersetup{
-      pdftitle={Algebraic-Geometry-Inspired Quantum Error-Correcting Codes for Hollow-Core Fiber Mobile Backhaul: Enhanced Evaluation and Decoder Design},
-      pdfauthor={Agentic Research Group}
-    }
+\textbf{Contributions.} This work:
+\begin{itemize}
+  \item Introduces an \emph{analog-likelihood fusion} step that augments binary syndromes with calibrated continuous readout features (\Cref{sec:analog}).
+  \item Provides a \emph{connectivity-aware} resource model (qubits, 1q/2q gates, SWAPs, depth) and reports counts per schedule (\Cref{sec:layout}).
+  \item Benchmarks logical error vs.\ physical error across depolarizing and biased-dephasing noise, with a leakage sensitivity sweep and pseudo-threshold estimates (\Cref{sec:evaluation}).
+  \item Ships a one-command, \emph{fully reproducible} pipeline to regenerate data, figures, and the PDF (\Cref{sec:repro}).
+\end{itemize}
 
-    % ===========================================================
-    % Document starts here
-    % ===========================================================
+\section{Method}
+\subsection{Layout-/Connectivity-aware scheduling} \label{sec:layout}
+We assume a 2D nearest-neighbor topology. For each stabilizer, we schedule s-CNOTs and (optional) f-CNOTs to avoid hook errors, following the flag/bridge paradigm~\cite{ChamberlandBeverland2018,LaoAlmudever2020}. We expose
+\emph{resource counts}: number of qubits (data, ancilla), total 1q/2q gates, SWAPs from routing, and two-qubit depth. The simulator reports these metrics for each code distance.
 
-    \begin{document}
+\subsection{Analog-likelihood fusion} \label{sec:analog}
+Let $m_i\in\{-1,+1\}$ be the ideal two-outcome measurement and $r_i \in \mathbb{R}$ a continuous readout with additive Gaussian noise $r_i=m_i+\varepsilon_i,\ \varepsilon_i\sim \mathcal{N}(0,\sigma^2)$. For repetition-like checks, the analog log-likelihood ratio (LLR) under a symmetric bit-flip channel $p$ is, up to an additive constant, proportional to $\sum_i r_i/\sigma^2$. We decide by the sign of the aggregated LLR. Pseudocode appears in \Cref{alg:analog}.
 
-    \title{Algebraic‑Geometry‑Inspired Quantum Error‑Correcting Codes for Hollow‑Core Fiber Mobile Backhaul: Enhanced Evaluation and Decoder Design}
+\begin{algorithm}[H]
+\caption{Analog-guided decoding (single round, repetition-style)}\label{alg:analog}
+\begin{algorithmic}[1]
+\Require readouts $r_1,\dots,r_d$, noise scale $\sigma$
+\State $\text{score} \gets \sum_i r_i/\sigma^2$
+\State \textbf{return} $\mathrm{sign}(\text{score}) \in \{-1,+1\}$
+\end{algorithmic}
+\end{algorithm}
 
-    \author{\IEEEauthorblockN{Agentic Research Group}}
+\subsection{Noise models}
+We consider: (i) independent bit-flip (proxy for circuit-level depolarizing in a repetition setting), (ii) biased dephasing (XZZX-motivated~\cite{XZZXNatComms2021}), and (iii) leakage augmentation, where with probability $p_\ell$ a qubit leaves the computational subspace and yields a near-zero-SNR readout; this approximates the effect of leakage on syndrome quality without specialized LRUs~\cite{McEwenLeakage2021,LRUAllMWPRL2023}.
 
-    \maketitle
+\section{Evaluation}\label{sec:evaluation}
+\paragraph{Setup.}
+We simulate distances $d\in\{3,5,7\}$ with $10^4$ shots per $p$, scanning $p\in[10^{-4},10^{-1}]$ logarithmically. For each $p$ we record the logical error rate $L(p)$, estimate the pseudo-threshold $\hat p_\star=\min\{p: L(p)\le p\}$, and tabulate resources (qubits, 1q/2q gates, SWAPs, two-qubit depth). Configurations and seeds are declared in YAML (see \Cref{sec:repro}).
 
-    \begin{abstract}
-    Hollow‑core fibers (HCFs) provide ultra‑low nonlinearity and latency for next‑generation mobile backhaul.  In 
-co‑propagation, however, intense classical channels induce noise—most notably spontaneous Raman scattering (SpRS) and 
-four‑wave mixing (FWM)—that degrades quantum links over long spans.  We propose an \emph{algebraic‑geometry‑inspired} 
-quantum error‑correcting code (QECC) tailored to entanglement distribution over a \SI{100}{\kilo\meter} HCF carrying a 
-\SI{10}{\dBm} classical channel.  Our design is a high‑rate CSS stabilizer code derived from algebraic‑geometry (AG) 
-codes, paired with a fully pipelined belief‑propagation decoder architecture (\emph{DABP}) amenable to FPGA deployment.
-  We introduce a physics‑driven noise model that captures asymmetric and temporally correlated Pauli errors.  To 
-evaluate the code's potential, we perform idealised simulations using a Bounded Distance Decoding (BDD) model and report
- finite‑length secret‑key rates.  We also analyse the latency and resource consumption of our DABP architecture on a 
-Xilinx Kintex UltraScale device.  Compared to prior work, this revision clarifies the noise model, reports additional 
-simulation results, and discusses the gap between idealised BDD and practical belief propagation.
-    \end{abstract}
+\paragraph{Main observations.}
+(i) Analog-likelihood fusion consistently lowers $L(p)$ vs.\ digital majority in the small-$p$ regime; (ii) under dephasing bias, analog fusion complements XZZX-style scheduling; (iii) leakage degrades performance; modeling it explicitly prevents optimistic pseudo-thresholds and motivates LRUs~\cite{LRUAllMWPRL2023,CouplerLRU2024}.
 
-    \section{Introduction}
-    Hollow‑core optical fibers (HCFs), which guide light in an air‑filled core with microstructured cladding, have 
-achieved loss levels rivaling standard silica fibers while offering orders‑of‑magnitude lower nonlinearity and group 
-delay.  This makes HCFs attractive for \emph{mobile backhaul} in quantum‑secured networks.  A persistent challenge is 
-that residual nonlinear processes driven by high‑power classical channels—particularly SpRS and FWM—can introduce 
-substantial noise into coexisting quantum channels over \SIrange{50}{100}{\kilo\meter} and beyond.
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.82\linewidth]{results/figs/l_vs_p.png}
+  \caption{\textbf{Logical error rate vs.\ physical error} for $d\in\{3,5,7\}$ comparing digital majority and analog-likelihood fusion. Shaded area: binomial $95\%$ intervals.}
+  \label{fig:main}
+\end{figure}
 
-    Quantum error correction (QEC) is a natural tool to mitigate such physical errors.  The surface code offers high 
-thresholds but very low rate; quantum LDPC codes provide higher rates but require long block lengths and complex 
-decoders.  Algebraic‑geometry (AG) codes provide a middle ground, offering moderate length and high rate with good 
-minimum distance.  However, their application in quantum networks has been limited.
+\begin{table}[t]
+  \centering
+  \caption{Resource accounting per distance (example schedule; nearest-neighbor chain).}
+  \label{tab:resources}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    $d$ & qubits (data+anc.) & 1q gates & 2q gates & SWAPs & 2q depth \\
+    \midrule
+    3 & 4 & 12 & 4 & 0 & 4 \\
+    5 & 6 & 20 & 8 & 0 & 8 \\
+    7 & 8 & 28 & 12 & 0 & 12 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-    \textbf{Contributions.} Our work makes the following contributions:
+\section{Related work}
+\textbf{Analog-assisted decoding.} GKP analog information can materially improve decoding~\cite{FukuiPRL2017,FukuiMBQC2017}. \\
+\textbf{Flag/bridge circuits.} Flag-based E.C.\ scales to higher-distance codes with low ancilla overhead~\cite{ChamberlandBeverland2018}; bridge variants help map to constrained topologies~\cite{LaoAlmudever2020}. \\
+\textbf{Biased-noise codes.} XZZX shows strong performance under dephasing bias~\cite{XZZXNatComms2021}. \\
+\textbf{Taxonomy.} See the Error Correction Zoo for broader code families and terminology.
 
-    \begin{enumerate}[leftmargin=*,itemsep=1pt,topsep=2pt]
-      \item \textbf{Code construction.}  We construct a length‑$n=255$ AG‑inspired CSS code with parameters
-$[[255,33,21]]$ (rate $R\approx 0.129$).  The classical ingredients are two nested Reed–Solomon codes
-over $\mathbb{F}_{256}$ with parameters $[255,144,112]$.  A companion script \texttt{generate\_css\_matrices.py}
-emits binary parity‑check matrices $H_X$ and $H_Z$, verifies $H_X H_Z^\top=0$, and Monte‑Carlo checks that the
-minimum distance satisfies $d\ge 21$.
-      \item \textbf{Noise model.}  We develop a physics‑driven noise model capturing asymmetric Pauli error 
-probabilities ($p_Z>p_X$) arising from SpRS/FWM and first‑order temporal correlations.  Our temporal correlation is 
-modelled via a first‑order Markov process with state‑persistence probability $\eta\approx 0.6$, corresponding to an 
-effective correlation coefficient $\alpha\approx 0.1$.  Model parameters are calibrated from fibre length, loss 
-(\SI{0.25}{\dB\per\kilo\meter}), and classical power (\SI{10}{\dBm}); see Section~\ref{sec:noise_models} for details.
-      \item \textbf{Enhanced performance evaluation.}  Beyond the idealised BDD analysis, we simulate the code using a 
-belief‑propagation (BP) decoder with damping and finite precision.  We report secret‑key rates under both memoryless and
-  correlated noise models, include an explicit logical‑error‑rate plot comparing BDD, BP and a comparable surface code, 
-and discuss finite‑size effects.
-      \item \textbf{Decoder architecture.}  We refine the DABP architecture, providing a pipeline diagram and resource 
-estimates for FPGA implementation.  Our design achieves sub‑\SI{1}{\micro\second} latency at \SI{200}{\mega\hertz} on a 
-Xilinx Kintex UltraScale (XCKU040).
-      \item \textbf{Limitations and future work.}  We discuss the gap between BDD and BP performance, highlight the need
-        for experimental validation, and suggest directions such as machine‑learning‑augmented decoders and adaptive codes.
-    \end{enumerate}
+\section{Limitations and future work}
+We use a repetition-style abstraction and Gaussian readout model as a proxy for analog information; future work: code-capacity and circuit-level sims for full stabilizer families; hardware-calibrated readout models; LRUs and leakage mobility.
 
-    Recent progress on resource-aware decoding primitives\cite{Locher2025}
-    and below-threshold demonstrations\cite{BelowThreshold2024}
-    motivates our emphasis on realistic noise modelling.  Applications such
-    as QEC-encoded chemistry pipelines\cite{QECChemistry2025} and surveys of
-    AI for decoding\cite{AIFQEC2024} provide additional context for our
-    architectural choices.
+\appendix
+\section{Reproducibility}\label{sec:repro}
+Environment and commands:
+\begin{verbatim}
+make env
+make data     # runs configs/depolarizing.yaml (10^4 shots per p)
+make pdf      # compiles this paper
+\end{verbatim}
+Artifacts: CSV/JSON under \texttt{results/<exp>/}, figure \texttt{results/figs/l\_vs\_p.png}. Seeds and git commit hashes are logged.
 
-    \section{Background and Channel Model}\label{sec:background}
-
-    \subsection{Hollow‑Core Fiber Coexistence Noise}
-    HCF confines most modal power in air, strongly suppressing Kerr nonlinearity relative to standard fibers.  
-Nonetheless, in quantum–classical coexistence, two mechanisms dominate:
-
-    \begin{itemize}[leftmargin=*,itemsep=1pt]
-      \item \textbf{Spontaneous Raman scattering (SpRS):} Broadband spontaneous scattering of classical photons can 
-populate the quantum band with noise photons, manifesting largely as dephasing ($Z$‑type) events on photonic qubits.
-      \item \textbf{Four‑wave mixing (FWM):} Parametric mixing among classical channels generates narrowband components 
-overlapping the quantum band, producing both bit‑flip ($X$) and phase‑flip ($Z$) errors.
-    \end{itemize}
-
-    \begin{figure}[t]
-    \centering
-    \begin{tikzpicture}[scale=0.8]
-      % Core (hollow)
-      \draw[very thick] (0,0) circle (0.8);
-      \node at (0,0) {\small Air core};
-      % Capillaries (6 around core)
-      \foreach \ang [count=\i] in {0,60,...,300} {
-        \draw[thick] (\ang:1.8) circle (0.4);
-        \node[font=\scriptsize] at (\ang:2.4) {\small Capillary \i};
-      }
-      \node at (0,-3.0) {\small Microstructured cladding};
-    \end{tikzpicture}
-    \caption{Schematic cross‑section of an HCF.  Air‑core guidance reduces light–silica overlap and suppresses 
-SpRS/FWM‑induced impairments.}
-    \label{fig:hcf}
-    \end{figure}
-
-    \subsection{Noise Models and Parameters}\label{sec:noise_models}
-    We consider entanglement‑based QKD over a \SI{100}{\kilo\meter} HCF with a co‑propagating \SI{10}{\dBm} classical 
-channel.  Two noise models are considered:
-
-    \paragraph*{Model 1 (baseline): Depolarising, i.i.d.}  For comparability with prior QEC studies, we first use a 
-memoryless depolarising channel with total physical error $p\approx 0.03$ (each of $X,Y,Z$ with probability $p/3$).
-
-    \paragraph*{Model 2 (physics‑driven): Asymmetric and correlated}  SpRS/FWM yield predominantly phase noise; we model
-  asymmetric Pauli error probabilities with $p_Z>p_X$.  A simple photon‑count‑driven model
-    \begin{equation}
-    P(\text{noise})=1-\exp[-(N_{\mathrm{SpRS}}+N_{\mathrm{FWM}})]
-    \end{equation}
-    sets the scale, where $N_{\mathrm{SpRS}}$ and $N_{\mathrm{FWM}}$ depend on classical power, span loss (assumed 
-\SI{0.25}{\dB\per\kilo\meter}), length (\SI{100}{\kilo\meter}), and spectral separation.  This yields baseline 
-probabilities $p_Z^{\mathrm{base}}\approx 9.0\times 10^{-3}$ and $p_X^{\mathrm{base}}\approx 2.7\times 10^{-3}$.  To 
-account for burstiness observed in photon‑count measurements, we model temporal correlations via a first‑order Markov 
-process with state‑persistence probability $\eta\approx 0.6$, corresponding to an effective correlation coefficient 
-    $\alpha\approx 0.1$; in practice this increases the variance of error weight by about $1.5\times$ compared to the
-    memoryless case.
-    Measurement error and leakage processes can be incorporated using the
-    extended utilities in \texttt{channel\_models.py}, which add classical
-    readout flips and a leakage flag for each qubit.  Bias sweeps over
-    $p_Z/p_X$ are exposed via \texttt{biased\_dephasing\_probs}.
-
-    \section{Code Construction and Decoder Design}
-
-    \subsection{Algebraic‑Geometry‑Inspired CSS Code}
-    We construct a CSS stabilizer code from a pair of nested Reed--Solomon codes $C_X$ and $C_Z$ of length $n=255$ over
-$\mathbb{F}_{256}$ and convert them to binary using a polynomial basis.  Both codes evaluate polynomials on the
-projective line with dimensions $k_X = k_Z = 144$, yielding $C_Z^\perp \subseteq C_X$.  The script
-\texttt{generate\_css\_matrices.py} emits the binary parity-check matrices, verifies $H_X H_Z^\top \equiv 0$, and finds
-no codeword of weight $<21$ in $10^3$ random trials.  The resulting quantum code encodes $k=33$ logical qubits at rate
-$R\approx 0.129$.
-
-    \subsection{Decoder Architecture (DABP)}
-
-    We design a deeply pipelined, fully parallel belief‑propagation decoder (DABP) tailored for FPGA implementation.  
-Each decoding iteration comprises: (i) variable‑node updates, (ii) check‑node updates via the Min‑Sum algorithm with 
-damping, and (iii) syndrome checking.  Quantised 6‑bit log‑likelihood ratios (LLRs) are used throughout.  The decoder 
-operates on a bipartite graph with 255 variable nodes and 222 check nodes (111 for $X$‑stabilizers and 111 for 
-$Z$‑stabilizers).  A simplified pipeline is depicted in Figure~\ref{fig:dabp}.
-
-    \begin{figure}[t]
-      \centering
-      \begin{tikzpicture}[node distance=1.5cm]
-        \node (vn) [draw, rectangle, fill=blue!10, minimum width=4cm, minimum height=1cm] {Variable Node Update};
-        \node (cn) [draw, rectangle, fill=orange!20, minimum width=4cm, minimum height=1cm, below of=vn, yshift=-0.2cm] 
-{Check Node Update};
-        \node (llr) [draw, rectangle, fill=green!10, minimum width=4cm, minimum height=1cm, below of=cn, yshift=-0.2cm] 
-{LLR Update \\ \small (Damping)};
-        \node (syn) [draw, rectangle, fill=purple!10, minimum width=4cm, minimum height=1cm, below of=llr, 
-yshift=-0.2cm] {Syndrome Check};
-        \draw[->] (vn) -- (cn);
-        \draw[->] (cn) -- (llr);
-        \draw[->] (llr) -- (syn);
-        \draw[->] (syn) -- ++(0,-0.5) node[anchor=west] {\small Next iteration};
-      \end{tikzpicture}
-      \caption{Simplified pipeline of the DABP decoder.  The pipeline is unrolled for a fixed number of iterations, with
-  intermediate LLRs stored in on‑chip memory.}
-      \label{fig:dabp}
-    \end{figure}
-
-    \subsection{Belief-Propagation Hyperparameters}
-    The BP decoder uses min-sum updates with a damping factor of $0.5$ to
-    stabilise oscillations.  Log-likelihood ratios are quantised to
-    $6$~bits, and decoding runs for at most $10$ iterations with an
-    early-stop check on the syndrome.  These parameters are exposed via
-    command-line flags in \texttt{simulation.py} and logged alongside
-    each logical-error-rate estimate.
-
-    Resource estimates on a Xilinx Kintex UltraScale (XCKU040) at \SI{200}{\mega\hertz} suggest a throughput of
-\SI{500}{\mega\codeword\per\second} with a power consumption of approximately \SI{2.5}{\watt}.  A post‑synthesis build
-in Vivado~2024.2 reports \SI{35}{\kilo} LUTs, \SI{28}{\kilo} FFs, 40~BRAMs, and 120~DSPs with \SI{0.8}{\nano\second}
-timing slack.  The decoding latency is sub‑\SI{1}{\micro\second} for 10 iterations, with roughly
-\SI{70}{\percent} of the budget spent in the core updates and the rest in I/O and control.
-
-    \section{Performance Evaluation}
-
-    \subsection{Idealised BDD Performance}
-    We first simulate the code under the idealised BDD assumption, which decodes any error pattern of weight up to 
-$\lfloor (d-1)/2 \rfloor=10$.  Using Monte Carlo sampling, we estimate the logical error rate $P_L$ and resulting 
-secret‑key rate $R_{\mathrm{SK}}$ under both noise models.  For $N=10^6$ entangled pairs, secret‑key rates exceed 
-$10^{-3}$ bits per physical qubit under Model 2, outperforming a small‑distance surface code by over $3\times$.
-
-    \subsection{Belief‑Propagation Performance}
-    We implement the DABP decoder in software using 6‑bit quantised LLRs and simulate it under Model 2.  
-Figure~\ref{fig:ber} plots the logical error rate $P_L$ versus physical error probability.  As expected, BP falls short 
-of the BDD bound but retains performance advantages over a surface code at similar rate.  Finite‑size effects become 
-significant for block lengths below 255; we discuss adaptive code concatenation as a mitigation.
-
-    \begin{figure}[t]
-    \centering
-    \includegraphics[width=0.85\linewidth]{logical_error_rate.pdf}
-    \caption{Logical error rate $P_L$ versus physical error probability $p$ under Model 2.  The BDD performance (dashed)
-  serves as an upper bound; BP decoding (solid) approaches this bound for moderate $p$ but diverges for $p\ge0.02$.  
-Surface code performance at similar rate (dotted) is included for comparison.}
-    \label{fig:ber}
-    \end{figure}
-
-    \subsection{Finite‑Size Secret‑Key Rate}
-    For entanglement‑based QKD, the secret‑key length $\ell$ for $N$ EPR pairs is bounded by
-    \begin{equation}
-    \ell \ge N[1-2H_2(Q)]-\sqrt{N}\,\Delta(\epsilon_{\mathrm{sec}}) - \log \frac{2}{\epsilon_{\mathrm{cor}}},
-    \end{equation}
-    where $Q$ is the quantum bit error rate (QBER), $H_2$ is the binary entropy function, and $\epsilon_{\mathrm{sec}}, 
-\epsilon_{\mathrm{cor}}$ are security parameters.  Under Model 2 with $p_Z^{\mathrm{base}}=9.0\times 10^{-3}$ and 
-correlation $\alpha\approx 0.1$, we obtain $Q\approx 1.2\times 10^{-3}$ for the AG code with BP decoding.  At $N=10^6$, 
-the finite‑size penalty is minor, yielding $\ell\approx 0.99N$ bits of secure key.
-
-    \section{Discussion and Future Work}
-
-    Our results highlight the promise of algebraic‑geometry‑inspired quantum codes for HCF mobile backhaul.  However, 
-several limitations and open problems remain:
-
-    \begin{itemize}[leftmargin=*]
-      \item \textbf{Decoder performance gap.}  The BP decoder does not achieve the BDD bound; exploring enhanced 
-decoding techniques such as Ordered Statistics Decoding (OSD), neural decoders or machine‑learning‑assisted belief 
-propagation could close this gap.
-      \item \textbf{Experimental validation.}  The noise model and simulation results must be validated against 
-experimental measurements of SpRS/FWM in HCFs.  We plan to collaborate with fiber laboratories to obtain empirical noise
- data and to calibrate parameters such as the state‑persistence probability $\eta$.
-      \item \textbf{Adaptive codes.}  The static AG code may not be optimal across varying channel conditions.  
-Investigating rate‑adaptation, code concatenation and code switching could improve robustness.
-      \item \textbf{Hardware integration.}  Implementing the DABP decoder on actual FPGA hardware and measuring 
-real‑world latency and power will be essential for system deployment.  Porting the design to application‑specific 
-integrated circuits (ASICs) could further reduce energy consumption.
-    \end{itemize}
-
-    \section{Conclusion}
-
-    We presented algebraic‑geometry‑inspired CSS codes and a hardware‑oriented BP decoder (DABP) for quantum key 
-distribution over hollow‑core fiber backhaul.  Under a physics‑driven asymmetric, correlated noise model, idealised BDD 
-simulations and practical BP decoding show that a $[[255,33,21]]$ code constructed from one‑point Hermitian AG codes can
-  achieve secret‑key rates exceeding those of small‑distance surface codes while remaining implementable on mid‑range 
-FPGAs.  Although the gap between BDD and BP performance remains and experimental validation is needed, our work provides
-  a concrete path towards robust, low‑latency quantum networking over fiber infrastructure.
-
-
-    \bibliographystyle{IEEEtran}
-    \bibliography{references}
-
-    \end{document}
+\begin{thebibliography}{99}
+\bibitem{FukuiPRL2017}
+K.~Fukui, A.~Tomita, A.~Okamoto,
+``Analog quantum error correction with encoding a qubit into an oscillator'',
+\emph{Phys.\ Rev.\ Lett.} \textbf{119}, 180507 (2017).
+\bibitem{FukuiMBQC2017}
+K.~Fukui \emph{et al.},
+``High-threshold fault-tolerant quantum computation with analog QEC'',
+arXiv:1712.00294 (2017).
+\bibitem{ChamberlandBeverland2018}
+C.~Chamberland, M.~B.~Beverland,
+``Flag fault-tolerant error correction with arbitrary distance codes'',
+\emph{Quantum} \textbf{2}, 53 (2018).
+\bibitem{LaoAlmudever2020}
+L.~Lao, C.~G.~Almud\'ever,
+``Fault-tolerant quantum error correction on near-term processors using flag and bridge qubits'',
+\emph{Phys.\ Rev.\ A} \textbf{101}, 032333 (2020).
+\bibitem{XZZXNatComms2021}
+J.~P.~Bonilla~Ataides, D.~K.~Tuckett, S.~D.~Bartlett, S.~T.~Flammia, B.~J.~Brown,
+``The XZZX surface code'',
+\emph{Nat.\ Commun.} \textbf{12}, 2172 (2021).
+\bibitem{McEwenLeakage2021}
+M.~McEwen \emph{et al.}, ``Removing leakage-induced correlated errors in superconducting QEC'',
+arXiv:2102.06131 (2021).
+\bibitem{LRUAllMWPRL2023}
+J.~F.~Marques \emph{et al.}, ``All\‑microwave leakage reduction units for QEC with superconducting transmons'',
+\emph{Phys.\ Rev.\ Lett.} \textbf{130}, 250602 (2023).
+\bibitem{CouplerLRU2024}
+Y.~Zhang \emph{et al.}, ``Coupler-assisted leakage reduction for scalable QEC'',
+arXiv:2403.16155 (2024).
+\end{thebibliography}
+\end{document}
