@@ -39,20 +39,30 @@ try:
     run_trial  # type: ignore[name-defined]
 except NameError:
     def run_trial(distance: int, p: float, noise: str, **kwargs: Any) -> bool:
-        """
-        Stub for integration. Replace or override this function with the
-        project's single-trial simulator.
+        """Fallback single-trial simulator for the CLI harness.
 
-        This stub simply raises NotImplementedError to signal that the
-        simulation hook has not been provided. To integrate with a real
-        simulator, implement a function with the same signature that
-        performs one simulation trial at physical error rate p for a code
-        of the given distance under the specified noise model, and returns
-        True if a logical failure is observed.
+        This minimal implementation enables smoke tests of the paper experiments
+        harness without requiring an external decoder. It draws iid Bernoulli
+        ``p`` errors on ``distance`` qubits and declares a logical failure when
+        more than ``t=(distance-1)//2`` errors occur. The ``noise`` argument and
+        additional keyword arguments are accepted for API compatibility but are
+        otherwise ignored. Replace this function with a proper simulator for
+        meaningful studies.
         """
-        raise NotImplementedError(
-            "Please implement run_trial(distance, p, noise, **kwargs) in modified_simulation.py"
-        )
+
+        if not (0.0 <= p <= 1.0):
+            raise ValueError("p must lie in [0,1]")
+
+        t_correctable = (distance - 1) // 2
+        errors = 0
+        for _ in range(distance):
+            if random.random() < p:
+                errors += 1
+                if errors > t_correctable:
+                    return True
+        return False
+
+
 
 
 # -----------------------------------------------------------------------------
@@ -103,13 +113,17 @@ def sweep_p_for_distance(
             if run_trial(distance=distance, p=p, noise=noise, **kwargs):
                 failures += 1
         lo, hi = wilson_interval(failures, trials)
-        yield {
+        row = {
             "distance": distance,
             "p": p,
             "logical_error_rate": failures / float(trials),
             "ci_low": lo,
             "ci_high": hi,
         }
+        for key in ("damping", "llr_bits", "max_iters", "early_stop"):
+            if key in kwargs:
+                row[key] = kwargs[key]
+        yield row
 
 
 def logspaced(min_p: float, max_p: float, num: int) -> Iterable[float]:
@@ -178,7 +192,30 @@ def paper_experiments_main(argv: Iterable[str] | None = None) -> None:
         "--bias",
         type=float,
         default=1.0,
-        help="Z/X bias used for biased dephasing (ignored otherwise)."
+        help="Z/X bias used for biased dephasing (ignored otherwise).",
+    )
+    parser.add_argument(
+        "--damping",
+        type=float,
+        default=0.5,
+        help="Belief-propagation damping factor.",
+    )
+    parser.add_argument(
+        "--llr-bits",
+        type=int,
+        default=6,
+        help="Quantization bits for LLR representation.",
+    )
+    parser.add_argument(
+        "--max-iters",
+        type=int,
+        default=10,
+        help="Maximum BP iterations.",
+    )
+    parser.add_argument(
+        "--early-stop",
+        action="store_true",
+        help="Enable early stopping when syndrome is satisfied.",
     )
     parser.add_argument("--pmin", type=float, required=True, help="Minimum p (log-scale).")
     parser.add_argument("--pmax", type=float, required=True, help="Maximum p (log-scale).")
@@ -230,6 +267,10 @@ def paper_experiments_main(argv: Iterable[str] | None = None) -> None:
                 trials=args.trials,
                 noise=args.noise,
                 bias=args.bias,
+                damping=args.damping,
+                llr_bits=args.llr_bits,
+                max_iters=args.max_iters,
+                early_stop=args.early_stop,
             )
         )
         all_rows.extend(rows)

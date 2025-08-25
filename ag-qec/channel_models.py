@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Channel and error-model utilities for AG-QEC simulations.
+"""Channel and error-model utilities for AG-QEC simulations.
 
 Key utilities:
   - attenuation_linear(alpha_db_per_km, L_km): correct linear attenuation.
   - depolarizing_probs(p): returns [1-p, p/3, p/3, p/3].
   - asymmetric_probs(pX, pY, pZ): returns [1-(pX+pY+pZ), pX, pY, pZ].
+  - biased_dephasing_probs(p_tot, bias): split total error with bias p_Z/p_X.
+  - sample_measurement_errors(rng, bits, p_meas): flip measurement outcomes.
+  - sample_pauli_with_leakage(rng, n, probs, p_leak): Pauli sampling with
+    a leakage flag 4 occurring with probability p_leak.
 """
 from __future__ import annotations
 from typing import Tuple
@@ -44,6 +47,19 @@ def asymmetric_probs(pX: float, pY: float, pZ: float) -> np.ndarray:
         raise ValueError("pX+pY+pZ must be < 1.")
     return np.array([1.0 - p, pX, pY, pZ], dtype=float)
 
+def biased_dephasing_probs(p_tot: float, bias: float) -> np.ndarray:
+    """Asymmetric dephasing with specified Z/X bias.
+
+    Args:
+        p_tot: total probability of non-identity error.
+        bias: ratio p_Z/p_X. p_Y is assumed zero.
+    """
+    if p_tot < 0 or p_tot >= 1 or bias <= 0:
+        raise ValueError("Invalid p_tot or bias")
+    p_x = p_tot / (bias + 1.0)
+    p_z = p_tot - p_x
+    return asymmetric_probs(p_x, 0.0, p_z)
+
 def wilson_interval(k: int, n: int, z: float = 1.96) -> Tuple[float, float]:
     """
     Wilson score interval for a binomial proportion.
@@ -71,3 +87,22 @@ def sample_pauli_iid(
     if abs(probs.sum() - 1.0) > 1e-12:
         raise ValueError("probs must sum to 1.")
     return rng.choice(4, size=n, p=probs)
+
+def sample_measurement_errors(rng: np.random.Generator, bits: np.ndarray,
+                              p_meas: float) -> np.ndarray:
+    """Apply classical measurement bit-flip errors with probability p_meas."""
+    if p_meas < 0 or p_meas > 1:
+        raise ValueError("p_meas must be in [0,1]")
+    flips = rng.random(bits.shape) < p_meas
+    return np.bitwise_xor(bits, flips.astype(int))
+
+def sample_pauli_with_leakage(
+    rng: np.random.Generator, n: int, probs: np.ndarray, p_leak: float
+) -> np.ndarray:
+    """Sample Pauli errors with an additional leakage state (4)."""
+    if p_leak < 0 or p_leak > 1:
+        raise ValueError("p_leak must be in [0,1]")
+    outcomes = sample_pauli_iid(rng, n, probs)
+    leakage = rng.random(n) < p_leak
+    outcomes[leakage] = 4
+    return outcomes
