@@ -39,20 +39,30 @@ try:
     run_trial  # type: ignore[name-defined]
 except NameError:
     def run_trial(distance: int, p: float, noise: str, **kwargs: Any) -> bool:
-        """
-        Stub for integration. Replace or override this function with the
-        project's single-trial simulator.
+        """Fallback single-trial simulator for the CLI harness.
 
-        This stub simply raises NotImplementedError to signal that the
-        simulation hook has not been provided. To integrate with a real
-        simulator, implement a function with the same signature that
-        performs one simulation trial at physical error rate p for a code
-        of the given distance under the specified noise model, and returns
-        True if a logical failure is observed.
+        This minimal implementation enables smoke tests of the paper experiments
+        harness without requiring an external decoder. It draws iid Bernoulli
+        ``p`` errors on ``distance`` qubits and declares a logical failure when
+        more than ``t=(distance-1)//2`` errors occur. The ``noise`` argument and
+        additional keyword arguments are accepted for API compatibility but are
+        otherwise ignored. Replace this function with a proper simulator for
+        meaningful studies.
         """
-        raise NotImplementedError(
-            "Please implement run_trial(distance, p, noise, **kwargs) in modified_simulation.py"
-        )
+
+        if not (0.0 <= p <= 1.0):
+            raise ValueError("p must lie in [0,1]")
+
+        t_correctable = (distance - 1) // 2
+        errors = 0
+        for _ in range(distance):
+            if random.random() < p:
+                errors += 1
+                if errors > t_correctable:
+                    return True
+        return False
+
+
 
 
 # -----------------------------------------------------------------------------
