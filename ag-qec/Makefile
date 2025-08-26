@@ -1,27 +1,57 @@
-PY=python
+PY=python3
+SEED?=1337
+N?=255
+RX?=110
+RZ?=112
+TRIALS?=2000
+ETA_LIST?=0,0.3,0.6
+PX?=0.02
+PZ?=0.04
+PY_ERR?=0.0
+ITERS?=100
+DAMP?=0.5
+OSD?=2
+DATA_DIR?=data
+FIG_DIR?=figs
 
-.PHONY: all matrices verify simulate plot pdf clean
+export PYTHONHASHSEED=0
 
-all: matrices verify simulate plot pdf
+.PHONY: all fast codes simulate figs baseline clean
 
-matrices:
-	$(PY) scripts/generate_css.py --seed 20250825 --n 255 --rx 111 --rz 111 --col_wx 3 --col_wz 3
+all: codes simulate figs
 
-verify:
-	$(PY) scripts/verify_css.py
+fast: RX=60
+fast: RZ=62
+fast: TRIALS=200
+fast: ETA_LIST=0
+fast: ITERS=50
+fast: DAMP=0.3
+fast: OSD=1
+fast: codes simulate figs
+
+codes:
+	@mkdir -p $(DATA_DIR)
+	$(PY) code/generate_css.py --n $(N) --rX $(RX) --rZ $(RZ) --seed $(SEED) --out $(DATA_DIR)/css_n$(N)_seed$(SEED).npz --stats $(DATA_DIR)/stats_seed$(SEED).json
 
 simulate:
-	$(PY) scripts/run_experiment.py \
-		--seed 20250825 --n 255 --rx 111 --rz 111 \
-		--pX 0.01 --pZ 0.03 --pY 0.00 --eta 0.60 \
-		--trials 50000 --iters 60 --damp 0.5 --osd True --osd_topk 8 \
-		--out data/logical_error_rate.csv
+	@mkdir -p $(DATA_DIR)
+	$(PY) code/experiment.py \
+	--css $(DATA_DIR)/css_n$(N)_seed$(SEED).npz \
+	--results $(DATA_DIR)/results.csv \
+	--seed $(SEED) \
+	--trials $(TRIALS) \
+	--eta-list $(ETA_LIST) \
+	--pX $(PX) --pZ $(PZ) --pY $(PY_ERR) \
+	--iters $(ITERS) --damping $(DAMP) --osd $(OSD)
 
-plot:
-	$(PY) scripts/plot_logical_error_rate.py --in data/logical_error_rate.csv --out figs/logical_error_rate.png
+baseline:
+	@mkdir -p $(DATA_DIR)
+	$(PY) code/experiment.py --baseline-lp --results $(DATA_DIR)/baseline_lp.csv --trials 500 --seed $(SEED)
 
-pdf:
-	@which latexmk >/dev/null 2>&1 && latexmk -pdf -silent ag-qec.tex || echo "Install LaTeX/latexmk to build PDF."
+figs:
+	@mkdir -p $(FIG_DIR)
+	$(PY) plots/make_plots.py --results $(DATA_DIR)/results.csv --outdir $(FIG_DIR)
 
 clean:
-	rm -f *.aux *.bbl *.blg *.log *.out *.toc *.fls *.fdb_latexmk ag-qec.pdf
+	rm -rf $(DATA_DIR) $(FIG_DIR)
+
