@@ -1,0 +1,58 @@
+\appendix
+\section*{Appendix A: Methods (construction, noise, decoding, ablations)}
+\addcontentsline{toc}{section}{Appendix A: Methods}
+
+\paragraph{CSS construction at $n=255$ with guaranteed commutation.}
+We first build a sparse $H_X\in\{0,1\}^{r_X\times n}$ with target small column weight ($w_X\!\approx\!3$) and then obtain $H_Z$ by sampling rows from $\mathrm{Null}_2(H_X)$ to the desired rank $r_Z$, which guarantees $H_X H_Z^\top=0$ over GF(2).
+Realized $k$ is reported as $k = n - \mathrm{rank}_2(H_X) - \mathrm{rank}_2(H_Z)$.
+For transparency, we log:
+row/column weight histograms of $H_X,H_Z$, a 4-cycle count, and the commutation check result.
+
+\paragraph{Noise model (asymmetric, first-order Markov Pauli).}
+We model temporally correlated, asymmetric Pauli noise by three independent first-order chains for $X$, $Z$, and $Y$ events with marginal rates $(p_X,p_Z,p_Y)$ and persistence $\eta\in[0,1)$.
+The effective bit/phase flip probabilities used by the CSS decoder are $p_X^\star = p_X + p_Y$ and $p_Z^\star = p_Z + p_Y$.
+To probe biases found in practice, we sweep $\eta\in\{0,0.3,0.6,0.9\}$ and $(p_X,p_Z)$ over grids where $p_Z\in\{p_X, 2p_X, 3p_X\}$.
+An optional cross-type coupling $\rho_{ZY}\in[0,1)$ can be enabled to correlate $Z$ and $Y$ bursts; it is \emph{disabled} in our default runs and only used in stress tests.
+
+\paragraph{Decoder.}
+We use damped min-sum belief propagation (BP) with maximum iterations $T$ and damping $\lambda\in[0,1)$; early stopping on syndrome satisfaction is enabled.
+On BP failure, we apply an order-2 ordered statistics decoding (OSD-2) rescue with standard reliability ordering from bit LLR magnitudes.
+We log $\#$OSD invocations, OSD time per block, and overall per-block latency.
+
+\paragraph{Statistical reporting.}
+Each configuration logs the number of blocks, the observed block-error rate $\hat p$, and two-sided Wilson 95\% confidence intervals.
+CSV schema is documented below and used verbatim by the plotting scripts.
+
+\paragraph{Ablations.}
+We ablate (i) BP-only vs.\ BP+OSD-2, (ii) damping values, (iii) iteration budgets, (iv) $(r_X,r_Z)$ choices that trade rate for protection under asymmetric noise, and (v) $\eta$.
+All randomness (matrix generation, noise, trial ordering) is deterministically derived from a single seed recorded in the CSV.
+
+\subsection*{CSV schema (file: \texttt{data/results.csv})}
+\begin{small}
+\begin{verbatim}
+seed, n, rX, rZ, k, wX_mean, wZ_mean, cycles4,
+decoder, iters, damping, osd_order, osd_calls,
+pX, pZ, pY, eta, rhoZY,
+trials, failures, p_hat, wilson_low, wilson_high,
+bp_time_ms, osd_time_ms, total_time_ms, notes
+\end{verbatim}
+\end{small}
+
+\subsection*{Construction heuristics}
+We prefer near-regular variable-node degrees and avoid duplicating column pairs to reduce 4-cycles. A simple local repair pass re-samples offending edges; the final 4-cycle count is logged for auditing.
+
+\subsection*{Distance lower bound}
+We include a bounded search up to weight $t$ to report a conservative lower bound on code distance for a subset of seeds. The search is syndrome-guided and prunes using parity checks; if no weight-$\le t$ codeword is found, we report $d>t$.
+
+\subsection*{Optional QLDPC baseline}
+An optional lifted-product toy baseline (small $n$) is provided behind \texttt{make baseline}; it is \emph{not} part of \texttt{make all} to avoid extending the default runtime. When enabled, it runs the same BP(+OSD) stack and writes a separate CSV with a distinctive \texttt{notes} tag.
+
+\subsection*{Reproducible execution}
+\begin{verbatim}
+cd ag-qec
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+make all        # generate codes, run sweeps, plot ablations/complexity
+make fast       # quick smoke test (few trials) for CI
+\end{verbatim}
+
