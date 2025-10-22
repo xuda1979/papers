@@ -1,0 +1,109 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amsfonts}
+\usepackage{algorithm,algpseudocode}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+\title{Proof-Carrying AI: Towards Provably Reliable Agents}
+\author{Author Name}
+\date{\today}
+
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We propose a framework where learning systems return \emph{machine-checkable certificates} alongside answers. A sound verifier checks the certificate to ensure the answer satisfies a specified property; otherwise the system abstains. We formalize properties, certificates, and verifiers; give verifier-guided sampling and repair algorithms; state guarantees under soundness; and demonstrate a minimal reference implementation.
+\end{abstract}
+
+\section{Introduction}
+Large language models are powerful but error-prone. To deploy them in high-stakes settings, we need mechanisms that \emph{guarantee} correctness of \emph{accepted} outputs. Inspired by proof-carrying code, we require models to produce certificates that a verifier can check. If the verifier accepts, the answer is guaranteed to satisfy the property; otherwise the model abstains.
+
+\paragraph{Threat model and trust base.}
+We assume an adversarial prover that may submit malicious certificates as well as an honest-but-buggy producer that inadvertently emits incorrect evidence. The verifier and any auditable helper libraries constitute the trusted computing base. The security goal is twofold: (i) \emph{soundness}---a malicious prover cannot convince the verifier to accept an incorrect answer---and (ii) \emph{fail closed behaviour}---if the prover crashes or misbehaves, the verifier rejects and the agent abstains.
+
+\paragraph{Positioning within proof-carrying research.}
+Proof-Carrying AI mirrors the classic notion of Proof-Carrying Code, where a consumer checks that untrusted binaries satisfy a local safety policy using a fast validator~(Necula et~al., 1997). It also draws on Proof-Carrying Data, which transports succinct, end-to-end proofs across distributed pipelines~(Chiesa and Tromer, 2010). Our prototype focuses on lightweight, easily-audited certificates rather than the fully general proof systems explored in that line of work, but the architecture is designed to adopt stronger proof objects as they become available.
+
+\section{Formal Framework}
+\begin{definition}[Task property]
+For input $x$, an output $y$ is acceptable if it satisfies a property $P_x(y)$.
+\end{definition}
+
+\begin{definition}[Certificate and verifier]
+A certificate $c$ is valid for $(x,y)$ if a verifier $V$ accepts: $V(x,y,c)=1$.
+The verifier is \emph{sound} if $V(x,y,c)=1 \Rightarrow P_x(y)$ for all $(x,y,c)$.
+\end{definition}
+The system aims to maximize \emph{coverage} $\Pr[V(x,y,c)=1]$ while maintaining \emph{zero conditional risk} on accepted outputs.
+
+\section{Algorithms}
+\textbf{Verifier-guided rejection sampling (VRS).} The model proposes $(y,c)$. If $V$ accepts, return; otherwise resample. The expected number of samples is $1/p_{\text{acc}}$, where $p_{\text{acc}}=\Pr[V(x,y,c)=1]$.
+To reduce this cost, we add counterexample-driven \emph{repair}: the verifier returns a witness on failure which updates the proposal or certificate.
+
+\begin{algorithm}
+\caption{Verifier-Guided Rejection Sampling (VRS)}
+\begin{algorithmic}
+\Require model $f_\theta$, verifier $V$, input $x$, budget $B$
+\For{$t=1$ to $B$}
+\State sample $(y,c)\sim f_\theta(x)$
+\If{$V(x,y,c)=1$} \Return $(y,c)$ \EndIf
+\State update proposal using counterexample/witness (optional)
+\EndFor
+\State \Return \textsc{Abstain}
+\end{algorithmic}
+\end{algorithm}
+
+\section{Guarantees}
+\begin{theorem}[Zero conditional risk]
+If $V$ is sound, then $\Pr[\neg P_x(y)\mid V(x,y,c)=1]=0$.
+\end{theorem}
+\begin{proof}
+By soundness, $V(x,y,c)=1 \Rightarrow P_x(y)$. Therefore the event $\neg P_x(y)$ and $V(x,y,c)=1$ has probability zero, which implies the conditional probability is zero.
+\end{proof}
+We evaluate using \emph{coverage} (acceptance rate) and \emph{conditional risk}. VRS trades coverage for guarantees: higher acceptance typically requires better proposals or stronger certificates. For \textsc{forall\_range}, any accepting certificate explicitly enumerates checks for every $n$ in the finite domain, so a failing witness would be exposed as a counterexample; incompleteness arises only when the prover cannot supply a total witness. For \textsc{contract\_trace}, acceptance guarantees that every recorded step satisfied its contract under the declared tolerance, but completeness is limited by the fidelity of the trace---missing operations or unmodelled side effects lead to rejection.
+
+\section{Implementation}
+Our Python prototype includes two certificate types: (i) finite-range universal checking, verifying $\forall n\in\{0,\dots,N\}$ that an algorithm matches a specification; and (ii) contract-style traces, recording pre/post-conditions for tool calls. The latter uses \texttt{math.isclose} with default tolerances $(\text{rel}=10^{-9}, \text{abs}=10^{-12})$ to guard against floating-point noise. We explicitly reject non-finite inputs (\texttt{NaN} and $\pm\infty$) and document that proofs over floats are not compositional: downstream consumers must validate each operation under the stated tolerance budget.
+
+Deterministic SHA-256 digests are produced by a 40-line helper that canonicalizes JSON data by sorting keys, stripping insignificant whitespace, and excluding volatile metadata such as \texttt{verified\_at}, \texttt{digest}, and \texttt{signature}. The helper follows the JSON Canonicalization Scheme (RFC~8785) semantics most relevant to our certificates without introducing new dependencies, allowing auditors to recompute digests with a standalone script.
+
+\paragraph{Complexity of verification.}
+For the \textsc{forall\_range} scheme, verification runs in $\mathcal{O}(N)$ time and $\mathcal{O}(1)$ additional memory beyond the trace of the counterexample search; the verifier halts on the first mismatch and returns the offending index. For \textsc{contract\_trace}, the cost is linear in the trace length $T$, with $\mathcal{O}(1)$ memory since each step is checked independently. In both cases failure reports include the first counterexample, enabling iterative repair.
+
+\section{Certificate Schema and Canonicalization}
+Certificates are JSON objects with a stable ``body'' that is signed and hashed, plus optional metadata. A minimal contract-trace certificate appears in \cref{fig:json-schema}; the canonical body excludes the \texttt{verified\_at} timestamp, the stored \texttt{digest}, and any \texttt{signature} field so that recomputing the digest is deterministic.
+
+\begin{figure}[t]
+\centering
+\begin{verbatim}
+{
+  "scheme": "contract_trace",
+  "operation": "divide",
+  "args": {"a": 7, "b": 3},
+  "tolerance": {"rel": 1e-9, "abs": 1e-12},
+  "result": {"ok": true, "value": 2.3333333333333335},
+  "verified_at": "2025-05-01T12:00:00Z",
+  "digest": "...",
+  "signature": "..."
+}
+\end{verbatim}
+\caption{Normative JSON layout. Canonicalization drops \texttt{verified\_at}, \texttt{digest}, and \texttt{signature} before hashing.}
+\label{fig:json-schema}
+\end{figure}
+
+Following RFC~8785, we stringify the body with lexicographically sorted keys, UTF-8 encoding, and no insignificant whitespace. Numbers are emitted in their standard JSON form but must be finite; encountering \texttt{NaN} or \texttt{Infinity} aborts verification. The digest is the SHA-256 hex encoding of this canonical string, enabling reproducible hashing across platforms and making signature verification independent from timestamp or deployment metadata.
+
+\section{Experiments}
+We test on small arithmetic and API-call tasks. The prototype achieves zero conditional risk by abstaining on invalid inputs and accepting only when certificates verify.
+
+\section{Related Work}
+Proof-Carrying Code~(Necula et~al., 1997) introduced the template our verifier follows: ship machine-checkable proofs alongside untrusted artefacts so that a lightweight checker enforces safety policies. Proof-Carrying Data~(Chiesa and Tromer, 2010) generalised the idea to distributed pipelines with succinct zero-knowledge proofs; our present scope limits itself to explicit traces but shares the goal of end-to-end integrity. In the AI domain, Proof-Carrying Plans~(Goldman et~al., 2012) convey type-like plans whose execution is certified safe. PCAI complements these approaches by targeting LLM-produced reasoning artefacts where transparency, determinism, and auditability trump asymptotic succinctness.
+
+\section{Limitations and Future Work}
+The current verifier is intentionally minimal and deterministic, without solver-aided proofs. Future work will integrate SMT/interactive proofs and scale to richer program properties and interactive proof objects.
+
+\end{document}

@@ -1,0 +1,61 @@
+\documentclass{article}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{natbib}
+
+\title{HASCO: Test-Time Compute Allocation via Adaptive Submodularity on Hypergraphs of Thought}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We propose Hypergraph-of-Thoughts with Adaptive Submodular Compute Allocation (HASCO), a novel algorithm for allocating reasoning compute across branches in large language models (LLMs). HASCO models intermediate reasoning states as nodes in a hypergraph, where hyperedges represent expansions that may progress multiple subgoals simultaneously. We show that, under natural assumptions, the objective of maximizing expected subgoal coverage is adaptive submodular and monotone. Therefore, a greedy policy achieves a $(1 - 1/e)$ approximation to the optimal allocation. HASCO employs Thompson sampling to estimate per-hyperedge success probabilities from a verifier, and selects expansions greedily under a compute budget. In synthetic experiments, HASCO significantly improves coverage compared to uniform allocation at the same budget.
+\end{abstract}
+
+\section{Introduction}
+Test-time compute (TTC) has emerged as an important axis for scaling LLM performance. Recent work shows that allocating additional tokens for reasoning can yield gains similar to parameter scaling, motivating adaptive per-query TTC allocation. However, current methods such as Best-of-$N$ or tree-of-thoughts allocate compute uniformly across reasoning branches. We propose HASCO, which formulates intra-query allocation as maximizing expected subgoal coverage on a hypergraph of thought.
+
+\section{Hypergraph-of-Thoughts}
+We represent a reasoning problem as a hypergraph $H=(V,E)$, where each vertex corresponds to a partial solution and each hyperedge $e$ expands the current state along multiple subgoals. A verifier estimates the probability $p_{e,g}$ that hyperedge $e$ solves subgoal $g$ when expanded. The objective is to maximize the expected number of solved subgoals subject to a budget $B$ on the number of expansions.
+
+\section{Adaptive Submodularity}
+Let $f(S)$ denote the expected number of subgoals covered after selecting a set $S$ of hyperedges. Under conditional independence of hyperedges and a normalized coverage objective, $f$ is adaptive submodular and monotone. By results of \citet{Golovin2011Adaptive}, a simple greedy policy that sequentially selects the hyperedge with the largest marginal gain attains at least $(1-1/e)$ of the optimal expected coverage.
+
+\section{HASCO Policy}
+HASCO maintains Beta posteriors over $p_{e,g}$. At each step, it samples $\hat{p}_{e,g}$ from the posterior (Thompson sampling), estimates the marginal coverage gain of each hyperedge, and greedily selects the hyperedge with the highest expected gain under budget $B$. After expansion, the verifier updates the posteriors for the affected subgoals.
+
+\section{Simulation}
+We evaluate HASCO on a synthetic hypergraph where each expansion can solve multiple subgoals with probabilities drawn from a Beta prior. For 150 random instances, we compare uniform allocation, HASCO with Thompson sampling, and an oracle policy that knows true probabilities. Table~\ref{tab:sim} reports the average coverage, and Figure~\ref{fig:sim} plots coverage as a function of the budget. HASCO outperforms uniform allocation and approaches the oracle performance.
+
+\begin{table}[ht]
+\centering
+\caption{Expected coverage on synthetic instances.}
+\label{tab:sim}
+\begin{tabular}{rrrr}
+\hline
+Budget & Uniform & HASCO & Oracle \\\hline
+8 & 0.604 & 0.777 & 0.844\\
+12 & 0.699 & 0.888 & 0.913\\
+16 & 0.776 & 0.928 & 0.958\\
+24 & 0.873 & 0.967 & 0.974\\\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.7\linewidth]{hasco_sim_results.png}
+\caption{Coverage vs. compute budget on synthetic instances.}
+\label{fig:sim}
+\end{figure}
+
+\section{Related Work}
+Recent methods scale LLM performance by increasing TTC. Self-Consistency samples multiple chains-of-thought and returns a majority vote \citep{Wang2022SelfConsistency}. Tree-of-Thoughts and Graph-of-Thoughts explore multiple reasoning branches \citep{Yao2023TreeOfThought,Besta2023GraphOfThought}. HASCO differs by optimizing intra-query compute with theoretical guarantees. Bandit approaches allocate compute across queries \citep{Zuo2025BanditTTC}, and process reward models provide dense verifier signals \citep{Lightman2024PRM}.
+
+\section{Conclusion}
+HASCO introduces a principled framework for adaptive compute allocation over reasoning branches. By leveraging adaptive submodularity, it enjoys approximation guarantees and yields strong empirical improvements. Future work will integrate HASCO with process reward models and evaluate on real reasoning benchmarks.
+
+\bibliographystyle{plainnat}
+\bibliography{hasco_refs}
+\end{document}
