@@ -276,10 +276,19 @@ To compare test-time compute algorithms abstractly:
 \item \textbf{Memory return:} Improvement per memory operation (DEMI).
 \end{itemize}
 
+\paragraph{Recommended evaluation protocol.}
+For comparability with recent reports on test-time compute, we recommend: (i) reporting BPF curves over budgets
+$B \in \{0.25, 0.5, 1, 2, 4\}\times$ a task-specific baseline; (ii) including at least one arithmetic task
+(e.g., GSM8K), one math task (e.g., MATH), one code task (e.g., HumanEval with unit tests), and one symbolic/planning domain;
+(iii) baselines of greedy, best-of-$n$, self-consistency, and a ToT variant; and (iv) explicit accounting of
+tokenized compute (prompt + generation), wall-clock on a fixed accelerator, and any gating policy (DPG) used.
+These practice recommendations make BPF and marginal value-of-compute directly comparable to recent
+compute-optimal inference studies and TTC surveys.
+
 \section{Related work}
 
-Prompted reasoning traces such as CoT \cite{wei2022cot} and self-consistency \cite{wang2023selfconsistency} improve LLM problem-solving but lack formal compute allocation. 
-Tree-of-thought search \cite{yao2023tot} and debate-style multi-agent prompting \cite{irving2018debate} add structure but often use fixed schedules. 
+Prompted reasoning traces such as CoT \cite{wei2022cot} and self-consistency \cite{wang2023selfconsistency} improve LLM problem-solving but lack formal compute allocation.
+Tree-of-thought search \cite{yao2023tot} and debate-style multi-agent prompting \cite{irving2018debate} add structure but often use fixed schedules.
 Our framework builds on metareasoning \cite{russellwefald1991,horvitz1989,liedergriffiths2020}, submodular optimization \cite{nemhauser1978}, risk-sensitive control, and bandit indices, and connects them to LLM inference.
 
 \section{Limitations and societal considerations}
@@ -294,6 +303,24 @@ Responsible deployment should pair compute-scaling with audit trails, verifiers,
 We introduced a unifying formalism for test-time compute scaling and ten algorithmic blueprints that transcend linear chains and naive parallelism. 
 The central message is that \emph{where} and \emph{when} to spend computation can be decided using principled quantities (EVC, indices, risk measures, information gain, submodular gains), yielding anytime procedures with theoretical backing and cognitive plausibility.
 Future work can instantiate these designs across domains and refine calibrations for self-evaluation and verification.
+
+\section{Scope and positioning relative to concurrent work}
+
+Recent work studies inference/test-time scaling empirically and surveys the area. Wu \emph{et al.} analyze inference
+scaling laws and compute-optimal inference, showing Pareto trade-offs between extra tokens/strategies and model size \cite{wu2024inference}.
+Ji \emph{et al.} survey test-time compute from System-1 adjustments to System-2 deliberate reasoning \cite{ji2025survey}.
+Guan \emph{et al.} propose \emph{Deliberative Alignment}, reasoning explicitly over safety specifications before answering \cite{guan2024delibalign};
+Guo \emph{et al.} introduce \emph{Reward Reasoning Models} that leverage deliberate test-time compute for reward modeling \cite{guo2025rrm}.
+Our contribution is complementary: we provide a formal budgeted decision-theoretic substrate (BPF/EVC/indices/risk) and
+theory-backed algorithmic blueprints that can host these approaches and make their compute--performance trade-offs explicit.
+
+\section{Threats to validity and reproducibility}
+
+Our guarantees rely on assumptions that may be violated in practice (e.g., independence across threads for IGD,
+indexability under Whittle-style relaxations, calibration of self-evaluation signals, and approximate submodularity of gains).
+We recommend: (i) reporting calibration diagnostics for self-scores and verifiers; (ii) ablation of risk schedules in RS-MCTT;
+(iii) stress tests where action costs are stochastic; and (iv) disclosing hardware, batching, and gating policies. Sharing small,
+reference implementations (pseudo-code suffices) will improve reproducibility and comparability.
 
 \appendix
 
@@ -382,6 +409,51 @@ Geoffrey Irving, Paul Christiano, and Dario Amodei.
 Richard~S. Sutton and Andrew~G. Barto.
 \newblock \emph{Reinforcement Learning: An Introduction}.
 \newblock MIT Press, 2nd edition, 2018.
+
+\bibitem{wu2024inference}
+Yangzhen Wu, Zhiqing Sun, Shanda Li, Sean Welleck, and Yiming Yang.
+\newblock Inference Scaling Laws: An Empirical Analysis of Compute-Optimal Inference for Problem-Solving with Language Models.
+\newblock \emph{arXiv:2408.00724}, 2024.
+
+\bibitem{ji2025survey}
+Yixin Ji, Juntao Li, Yang Xiang, Hai Ye, Kaixin Wu, Kai Yao, Jia Xu, Linjian Mo, and Min Zhang.
+\newblock A Survey of Test-Time Compute: From Intuitive Inference to Deliberate Reasoning.
+\newblock \emph{arXiv:2501.02497}, 2025.
+
+\bibitem{guan2024delibalign}
+Melody~Y. Guan, Manas Joglekar, Eric Wallace, Saachi Jain, Boaz Barak, Alec Helyar, Rachel Dias, Andrea Vallone, Hongyu Ren, Jason Wei, Hyung~Won Chung, Sam Toyer, Johannes Heidecke, Alex Beutel, and Amelia Glaese.
+\newblock Deliberative Alignment: Reasoning Enables Safer Language Models.
+\newblock \emph{arXiv:2412.16339}, 2024.
+
+\bibitem{guo2025rrm}
+Jiaxin Guo, Zewen Chi, Li Dong, Qingxiu Dong, Xun Wu, Shaohan Huang, and Furu Wei.
+\newblock Reward Reasoning Model.
+\newblock \emph{arXiv:2505.14674}, 2025.
+
+\bibitem{kocsis2006uct}
+Levente Kocsis and Csaba Szepesv\'ari.
+\newblock Bandit based Monte-Carlo Planning.
+\newblock In \emph{ECML}, 2006.
+
+\bibitem{howardmatheson1972}
+Ronald~A. Howard and James~E. Matheson.
+\newblock Risk-sensitive Markov decision processes.
+\newblock \emph{Management Science}, 18(7):356--369, 1972.
+
+\bibitem{gittins1979}
+John~C. Gittins.
+\newblock Bandit Processes and Dynamic Allocation Indices.
+\newblock \emph{Journal of the Royal Statistical Society: Series B}, 41(2):148--164, 1979.
+
+\bibitem{whittle1988}
+Peter Whittle.
+\newblock Restless bandits: Activity allocation in a changing world.
+\newblock \emph{Journal of Applied Probability}, 25(A):287--298, 1988.
+
+\bibitem{itti2006surprise}
+Laurent Itti and Pierre~F. Baldi.
+\newblock Bayesian Surprise Attracts Human Attention.
+\newblock In \emph{NIPS}, 2006; see also \emph{Vision Research}, 49(10):1295--1306, 2009.
 
 \end{thebibliography}
 
