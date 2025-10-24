@@ -1,0 +1,41 @@
+% === Theory Supplement: Deliberative Compute ===
+% Include from paper.tex as: \input{theory_supplement}
+\section{Problem Setup and Notation}
+Let $x\sim\mathcal{D}$ be an input and $f_\theta$ an LLM. A \emph{deliberation policy} $\pi_\phi$ maps $(x,\lambda)$ to a compute allocation $\mathbf{c}(x)=(n,\ell,t)$ consisting of number of samples $n$, a per-sample token/step cap $\ell$, and an optional wall-clock/energy cap $t$.
+We study the costed objective
+\[
+\mathcal{L}(\pi)=\mathbb{E}_{x\sim\mathcal{D}}\Big[\ell(f_\theta,x;\mathbf{c})+\lambda_1 \mathrm{Tok}(\mathbf{c})+\lambda_2 \mathrm{Time}(\mathbf{c})+\lambda_3 \mathrm{Energy}(\mathbf{c})\Big],
+\]
+with $\lambda_i\!\ge 0$ and measurable cost terms. The \emph{self-consistency} (SC) estimator aggregates $n$ sampled solutions by majority vote on the final answer.
+
+\section{Theoretical Guarantees}
+\paragraph{Monotone improvement under SC.}
+Suppose each i.i.d.\ sample returns the correct answer with probability $p>1/2$. Then the majority-vote error after $n$ samples satisfies
+\[
+\mathbb{P}[\text{error}]\le \exp\{-2n(p-\tfrac{1}{2})^2\},
+\]
+by Hoeffding/Chernoff. Hence expected error decreases exponentially in $n$ and, for a token budget proportional to $n$, yields an $\tilde{O}(\exp(-\kappa n))$ trade-off. \textbf{Proof sketch:} Reduce to a binomial tail; apply Hoeffding's inequality.
+
+\paragraph{Optimal halting via SPRT analogy.}
+Let $H_0,H_1$ be hypotheses ``final answer is $a$'' vs.\ ``final answer is not $a$''. If samples admit a per-step likelihood ratio, then the sequential probability ratio test (SPRT) with thresholds $(A,B)$ minimizes expected sample size at fixed error levels. Interpreting the SC vote margin as an evidence proxy implies an \emph{adaptive halting} rule: stop when the posterior odds exceed $A$ or fall below $B$. This yields threshold policies for $\pi_\phi$ in the simple-hypothesis setting; extensions use test supermartingales and near-optimal stopping. 
+
+\paragraph{Resource-rational control (EVC).}
+Let $\Delta \mathrm{Acc}(n)$ be marginal accuracy gain for one more sample and $g(\cdot)$ the marginal compute penalty (tokens/time/energy). The \emph{expected value of control} selects the least $n^\star$ such that $\Delta \mathrm{Acc}(n^\star)\!<\!g'(\cdot)$. Under mild regularity ($\Delta \mathrm{Acc}$ decreasing, $g$ increasing), the optimal policy is a \emph{threshold} on an uncertainty proxy (e.g., vote-entropy or verifier log-odds). 
+
+\paragraph{Compute-scaling law (parallel sampling).}
+If tokens scale $\propto n$ and per-sample errors are weakly dependent with variance proxy $\sigma^2$, then majority-vote excess risk decays like $\exp(-c n)$, i.e.\ sub-Gaussian in $n$. When compute $C\propto n$, accuracy improves roughly as $1-\exp(-\alpha C)$ until other bottlenecks dominate (correlation, systematic biases).
+
+\section{Cognitive and Neuroscience Foundations}
+SC and adaptive halting instantiate an \emph{evidence accumulation} process: multiple partial solutions accumulate support until a boundary is crossed. This mirrors drift–diffusion models (DDM) of human choice and neural implementations of the SPRT. The cost parameters $\lambda$ correspond to \emph{effort costs} in the Expected Value of Control (EVC) theory of the dACC, yielding a normative account of when to ``think harder''.
+
+\section{Algorithms}
+\paragraph{Self-Consistency (fixed $n$).}
+Sample $n$ CoT rollouts at temperature $\tau$; parse final answers; return majority vote. 
+\paragraph{Adaptive margin halting.}
+Iteratively sample one rollout; compute vote-entropy (or verifier score); halt when entropy $<\epsilon$ or max $n$ reached.
+
+\section{Experimental Protocol}
+Report accuracy, tokens, time, and energy (NVML) for: GSM8K (math), MMLU (knowledge), HumanEval/MBPP (code), and a safety set. Compare fixed-$n$ SC vs.\ adaptive halting vs.\ greedy baselines; sweep $\tau$, $n_{\max}$, and step caps. Plot Pareto fronts and fit simple compute–accuracy laws.
+
+\section{Limitations}
+Independence assumptions and vote parsing may fail on tasks with highly correlated failure modes; verifiers reduce but do not eliminate this.
