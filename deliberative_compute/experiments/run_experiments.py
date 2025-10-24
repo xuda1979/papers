@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple
 import numpy as np
 from tqdm import tqdm
-import pandas as pd
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
