@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 import argparse
+import csv
 import glob
 import json
 import os
-
-import pandas as pd
 
 
 def load_rows(pattern):
@@ -41,7 +40,7 @@ def summarize(rows):
                 "avg_energy_j": energy,
             }
         )
-    return pd.DataFrame(out).sort_values(by=["policy", "accuracy"], ascending=[True, False])
+    return sorted(out, key=lambda r: (r["policy"], -r["accuracy"]))
 
 
 if __name__ == "__main__":
@@ -50,7 +49,26 @@ if __name__ == "__main__":
     ap.add_argument("--out_csv", type=str, required=True)
     args = ap.parse_args()
     rows = load_rows(args.glob)
-    df = summarize(rows)
-    os.makedirs(os.path.dirname(args.out_csv), exist_ok=True)
-    df.to_csv(args.out_csv, index=False)
+    summary_rows = summarize(rows)
+    out_dir = os.path.dirname(args.out_csv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    fieldnames = [
+        "policy",
+        "conf",
+        "n_examples",
+        "accuracy",
+        "avg_gen_tokens",
+        "avg_wall_time_sec",
+        "avg_energy_j",
+    ]
+    with open(args.out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in summary_rows:
+            cleaned = {
+                key: ("" if row[key] is None else row[key])
+                for key in fieldnames
+            }
+            writer.writerow(cleaned)
     print("Wrote:", args.out_csv)
