@@ -1,0 +1,41 @@
+\appendix
+\section*{Appendix E: TU-backed ILP repair --- a worked miniature}
+\label{app:tu-example}
+We provide a concrete 12-edge acyclic repair graph and its ILP encoding to illustrate the total unimodularity
+(TU) conditions referenced in Theorem~7. Nodes are $(i,s)$ for sequence position $i\in\{0,1,2\}$ and automaton
+states $s\in\{a,b,c\}$; edges encode \texttt{keep}/\texttt{substitute}/\texttt{insert}/\texttt{delete} with unit costs.
+
+\paragraph{Graph.} Layers $i=0,1,2$ with a single source $(0,a)$ and sinks at $(2,b)$ or $(2,c)$ that are accepting.
+Edges go only from layer $i$ to $i$ or $i{+}1$ (acyclic). Each layer has capacity $1$ (unit flow).
+
+\paragraph{ILP.} Binary variables $x_e$ for each edge $e$. Let $\mathcal{E}$ be all edges; $\delta^+(v)$ and $\delta^-(v)$ the
+outgoing/incoming edges of node $v$. The ILP is:
+\[
+\min \sum_{e\in \mathcal{E}} c_e x_e
+\quad
+\text{s.t.}\ 
+\sum_{e\in \delta^+(v)} x_e - \sum_{e\in \delta^-(v)} x_e =
+\begin{cases}
+1 & v=(0,a)\\
+0 & v\in\text{intermediate nodes}\\
+-1 & v\in\{(2,b),(2,c)\}
+\end{cases}
+,\quad
+0\le x_e\le 1,\ x_e\in\{0,1\}.
+\]
+No constraints couple different layers except flow conservation.
+
+\paragraph{TU argument.} The constraint matrix is the node-arc incidence matrix of a directed acyclic network
+with one source and (merged) sink; such matrices are totally unimodular. With unit capacities, the LP
+relaxation has integral vertices; thus solving the LP gives an integral optimal solution equal to the ILP optimum.
+
+\paragraph{Tiny instance.} Consider the following edges (all costs $1$ unless marked):
+\begin{itemize}
+\item Layer $0\to 1$: $(0,a)\to(1,a)$ [keep], $(0,a)\to(1,b)$ [sub], $(0,a)\to(0,b)$ [insert].
+\item Layer $1\to 2$: $(1,a)\to(2,b)$ [sub], $(1,a)\to(2,c)$ [sub], $(1,b)\to(2,b)$ [keep], $(1,b)\to(1,b)$ [insert].
+\item Deletion edges: $(0,a)\to(1,a)$ [del, cost $0$], $(1,a)\to(2,a)$ [del, cost $0$] then $(2,a)$ pruned by acceptance.
+\end{itemize}
+The LP optimum selects a simple $s$–$t$ path; integrality holds by TU.
+
+\paragraph{Takeaway.} When repair unrolling yields a layered DAG with single-commodity flow and no cross-layer
+couplings, the LP is exact and fast (network simplex or interior-point), justifying the ILP fallback claims.
