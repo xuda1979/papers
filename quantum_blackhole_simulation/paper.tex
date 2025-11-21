@@ -21,7 +21,7 @@ To resolve this paradox within a unitary framework, the entanglement entropy of 
 
 Recent theoretical advances have proposed the Horizon Memory Comb (HMC) framework as a solution that preserves semiclassical spacetime structure outside the horizon while enforcing unitarity through non-Markovian dynamics. The HMC postulates that the black hole horizon functions as a finite-capacity quantum memory, physically identified with gravitational edge modes or "soft hair," which mediates entanglement between the interior and the asymptotic radiation. Unlike proposals that require macroscopic non-locality or high-energy firewalls, the HMC achieves information recovery through "gentle," causally retarded interactions governed by a quantum comb—a sequential quantum channel with memory.
 
-This research report details the theoretical architecture and algorithmic implementation required to simulate the HMC framework on a gate-based quantum computer. While classical simulations using Process-Tensor Matrix Product Operators (PT-MPO) have validated the entropic bounds of the HMC, a quantum simulation offers a native platform to explore the complexity of the scrambling dynamics and the multipartite entanglement structure of the evaporation process. By mapping the HMC's axioms—specifically the Area-Memory Correspondence, Fast Scrambling, and Adiabatic Dilation—to a quantum circuit model, we provide a falsifiable, operational definitions of unitary evaporation. We derive the explicit unitaries required to simulate the shrinking memory code subspace, present a complete Qiskit implementation of the "Minimal Comb" circuit, and analyze the observable signatures of non-Markovianity, such as $g^{(2)}$ intensity sidebands, that distinguish this model from thermal Hawking radiation.
+This research report details the theoretical architecture and algorithmic implementation required to simulate the HMC framework on a gate-based quantum computer. While classical simulations using Process-Tensor Matrix Product Operators (PT-MPO) have validated the entropic bounds of the HMC, a quantum simulation offers a native platform to explore the complexity of the scrambling dynamics and the multipartite entanglement structure of the evaporation process. By mapping the HMC's axioms—specifically the Area-Memory Correspondence, Fast Scrambling, and Adiabatic Dilation—to a quantum circuit model, we provide a falsifiable, operational definition of unitary evaporation. We derive the explicit unitaries required to simulate the shrinking memory code subspace, present a complete Qiskit implementation of the "Minimal Comb" circuit, and analyze the observable signatures of non-Markovianity, such as $g^{(2)}$ intensity sidebands, that distinguish this model from thermal Hawking radiation.
 
 \section{Theoretical Architecture of the Horizon Memory Comb}
 The Horizon Memory Comb framework reconstructs the black hole evaporation process not as a sequence of independent, memoryless events, but as a structured quantum process with finite memory depth. This section dissects the foundational axioms and derived properties that govern the HMC, establishing the physical constraints that our quantum simulation must satisfy.
@@ -137,7 +137,7 @@ We map the continuous time coordinate $u$ to discrete steps $k$, with width $\De
 
 \paragraph{Radiation Register ($R$):} Represents the asymptotic Hawking radiation.
 \begin{itemize}
-    \item \textbf{Implementation:} A dynamically growing register, where a new qubit $R_k$ is initialized in the state $|0\rangle$ at each time step $k$.
+    \item \textbf{Implementation:} A register of size $N$, where the "active" radiation subspace grows dynamically. A new qubit $R_k$ is initialized or activated in the state $|0\rangle$ at each time step $k$.
     \item \textbf{Dynamics:} Once emitted, $R_k$ does not participate in further gates (no re-scattering), preserving the causality of the asymptotic observer.
 \end{itemize}
 
@@ -156,9 +156,9 @@ On a quantum processor, we implement this as a "hardware-efficient ansatz": a la
 \begin{equation}
 U_{emit}^{(k)} : H_M \otimes H_{R_k} \to H_M \otimes H_{R_k}
 \end{equation}
-We model this interaction as a partial SWAP operation between a specific qubit in the Memory register (the "edge" qubit) and the fresh Radiation qubit $R_k$.
+We model this interaction as a partial SWAP operation via an isotropic Heisenberg coupling between a specific qubit in the Memory register (the "edge" qubit) and the fresh Radiation qubit $R_k$.
 \begin{equation}
-U_{emit}(\theta) = \exp\left(-i \frac{\theta}{2} (X_M X_R + Y_M Y_R)\right)
+U_{emit}(\theta) = \exp\left(-i \frac{\theta}{2} (X_M X_R + Y_M Y_R + Z_M Z_R)\right)
 \end{equation}
 \textbf{Coupling Strength $\theta$:} This parameter controls the evaporation rate. $\theta = \pi/2$ corresponds to a full SWAP (maximal evaporation), while small $\theta$ corresponds to the adiabatic regime (A4) where information leaks slowly. This models the greybody factors $\Gamma(\omega)$ of the black hole.
 
