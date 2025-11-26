@@ -159,7 +159,7 @@ if __name__ == "__main__":
     sim.run_simulation()
     sim.plot_page_curve()
     sim.save_data()
-    # sim.draw_circuit() # Requires matplotlib interaction or latex installation
+    sim.draw_circuit() # Requires matplotlib interaction or latex installation
 
     print("\n--- Simulation Results ---")
     for i, s in enumerate(sim.entropies):
