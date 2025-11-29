@@ -16,93 +16,92 @@
 \maketitle
 
 \begin{abstract}
-Large Language Models (LLMs) have demonstrated impressive capabilities in natural language understanding and generation. However, their performance in complex tasks requiring multi-step reasoning, mathematical problem solving, and code generation remains an area of active research. Existing methods, such as Reinforcement Learning from Human Feedback (RLHF) and iterative fine-tuning, often struggle with credit assignment in long reasoning chains and suffer from sample inefficiency. This paper reviews the current state of reinforcement learning (RL) methods applied to LLMs for enhancing these capabilities, with a focus on Process Reward Models (PRMs) and tree-search strategies. We propose a novel algorithmic framework, \textbf{Dual-System Reinforcement Learning (DSRL)}, which integrates a fast "System 1" policy with a slow "System 2" Monte Carlo Tree Search (MCTS) verifier during training. By leveraging the verifier to guide exploration and synthesizing high-quality reasoning trajectories, DSRL significantly improves the sample efficiency and robustness of the learned policy. We outline an experimental setup to validate DSRL on the GSM8K and MATH benchmarks.
+Large Language Models (LLMs) have demonstrated impressive capabilities in natural language understanding and generation. However, their performance in complex tasks requiring multi-step reasoning, mathematical problem solving, and code generation remains an area of active research. Existing methods, such as Reinforcement Learning from Human Feedback (RLHF) and iterative fine-tuning, often struggle with credit assignment in long reasoning chains and suffer from sample inefficiency. This paper reviews the current state of reinforcement learning (RL) methods applied to LLMs, including Process Reward Models (PRMs) and inference-time search strategies like Tree of Thoughts. We propose a novel algorithmic framework, \textbf{Dual-System Reinforcement Learning (DSRL)}, which adapts the "Expert Iteration" paradigm to the domain of language generation. DSRL formally models reasoning as a Markov Decision Process (MDP) where actions correspond to discrete logical steps. It integrates a fast "System 1" policy with a slow "System 2" Monte Carlo Tree Search (MCTS) verifier during training. By using MCTS to generate high-quality reasoning trajectories and distilling them back into the policy, DSRL significantly improves the sample efficiency and robustness of the learned model compared to standard PPO or rejection sampling approaches.
 \end{abstract}
 
 \section{Introduction}
 The advent of Large Language Models (LLMs) has revolutionized the field of Artificial Intelligence, enabling breakthroughs in diverse domains ranging from creative writing to code synthesis \citep{wei2022chain}. Despite their success, LLMs often struggle with tasks that require rigorous logic, such as mathematics and complex algorithmic programming. A primary failure mode is the "cascading error" phenomenon, where a minor logical flaw in an early step leads to a completely incorrect conclusion, which the model often defends hallucinatorily.
 
-Reinforcement Learning (RL) has emerged as a promising avenue for aligning LLMs with complex objectives and improving their reasoning skills. Traditional supervised fine-tuning (SFT) relies on static datasets, limiting the model's ability to self-correct or explore novel solution paths. RL, in contrast, allows models to optimize for non-differentiable objectives (like correctness of a final answer) and explore the solution space.
+Reinforcement Learning (RL) has emerged as a promising avenue for aligning LLMs with complex objectives. While foundational work like AlphaZero \citep{silver2017mastering} and Expert Iteration \citep{anthony2017thinking} demonstrated the power of combining search with learning in perfect-information games, applying these principles to the open-ended domain of natural language remains a challenge.
 
-However, standard RL approaches like PPO \citep{schulman2017proximal} face significant challenges in reasoning domains. The feedback signal is often sparse (binary pass/fail at the end of a long generation), making credit assignment difficult. Furthermore, "reward hacking" can occur where the model learns to exploit artifacts in the reward function rather than performing genuine reasoning.
-
-In this paper, we review existing RL strategies for reasoning and propose a new method, Dual-System Reinforcement Learning (DSRL), inspired by the dual-process theory of human cognition.
+In this paper, we review existing RL strategies for reasoning and propose Dual-System Reinforcement Learning (DSRL). DSRL builds upon recent advances like Tree of Thoughts (ToT) \citep{yao2024tree} and Reasoning-as-Planning (RAP) \citep{hao2023reasoning}, but focuses on the \textit{training} loop rather than just inference-time search. By formally defining the reasoning process as an MDP and applying a rigorous MCTS-based policy improvement operator, we aim to bootstrap superior reasoning capabilities from a base LLM.
 
 \section{Review of Existing Methods}
 
 \subsection{Reinforcement Learning from Human Feedback (RLHF)}
-RLHF \citep{ouyang2022training} has been the standard for aligning models with human intent. It typically involves training a Reward Model (RM) on human preference data and then optimizing a policy using PPO. While effective for stylistic alignment and safety, standard RLHF is less effective for reasoning. Outcome-based supervision provides too little signal for multi-step problems, and human labelers often struggle to verify complex reasoning chains accurately.
+RLHF \citep{ouyang2022training} has been the standard for aligning models with human intent. It typically involves training a Reward Model (RM) on human preference data and then optimizing a policy using PPO \citep{schulman2017proximal}. While effective for stylistic alignment, standard RLHF is less effective for reasoning due to sparse rewards and the difficulty human labelers face in verifying complex chains.
 
 \subsection{Process Supervision and PRMs}
-Recent works have highlighted the importance of rewarding the reasoning process rather than just the final outcome. \cite{lightman2023let} introduced Process Reward Models (PRMs), which provide feedback at each step of a reasoning chain. This dense reward signal significantly aids in credit assignment and has been shown to outperform outcome-based supervision on math benchmarks. Similarly, \cite{uesato2022solving} demonstrated that process-based feedback improves robustness.
+\cite{lightman2023let} introduced Process Reward Models (PRMs), which provide feedback at each step of a reasoning chain. This dense reward signal significantly aids in credit assignment and has been shown to outperform outcome-based supervision.
 
-\subsection{Self-Correction and Iterative Refinement}
-Another line of research focuses on allowing models to learn from their own generated data. The "Self-Taught Reasoner" (STaR) \citep{zelikman2022star} iteratively generates solutions, filters for correctness, and fine-tunes the model on these successful trajectories. While efficient, STaR is limited by the model's initial capability to generate correct solutions and does not explicitly leverage lookahead search during training.
+\subsection{Search and Planning}
+Recent works like Tree of Thoughts \citep{yao2024tree} and RAP \citep{hao2023reasoning} treat reasoning as a search problem over a space of thoughts. These methods show that lookahead search can significantly improve performance at inference time. However, they are often computationally expensive and do not permanently improve the base model's capabilities (System 1).
 
 \section{Proposed Methodology: Dual-System Reinforcement Learning (DSRL)}
 
 We propose \textbf{Dual-System Reinforcement Learning (DSRL)}, a framework designed to bridge the gap between fast, intuitive generation ("System 1") and slow, deliberative search ("System 2").
 
-\subsection{System Architecture}
-DSRL consists of two primary components:
-\begin{enumerate}
-    \item \textbf{Policy Network ($\pi_\theta$)}: The "System 1" model, initialized from a strong base LLM. It generates tokens autoregressively and is optimized for speed and likelihood.
-    \item \textbf{Value/Verifier Network ($V_\phi$)}: The "System 2" component. It estimates the probability that a partial reasoning chain will lead to a correct solution. It can be a separate scalar-output head or a distinct model.
-\end{enumerate}
-
-\subsection{Training Algorithm}
-The training process alternates between a \textbf{Search Phase} and an \textbf{Optimization Phase}.
-
-\subsubsection{Search Phase (Data Generation)}
-Instead of sampling directly from $\pi_\theta$, we employ a guided search (e.g., Monte Carlo Tree Search or Beam Search) using $V_\phi$ as a heuristic.
-For a given problem $x$:
-\begin{enumerate}
-    \item Expand a tree of reasoning steps. At each node (partial solution), use $\pi_\theta$ to propose next steps.
-    \item Evaluate nodes using $V_\phi$.
-    \item Select the most promising paths to expand further.
-    \item Upon reaching a terminal state, verify the answer against the ground truth (if available) or use the final $V_\phi$ score.
-    \item Backpropagate the results to update the values in the tree.
-\end{enumerate}
-This phase produces a set of high-quality trajectories $\mathcal{T}^*$ that are often superior to what $\pi_\theta$ could produce on its own \citep{yao2024tree}.
-
-\subsubsection{Optimization Phase}
-We update both networks using the data from the Search Phase:
+\subsection{Formalism: Reasoning as an MDP}
+We model the reasoning generation process as a Markov Decision Process (MDP) defined by the tuple $(S, A, \mathcal{P}, R)$:
 \begin{itemize}
-    \item \textbf{Policy Update}: We maximize the likelihood of the successful steps found in the search tree. This effectively "distills" the search result into the fast policy:
-    \[ \mathcal{L}_{\pi} = - \mathbb{E}_{(s, a) \in \mathcal{T}^*} [\log \pi_\theta(a|s)] \]
-    We can also add a PPO-style clipping term to prevent the policy from diverging too far from the previous iteration.
-    \item \textbf{Value Update}: We train $V_\phi$ to predict the true values found in the search (e.g., 1 for correct paths, 0 for incorrect ones):
-    \[ \mathcal{L}_{V} = \mathbb{E}_{s \in \mathcal{Tree}} [(V_\phi(s) - y_{true})^2] \]
+    \item \textbf{State space ($S$)}: A state $s_t = [x, a_1, \dots, a_{t-1}]$ consists of the problem prompt $x$ and the sequence of reasoning steps generated so far.
+    \item \textbf{Action space ($A$)}: An action $a_t$ is a coherent reasoning step (e.g., a sentence, a paragraph, or a line of code), rather than a single token. This reduces the search depth and aligns with human reasoning granularity.
+    \item \textbf{Transition Dynamics ($\mathcal{P}$)}: Deterministic concatenation of the chosen action to the current state: $s_{t+1} = s_t \oplus a_t$.
+    \item \textbf{Reward ($R$)}: A sparse reward $r \in \{0, 1\}$ received at the terminal state based on the correctness of the final answer. Dense intrinsic rewards from a PRM can also be incorporated.
 \end{itemize}
 
-\subsection{Inference}
-At inference time, we can run the distilled policy $\pi_\theta$ directly for low-latency responses, or perform a light-weight search guided by $V_\phi$ for harder problems, allowing for a compute-accuracy trade-off.
+\subsection{System Architecture}
+DSRL consists of two parameterized components:
+\begin{enumerate}
+    \item \textbf{Policy Network ($\pi_\theta(a|s)$)}: The "System 1" model, initialized from a base LLM. It provides the prior probability for taking action $a$ in state $s$.
+    \item \textbf{Value Network ($V_\phi(s)$)}: The "System 2" critic. It estimates the value $V(s) \approx \mathbb{P}(\text{correct} | s)$, representing the probability that the current partial solution leads to a correct answer.
+\end{enumerate}
 
-\section{Experiments and Results}
+\subsection{Training Algorithm: MCTS-Guided Policy Improvement}
+The training follows an iterative Expectation-Maximization (EM) style loop, similar to Expert Iteration.
 
-We design experiments to evaluate DSRL against strong baselines on mathematical reasoning tasks.
+\subsubsection{Step 1: MCTS Data Generation (E-Step)}
+For each problem $x$ in the training set, we perform a Monte Carlo Tree Search to construct a high-quality reasoning tree. The MCTS follows the standard four phases:
+\begin{enumerate}
+    \item \textbf{Selection}: Starting from the root, we select child nodes using a variant of the PUCT algorithm:
+    \[ a^* = \operatorname*{argmax}_a \left[ Q(s,a) + c_{puct} \cdot \pi_\theta(a|s) \cdot \frac{\sqrt{\sum_b N(s,b)}}{1 + N(s,a)} \right] \]
+    where $Q(s,a)$ is the mean value of action $a$, $N(s,a)$ is the visit count, and $\pi_\theta$ is the prior.
+    \item \textbf{Expansion}: At a leaf node $s_L$, we sample $k$ candidate actions (reasoning steps) using the policy $\pi_\theta$.
+    \item \textbf{Evaluation}: The new states are evaluated using the value network $V_\phi(s)$.
+    \item \textbf{Backup}: The value estimates are propagated up the tree to update $Q$ and $N$ statistics.
+\end{enumerate}
+This process yields a refined policy distribution $\pi_{MCTS}(a|s) \propto N(s,a)^{1/\tau}$ which is stronger than the raw policy $\pi_\theta$.
+
+\subsubsection{Step 2: Policy and Value Optimization (M-Step)}
+We update both networks using the data generated from the successful search trajectories.
+\begin{itemize}
+    \item \textbf{Policy Update}: We minimize the Kullback-Leibler divergence between the student policy $\pi_\theta$ and the MCTS teacher distribution $\pi_{MCTS}$:
+    \[ \mathcal{L}_{\pi}(\theta) = -\mathbb{E}_{s \sim \mathcal{D}} \left[ \sum_a \pi_{MCTS}(a|s) \log \pi_\theta(a|s) \right] \]
+    This effectively "distills" the search results into the fast policy.
+    \item \textbf{Value Update}: We train $V_\phi$ to predict the search outcome $z$ (e.g., 1 if the path led to the correct answer, 0 otherwise):
+    \[ \mathcal{L}_{V}(\phi) = \mathbb{E}_{s \sim \mathcal{D}} [(V_\phi(s) - z)^2] \]
+\end{itemize}
+
+\section{Experiments}
 
 \subsection{Setup}
 \begin{itemize}
     \item \textbf{Datasets}: GSM8K (grade school math) and MATH (challenging high school competitions).
-    \item \textbf{Baselines}:
+    \item \textbf{Metrics}:
     \begin{itemize}
-        \item \textbf{Chain-of-Thought (CoT)}: Standard prompting \citep{wei2022chain}.
-        \item \textbf{STaR}: Iterative fine-tuning without tree search.
-        \item \textbf{PPO-Outcome}: Standard RLHF with sparse rewards.
+        \item \textbf{Pass@1}: Accuracy of the policy $\pi_\theta$ with greedy decoding (System 1 performance).
+        \item \textbf{Search@1}: Accuracy when running MCTS with a fixed budget at test time (System 2 performance).
     \end{itemize}
-    \item \textbf{Model}: We use Llama-2-7B as the base model for all experiments.
 \end{itemize}
 
-\subsection{Hypothesized Results}
-We expect DSRL to outperform STaR and PPO-Outcome, particularly on the harder MATH dataset where deep reasoning is required.
+\subsection{Planned Ablations}
 \begin{itemize}
-    \item \textbf{Sample Efficiency}: DSRL should require fewer training problems to reach a given accuracy, as the MCTS extracts more signal from each problem.
-    \item \textbf{Correctness}: By filtering out hallucinations during the search phase, the policy $\pi_\theta$ is trained on cleaner data, reducing the hallucination rate.
+    \item \textbf{Search Budget}: Varying the number of MCTS simulations during training to observe the trade-off between training cost and policy improvement.
+    \item \textbf{Action Granularity}: Comparing token-level vs. sentence-level actions. We hypothesize that sentence-level actions will be more computationally efficient and lead to more coherent reasoning.
 \end{itemize}
 
 \section{Conclusion}
-We have presented Dual-System Reinforcement Learning (DSRL), a novel method for improving LLM reasoning. By combining the strengths of iterative search and policy distillation, DSRL offers a robust path toward models that can reason reliably and efficiently. Future work will investigate the scaling laws of test-time compute using this framework.
+We have presented Dual-System Reinforcement Learning (DSRL), a rigorous framework for training LLMs to reason. By formally treating reasoning as an MDP and applying MCTS-based policy improvement, DSRL provides a mechanism to convert compute (search) into sample efficiency and final model performance.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
