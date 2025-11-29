@@ -36,14 +36,11 @@ def simple_kmeans(X, k, max_iters=20):
 
         # Update centroids
         new_centroids = np.zeros_like(centroids)
-        counts = np.zeros(k)
-
-        # Vectorized sum per cluster is tricky in pure numpy without extra memory
-        # Loop is fine for small k
+        # Vectorized mean
         for i in range(k):
-            cluster_points = X[labels == i]
-            if len(cluster_points) > 0:
-                new_centroids[i] = cluster_points.mean(axis=0)
+            mask = (labels == i)
+            if np.any(mask):
+                new_centroids[i] = X[mask].mean(axis=0)
             else:
                 # Re-init empty cluster
                 new_centroids[i] = X[np.random.choice(N)]
@@ -67,13 +64,14 @@ def naive_attention(Q, K, V):
     output = np.dot(weights, V)
     return output
 
-def spectral_sparse_attention(Q, K, V, k_clusters=None, sparsity_fraction=0.1):
+def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0):
     """
     Improved Spectral Sparse Attention.
-    1. Projects Q to lower dim using Random Projection.
-    2. Clusters Q to find structure.
-    3. Computes block-diagonal attention (intra-cluster).
-    4. Computes global attention using Cluster Centroids as landmarks (Nystrom-like).
+    Approximates Attention by only computing scores for:
+    1. Keys in the same cluster as the Query (Local).
+    2. A set of global random keys (Global).
+
+    This ensures O(N*sqrt(N)) complexity if k ~ sqrt(N) and num_global ~ sqrt(N).
     """
     N, d = Q.shape
     if k_clusters is None:
@@ -89,48 +87,50 @@ def spectral_sparse_attention(Q, K, V, k_clusters=None, sparsity_fraction=0.1):
 
     output = np.zeros_like(V)
 
-    # Pre-calculate counts/indices for speed
-    # We will accumulate output
+    # 3. Select Global Keys
+    # To maintain O(N^1.5), the number of global keys should be proportional to sqrt(N) * constant
+    num_global = int(global_ratio * np.sqrt(N))
+    # Ensure at least some global keys, but not more than N
+    num_global = max(1, min(N, num_global))
 
-    # 3. Local Attention (Block Diagonal)
+    global_indices = np.random.choice(N, num_global, replace=False)
+
+    # 4. Compute Sparse Attention per Cluster
     for i in range(k_clusters):
-        indices = np.where(labels == i)[0]
-        if len(indices) == 0:
+        query_indices = np.where(labels == i)[0]
+        if len(query_indices) == 0:
             continue
 
-        Q_c = Q[indices]
-        K_c = K[indices]
-        V_c = V[indices]
+        # Local keys are the keys in the same cluster
+        # Global keys are the selected random keys
+        # We need the union of these
 
-        # Standard Attention within cluster
-        scores = np.dot(Q_c, K_c.T) / np.sqrt(d)
+        # Note: In a real efficient implementation (CUDA), we wouldn't concatenate indices like this
+        # but for NumPy simulation this simulates the sparse mask correctly.
+
+        local_key_indices = query_indices
+
+        # Combine and unique
+        combined_key_indices = np.union1d(local_key_indices, global_indices)
+
+        # Gather Data
+        Q_block = Q[query_indices]                # (n_q, d)
+        K_block = K[combined_key_indices]         # (n_k, d)
+        V_block = V[combined_key_indices]         # (n_k, d)
+
+        # Compute Attention Scores for this block
+        # (n_q, d) * (d, n_k) -> (n_q, n_k)
+        scores = np.dot(Q_block, K_block.T) / np.sqrt(d)
+
+        # Softmax along the key dimension
         w = softmax(scores, axis=-1)
-        out_c = np.dot(w, V_c)
 
-        output[indices] += 0.5 * out_c # Weighted contribution
+        # Weighted sum
+        # (n_q, n_k) * (n_k, d) -> (n_q, d)
+        out_block = np.dot(w, V_block)
 
-    # 4. Global Attention (Landmark / Low Rank)
-    # Instead of random tokens, we use centroids of K as landmarks?
-    # Or just sample random tokens? The paper mentions "random landmarks" or "summary tokens".
-    # Let's use Random Landmarks as it's faster and consistent with "Sparse" literature
-    # But to make it better, let's use the Cluster Centroids of K/V?
-    # Calculating centroids of K takes O(N), same as clustering.
-    # Let's stick to random landmarks for O(1) selection cost (or O(N) to copy).
-
-    s = max(1, int(N * sparsity_fraction))
-    # Ensure we don't pick more than N
-    s = min(s, N)
-
-    global_indices = np.random.choice(N, s, replace=False)
-    K_global = K[global_indices]
-    V_global = V[global_indices]
-
-    # All queries attend to global keys
-    scores_g = np.dot(Q, K_global.T) / np.sqrt(d)
-    w_g = softmax(scores_g, axis=-1)
-    out_g = np.dot(w_g, V_global)
-
-    output += 0.5 * out_g
+        # Scatter back to output
+        output[query_indices] = out_block
 
     return output
 
@@ -160,7 +160,6 @@ def run_experiments():
             spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)))
 
         # Measure Naive
-        # For N=4096, Naive might be very slow (approx 4*0.7s ~ 3s). It's fine.
         start = time.time()
         out_naive = naive_attention(Q, K, V)
         end = time.time()
@@ -169,7 +168,8 @@ def run_experiments():
 
         # Measure SSA
         start = time.time()
-        out_ssa = spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)))
+        # Use roughly sqrt(N) global tokens
+        out_ssa = spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)), global_ratio=4.0)
         end = time.time()
         t_ssa = end - start
         times_ssa.append(t_ssa)
@@ -187,7 +187,7 @@ def run_experiments():
         print(f"{N:<6} | {t_naive:<10.4f} | {t_ssa:<10.4f} | {speedup:<10.2f} | {err:<10.2f}")
 
         # Format for LaTeX
-        latex_table_rows.append(f"{N} & {t_naive:.4f} & {t_ssa:.4f} & {speedup:.2f}x \\\\")
+        latex_table_rows.append(f"{N} & {t_naive:.4f} & {t_ssa:.4f} & {speedup:.2f}x & {err:.4f} \\\\")
 
     # 1. Plot Runtime
     plt.figure(figsize=(10, 6))
@@ -205,7 +205,10 @@ def run_experiments():
     N_range = np.linspace(100, 5000, 100)
     flops_trans = 4 * N_range**2 * d_model
     flops_mamba = 10 * N_range * d_model * 16
-    flops_ssa = N_range * d_model * (d_model/2) + (N_range**2 / np.sqrt(N_range)) * d_model + N_range * d_model * d_model
+    # SSA approx: N_blocks * (block_size * (block_size + global))
+    # block_size ~ sqrt(N), global ~ sqrt(N), N_blocks ~ sqrt(N)
+    # Total ~ sqrt(N) * (sqrt(N) * 2sqrt(N)) = N * 2sqrt(N) = 2 N^1.5
+    flops_ssa = 2 * (N_range**1.5) * d_model
 
     plt.figure(figsize=(10, 6))
     plt.plot(N_range, flops_trans, label='Transformer $O(N^2)$', linewidth=2)
@@ -224,7 +227,7 @@ def run_experiments():
     with open('energy_efficient_ai/results_table.txt', 'w') as f:
         f.write("\n".join(latex_table_rows))
 
-    # Save the max speedup to a file to be read by the agent
+    # Save the max speedup to a file
     max_speedup = max(speedups)
     with open('energy_efficient_ai/max_speedup.txt', 'w') as f:
         f.write(f"{max_speedup:.2f}")
