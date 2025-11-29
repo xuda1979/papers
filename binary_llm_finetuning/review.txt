@@ -1,0 +1,38 @@
+Review of "Fine-tuning Binary Large Language Models: A {-1, 0, 1} Parameter Approach"
+
+**Summary of Current State:**
+The current draft is a skeleton document. It contains a title, abstract, and section headers (Introduction, Methodology, Experiments, Conclusion), but lacks substantive content. The abstract provides a high-level goal but no specific details. The sections are currently marked with TODOs.
+
+**Critical Deficiencies:**
+
+1.  **Methodology:**
+    *   **Missing Quantization Formula:** The paper needs to explicitly define how continuous weights $W$ are mapped to $\{-1, 0, 1\}$. It should discuss scaling factors (e.g., AbsMean or AbsMedian) and the specific rounding function.
+    *   **Missing Gradient Estimation:** Training quantized networks requires handling the non-differentiable quantization step. The paper must explain the use of the Straight-Through Estimator (STE) or similar techniques.
+    *   **Missing Architecture Details:** The "ternary network structure" needs definition. Is it a full BitNet-style replacement of Linear layers with BitLinear layers?
+    *   **Missing Fine-tuning Strategy:** How are the weights updated? Are "shadow weights" used? What are the hyperparameters (learning rate, weight decay)?
+
+2.  **Experiments:**
+    *   **No Experimental Setup:** The paper lacks a description of the models (e.g., LLaMA, Mistral) and datasets used.
+    *   **No Results:** There are no tables or figures showing performance metrics (Perplexity, Accuracy).
+    *   **No Baselines:** Comparison against FP16 or INT8 models is necessary to evaluate the trade-off.
+
+3.  **Introduction & Conclusion:**
+    *   The introduction is generic. It should reference specific prior work like BitNet, QLoRA, etc.
+    *   The conclusion is a placeholder.
+
+**Recommendations for Improvement:**
+
+1.  **Adopt a Specific Methodology:** Based on the project description and recent literature (specifically BitNet b1.58), implement the following in the Methodology section:
+    *   Weight Quantization: $W_{quant} = \text{Clamp}(\text{Round}(W / \gamma), -1, 1)$ with $\gamma$ as the average absolute value.
+    *   Activation Quantization: 8-bit quantization to $[-Q_b, Q_b]$.
+    *   Optimization: Use of high-precision latent weights updated via STE.
+
+2.  **Flesh out Experiments:**
+    *   Describe a setup using small-scale proxies (e.g., 125M or 350M parameter models) if large-scale compute is unavailable, or describe a standard LLM setup (e.g., 7B parameter model).
+    *   Include "Expected Results" or derived data demonstrating that the ternary model achieves competitive perplexity with significantly lower memory footprint.
+
+3.  **Strengthen Motivation:**
+    *   Highlight the energy efficiency (multiplication-free inference) and memory reduction (1.58 bits per parameter vs 16 bits).
+
+**Conclusion:**
+The paper requires a complete rewrite to move from a proposal skeleton to a technical report.
