@@ -1,7 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os
-from scipy.linalg import svd
+from scipy.linalg import svd, eigh
+
+# Configure plotting style
+sns.set_theme(style="whitegrid", context="paper")
+plt.rcParams['font.family'] = 'serif'
 
 np.random.seed(42)
 
@@ -21,23 +26,26 @@ def apply_crz(state, phi, control, target, n_qubits):
     """Applies a Controlled-RZ gate."""
     # CRZ(phi) = |0><0| I + |1><1| RZ(phi)
     # RZ(phi) = diag(e^{-i phi/2}, e^{i phi/2})
-
-    # Identify indices where control bit is 1
-    # We can do this efficiently with masks, but for N=4, a loop over indices is fine or reshaping.
-    # Let's use reshaping for vectorization.
-
-    # Ensure control < target for simplicity in this reshaping logic, or just handle general case carefully.
-    # Actually, let's just iterate through the state vector for clarity and robustness with small N.
     N = n_qubits
     new_state = state.copy()
 
-    for i in range(2**N):
-        if (i >> (N - 1 - control)) & 1: # Check if control bit is 1 (Big Endian)
-            # Apply RZ to target
-            target_bit = (i >> (N - 1 - target)) & 1
-            phase = -phi/2 if target_bit == 0 else phi/2
-            new_state[i] *= np.exp(1j * phase)
+    # Vectorized application using masks
+    indices = np.arange(2**N)
+    control_mask = (indices >> (N - 1 - control)) & 1
+    target_mask = (indices >> (N - 1 - target)) & 1
 
+    # Phase shift is applied only where control is 1
+    # If target is 0 -> -phi/2, if target is 1 -> phi/2
+    phases = np.zeros(2**N)
+    phases[control_mask == 1] = np.where(target_mask[control_mask == 1] == 0, -phi/2, phi/2)
+
+    # Apply phase: exp(i * phase)
+    # Note: RZ is usually exp(-i Z phi / 2).
+    # Z|0> = |0>, Z|1> = -|1>.
+    # So |0> -> exp(-i phi/2), |1> -> exp(i phi/2).
+    # This matches the logic above.
+
+    new_state *= np.exp(1j * phases)
     return new_state
 
 def ry_gate(theta):
@@ -48,14 +56,12 @@ def ry_gate(theta):
 
 def get_expectation_z(state, qubit_idx, n_qubits):
     """Calculates <psi| Z_i |psi>."""
-    # Z has eigenvalues 1 for |0> and -1 for |1>
-    exp_val = 0
     prob_dens = np.abs(state)**2
-    for i in range(2**n_qubits):
-        bit = (i >> (n_qubits - 1 - qubit_idx)) & 1
-        val = 1 if bit == 0 else -1
-        exp_val += val * prob_dens[i]
-    return exp_val
+    indices = np.arange(2**n_qubits)
+    mask = (indices >> (n_qubits - 1 - qubit_idx)) & 1
+    # 0 -> +1, 1 -> -1
+    vals = np.where(mask == 0, 1, -1)
+    return np.sum(vals * prob_dens)
 
 def get_entanglement_entropy(state, n_qubits):
     """
@@ -63,18 +69,11 @@ def get_entanglement_entropy(state, n_qubits):
     for the first N/2 qubits.
     """
     half_n = n_qubits // 2
-    # Reshape state into bipartite system A|B
-    # Dimensions: (2^half_n, 2^(n - half_n))
     psi_matrix = state.reshape((2**half_n, 2**(n_qubits - half_n)))
-
-    # Schmidt decomposition via SVD
-    # The singular values squared are the eigenvalues of the reduced density matrix
     try:
         _, s, _ = svd(psi_matrix, full_matrices=False)
         eigenvalues = s**2
-
-        # Filter small values for numerical stability
-        eigenvalues = eigenvalues[eigenvalues > 1e-12]
+        eigenvalues = eigenvalues[eigenvalues > 1e-15]
         entropy = -np.sum(eigenvalues * np.log(eigenvalues))
         return entropy
     except:
@@ -87,7 +86,6 @@ class VQC:
         self.n_qubits = n_qubits
         self.n_layers = n_layers
         self.phi = entanglement_phi
-        # Parameters: n_layers * n_qubits
         self.params = np.random.uniform(0, 2*np.pi, size=(n_layers, n_qubits))
 
     def forward(self, x, params=None):
@@ -97,17 +95,14 @@ class VQC:
         state = np.zeros(2**self.n_qubits, dtype=np.complex128)
         state[0] = 1.0 # |00...0>
 
-        # Encoding: Ry(arctan(x)) on first 2 qubits
-        # Repeated on others for redundancy/richness
-        angles = np.arctan(x) # Map input to (-pi/2, pi/2)
+        # Encoding: Ry(arctan(x))
+        angles = np.arctan(x)
         for i in range(self.n_qubits):
-            # Use x[0] for even qubits, x[1] for odd
-            feat_idx = i % 2
+            feat_idx = i % len(x)
             gate = ry_gate(angles[feat_idx])
             state = apply_gate(state, gate, i, self.n_qubits)
 
         # Variational Layers
-        param_idx = 0
         reshaped_params = params.reshape(self.n_layers, self.n_qubits)
 
         for l in range(self.n_layers):
@@ -117,7 +112,7 @@ class VQC:
                 state = apply_gate(state, ry_gate(theta), q, self.n_qubits)
 
             # Entangling layer (CRZ chain)
-            # 0-1, 1-2, ..., (N-1)-0
+            # Circular topology
             for q in range(self.n_qubits):
                 control = q
                 target = (q + 1) % self.n_qubits
@@ -127,15 +122,81 @@ class VQC:
 
     def predict(self, x, params=None):
         state = self.forward(x, params)
-        # Measure Z on first qubit
         return get_expectation_z(state, 0, self.n_qubits)
+
+    def compute_gradients(self, x, params=None):
+        """
+        Computes the gradient of the state vector |psi> w.r.t parameters using finite differences.
+        This is for FIM calculation.
+        Returns: Matrix of shape (2^N, num_params)
+        """
+        if params is None:
+            params = self.params
+
+        flat_params = params.flatten()
+        num_params = len(flat_params)
+        dim = 2**self.n_qubits
+
+        grads = np.zeros((dim, num_params), dtype=np.complex128)
+        epsilon = 1e-4
+
+        base_state = self.forward(x, params)
+
+        for i in range(num_params):
+            p_perturbed = flat_params.copy()
+            p_perturbed[i] += epsilon
+            state_perturbed = self.forward(x, p_perturbed.reshape(self.params.shape))
+
+            grads[:, i] = (state_perturbed - base_state) / epsilon
+
+        return base_state, grads
+
+def compute_qfi_rank(model, X_sample, tol=1e-4):
+    """
+    Computes the effective dimension via the rank of the Quantum Fisher Information Matrix (QFIM).
+    QFIM_ij = 4 * Re( <d_i psi | d_j psi> - <d_i psi | psi><psi | d_j psi> )
+    We average the QFIM over inputs X_sample.
+    """
+    num_params = model.params.size
+    qfim_sum = np.zeros((num_params, num_params))
+
+    for x in X_sample:
+        psi, grads = model.compute_gradients(x)
+        # grads is (dim, P)
+        # psi is (dim,)
+
+        # Term 1: <d_i psi | d_j psi>
+        # (P, dim) @ (dim, P) -> (P, P)
+        term1 = np.dot(grads.conj().T, grads)
+
+        # Term 2: <d_i psi | psi> <psi | d_j psi>
+        # <d_i psi | psi> is a vector of size P
+        overlap = np.dot(grads.conj().T, psi) # (P,)
+        term2 = np.outer(overlap, overlap.conj())
+
+        qfim = 4 * np.real(term1 - term2)
+        qfim_sum += qfim
+
+    avg_qfim = qfim_sum / len(X_sample)
+
+    # Calculate Rank
+    evals = np.linalg.eigvalsh(avg_qfim)
+    # Normalize eigenvalues by number of parameters for consistent scale interpretation
+    # effective dimension roughly sum of eigenvalues / max_eigenvalue or just count > tol
+    # Abbas et al use the capacitance definition, but rank is a good proxy for capacity.
+
+    rank = np.sum(evals > tol)
+
+    # Return normalized effective dimension (0 to 1)
+    return rank / num_params
 
 # --- Training and Experiment ---
 
 def generate_data(n_samples=50):
     X = np.random.uniform(-1, 1, size=(n_samples, 2))
-    # Concentric circles
-    y = np.array([1 if x[0]**2 + x[1]**2 < 0.5 else -1 for x in X])
+    # Non-linear boundary: Concentric circles + some noise
+    # y = 1 if r < 0.6, else -1
+    y = np.array([1 if x[0]**2 + x[1]**2 < 0.6**2 else -1 for x in X])
     return X, y
 
 def loss_fn(model, params, X, y):
@@ -145,17 +206,12 @@ def loss_fn(model, params, X, y):
 def train(model, X, y, iterations=100, eta=0.1):
     params = model.params.flatten()
 
-    # SPSA Optimizer
     for i in range(iterations):
-        # Perturbation
-        c = 0.1 / ( (i+1)**0.11 ) # decay perturbation
-        lr = eta / ( (i+1)**0.602 ) # decay learning rate
-
+        c = 0.1 / ( (i+1)**0.11 )
+        lr = eta / ( (i+1)**0.602 )
         delta = np.random.choice([-1, 1], size=params.shape)
-
         loss_plus = loss_fn(model, params + c*delta, X, y)
         loss_minus = loss_fn(model, params - c*delta, X, y)
-
         grad = (loss_plus - loss_minus) / (2 * c) * delta
         params -= lr * grad
 
@@ -163,87 +219,104 @@ def train(model, X, y, iterations=100, eta=0.1):
     return model
 
 def run_experiment():
-    print("Starting Simulation... (This may take a minute)")
+    print("Starting Advanced Simulation...")
 
-    N_QUBITS = 4
-    N_LAYERS = 3
+    # Configuration
+    N_QUBITS = 6  # Increased from 4
+    N_LAYERS = 3  # Reduced depth slightly for speed
+    ITERATIONS = 40 # Reduced iterations
+    TRIALS = 3    # Reduced trials
+
+    print(f"System: N={N_QUBITS}, Layers={N_LAYERS}")
 
     X_train, y_train = generate_data(80)
     X_test, y_test = generate_data(40)
 
-    # Sweep entangling power phi
-    phis = np.linspace(0, 2.0, 15) # From separable (0) to highly entangled (~2.0)
+    # For FIM calc, use a subset
+    X_fim = X_train[:6]
+
+    phis = np.linspace(0, 2.5, 8)
 
     final_errors = []
     final_entropies = []
+    final_eff_dims = []
 
-    for phi in phis:
-        print(f"  Testing phi = {phi:.2f}...")
+    for idx, phi in enumerate(phis):
+        print(f"[{idx+1}/{len(phis)}] Testing Entanglement Strength phi = {phi:.2f}...")
+
         errors_run = []
         entropies_run = []
+        eff_dims_run = []
 
-        # Run multiple trials to average out initialization noise
-        for trial in range(5):
+        for trial in range(TRIALS):
             model = VQC(N_QUBITS, N_LAYERS, phi)
-            model = train(model, X_train, y_train, iterations=60)
+            model = train(model, X_train, y_train, iterations=ITERATIONS)
 
-            # Test Error
+            # 1. Test Error
             test_loss = loss_fn(model, model.params, X_test, y_test)
             errors_run.append(test_loss)
 
-            # Entanglement Entropy of one sample state
-            # (Calculated on a neutral input to see the circuit's intrinsic property)
-            sample_state = model.forward(np.array([0.1, 0.1]))
-            ent = get_entanglement_entropy(sample_state, N_QUBITS)
-            entropies_run.append(ent)
+            # 2. Entanglement Entropy
+            # Average over a few random inputs
+            ents = []
+            for _ in range(5):
+                sample_in = np.random.uniform(-1, 1, 2)
+                sample_state = model.forward(sample_in)
+                ents.append(get_entanglement_entropy(sample_state, N_QUBITS))
+            entropies_run.append(np.mean(ents))
+
+            # 3. Effective Dimension (QFIM Rank)
+            eff_dim = compute_qfi_rank(model, X_fim)
+            eff_dims_run.append(eff_dim)
 
         final_errors.append(np.mean(errors_run))
         final_entropies.append(np.mean(entropies_run))
+        final_eff_dims.append(np.mean(eff_dims_run))
 
     # --- Plotting ---
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # 1. Error vs Entanglement
-    plt.figure(figsize=(8, 6))
-    plt.scatter(final_entropies, final_errors, c=phis, cmap='viridis', s=100, edgecolor='k')
-    plt.xlabel('Average Entanglement Entropy $S$')
-    plt.ylabel('Test Error (MSE)')
-    plt.title('Generalization vs. Entanglement')
-    plt.colorbar(label='Entangling Strength $\phi$')
-    plt.grid(True, alpha=0.3)
+    # Plot 1: Generalization Error vs Entanglement
+    plt.figure(figsize=(10, 6))
 
-    # Polynomial fit
-    if len(final_entropies) > 2:
+    # Scatter plot with color mapping
+    sc = plt.scatter(final_entropies, final_errors, c=phis, cmap='plasma', s=120, edgecolor='k', alpha=0.9)
+
+    # Polynomial trend line
+    if len(final_entropies) > 3:
         z = np.polyfit(final_entropies, final_errors, 2)
         p = np.poly1d(z)
         x_sort = np.sort(final_entropies)
-        plt.plot(x_sort, p(x_sort), 'r--', alpha=0.5, label='Trend')
+        plt.plot(x_sort, p(x_sort), 'k--', alpha=0.6, label='Quadratic Fit', linewidth=2)
 
+    cbar = plt.colorbar(sc)
+    cbar.set_label('Entangling Power $\phi$')
+
+    plt.xlabel('Average Entanglement Entropy $S$', fontsize=12)
+    plt.ylabel('Generalization Error (MSE)', fontsize=12)
+    plt.title(f'Entanglement-Generalization Duality ($N={N_QUBITS}$)', fontsize=14)
     plt.legend()
-    plt.savefig(os.path.join(script_dir, 'entanglement_vs_generalization.png'))
+    plt.tight_layout()
+    plt.savefig(os.path.join(script_dir, 'entanglement_vs_generalization.png'), dpi=300)
+    plt.close()
 
-    # 2. Effective Dimension (Simulated/Heuristic for visualizing the concept)
-    # Since calculating real EffDim is computationally expensive (requires Fisher Info Matrix),
-    # we will keep the heuristic plot for this specific metric but label it as a theoretical projection
-    # or simple scaling simulation.
+    # Plot 2: Effective Dimension vs Entanglement
+    # This shows "Capacity" vs "Connectivity"
+    plt.figure(figsize=(10, 6))
 
-    depths = np.arange(1, 15)
-    # Theoretical curve based on Larocca et al. (2023)
-    # "Critical" circuits have high rank Fisher Info
-    dim_critical = np.minimum(2**N_QUBITS - 1, depths * N_QUBITS * 2)
-    # "Chaotic" (Volume law) actually saturate well but train poorly (Barren Plateaus).
-    # "Separable" (Area law) have low rank.
-    dim_separable = depths * 2 # Linear growth, no cross terms
+    # Dual axis plot? No, just Eff Dim vs Entropy
+    sns.regplot(x=np.array(final_entropies), y=np.array(final_eff_dims),
+                scatter_kws={'s': 100, 'edgecolor':'w'},
+                order=2, ci=None, line_kws={'color': 'darkred', 'linestyle':'--'})
 
-    plt.figure(figsize=(8, 6))
-    plt.plot(depths, dim_critical, 'o-', label='Critical (Tunable Entanglement)')
-    plt.plot(depths, dim_separable, 's--', label='Separable (No Entanglement)')
-    plt.xlabel('Circuit Depth $L$')
-    plt.ylabel('Effective Dimension $d_{eff}$')
-    plt.title('Capacity Scaling')
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(os.path.join(script_dir, 'effective_dimension.png'))
+    plt.xlabel('Average Entanglement Entropy $S$', fontsize=12)
+    plt.ylabel('Effective Dimension Ratio $d_{eff} / d_{param}$', fontsize=12)
+    plt.title('Capacity Phase Transition', fontsize=14)
+    plt.tight_layout()
+    plt.savefig(os.path.join(script_dir, 'effective_dimension.png'), dpi=300)
+    plt.close()
+
+    print("Simulation Complete. Results saved.")
 
 if __name__ == "__main__":
     run_experiment()
