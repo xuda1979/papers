@@ -1,9 +1,16 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath, amssymb, amsthm}
 \usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
 
-\title{The Quantum PCP (Probabilistically Checkable Proof) Conjecture}
+\newtheorem{theorem}{Theorem}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{definition}{Definition}
+
+\title{Review: The Quantum PCP Conjecture and Recent Progress}
 \author{Research Overview}
 \date{\today}
 
@@ -12,19 +19,72 @@
 \maketitle
 
 \begin{abstract}
-This paper discusses the Quantum PCP Conjecture, a potential quantum analogue to the classical PCP theorem, which asks whether approximating the ground state energy of a local Hamiltonian is QMA-hard.
+The Quantum Probabilistically Checkable Proof (PCP) conjecture is one of the most significant open problems in quantum complexity theory. It proposes a quantum analogue to the classical PCP theorem, suggesting that approximating the ground state energy of a local Hamiltonian remains QMA-hard even for constant error margins. This paper reviews the formulation of the conjecture, the implications for the robustness of entanglement at finite temperatures, and recent breakthroughs, including the proof of the No Low-Energy Trivial States (NLTS) conjecture. We also provide a numerical demonstration of the exponential complexity of finding ground states in local Hamiltonians.
 \end{abstract}
 
-\section{Domain}
-Quantum Complexity Theory
+\section{Introduction}
 
-\section{The Problem}
-This is likely the "grand challenge" of quantum complexity. In classical complexity, the PCP theorem states that for any problem in NP, there exists a proof that can be verified by reading only a constant number of bits. The \textbf{Quantum PCP conjecture} asks if there is a quantum analogue: \emph{Is calculating the ground state energy of a local Hamiltonian (a physical energy function) hard to approximate even with a constant error margin?}
+In classical complexity theory, the PCP theorem is a crowning achievement, stating that for every language in NP, there exists a proof format that allows a verifier to check the proof's validity with high probability by querying only a constant number of bits. A crucial corollary of the PCP theorem is the hardness of approximation: many NP-hard optimization problems remain NP-hard even when we only require an approximate solution.
 
-\section{Implications}
-If true, it would mean that "entanglement" makes finding even \emph{approximate} solutions to quantum physical systems extremely difficult (QMA-hard). It is deeply connected to the stability of entanglement at room temperature.
+The Quantum PCP (QPCP) conjecture asks whether a similar phenomenon holds for quantum complexity, specifically for the class QMA (Quantum Merlin-Arthur), which is the quantum analogue of NP \citep{aharonov2013quantum}.
 
-\section{Status}
-\textbf{Open.} A related precursor, the \textbf{NLTS (No Low-Energy Trivial States) Conjecture}, was \textbf{solved} recently (2023) by Anshu, Breuckmann, and Nirkhe, proving that there \emph{are} systems where all low-energy states remain highly entangled. However, the full Quantum PCP conjecture remains unsolved.
+\section{Formal Setup}
+
+\subsection{The Local Hamiltonian Problem}
+The central problem in QMA is the $k$-Local Hamiltonian problem.
+\begin{definition}[$k$-Local Hamiltonian Problem]
+Given a Hamiltonian $H = \sum_{i=1}^m H_i$ acting on $n$ qubits, where each $H_i$ acts non-trivially on at most $k$ qubits and $\|H_i\| \le 1$, estimate the ground state energy $E_0(H)$.
+\end{definition}
+
+Kitaev proved that the 5-Local Hamiltonian problem is QMA-complete \citep{kitaev2002classical}, later improved to 2-Local. This means that determining whether $E_0(H) < a$ or $E_0(H) > b$ (where $b-a \ge 1/\text{poly}(n)$) is hard for a quantum computer to verify without a witness, and hard even with a witness if the verifier is polynomial time.
+
+\subsection{The Conjecture}
+The classical PCP theorem implies that for Constraint Satisfaction Problems (CSPs), it is NP-hard to distinguish between the case where all constraints can be satisfied and the case where a constant fraction of constraints must be violated.
+
+The Quantum PCP conjecture posits:
+\begin{conjecture}[Quantum PCP]
+There exist constants $\alpha, \beta > 0$ such that it is QMA-hard to distinguish between:
+\begin{itemize}
+    \item (YES case) There exists a state $|\psi\rangle$ such that $\langle \psi | H | \psi \rangle \le \alpha m$.
+    \item (NO case) For all states $|\psi\rangle$, $\langle \psi | H | \psi \rangle \ge \beta m$.
+\end{itemize}
+where $m$ is the number of local terms in the Hamiltonian.
+\end{conjecture}
+Crucially, the gap here is proportional to $m$ (extensive energy), whereas standard QMA-completeness deals with gaps scaling as $1/\text{poly}(n)$.
+
+\section{The NLTS Theorem}
+
+A major obstacle to proving the QPCP conjecture was the hypothesis that low-energy states of local Hamiltonians might always be "trivial," meaning they could be generated by low-depth quantum circuits. If true, this would disprove QPCP.
+
+The \textbf{No Low-Energy Trivial States (NLTS)} conjecture, formulated by Freedman and Hastings \citep{hastings2013trivial}, stated that there exist Hamiltonians whose low-energy states (not just ground states) require logarithmic depth circuits to generate.
+
+In 2023, Anshu, Breuckmann, and Nirkhe proved the NLTS conjecture \citep{anshu2023nlts}. By utilizing good quantum low-density parity-check (qLDPC) codes, they constructed a family of Hamiltonians where all states with energy below a certain constant threshold retain long-range entanglement.
+
+\begin{theorem}[NLTS Theorem]
+There exist families of local Hamiltonians such that any state with energy close to the ground energy cannot be prepared by a quantum circuit of constant depth.
+\end{theorem}
+
+This result removes a key barrier to the QPCP conjecture, though the full conjecture remains open.
+
+\section{Numerical Demonstration}
+
+To illustrate the difficulty of the Local Hamiltonian problem, we performed a simulation of finding the ground state energy for a 1D Transverse Field Ising Model (TFIM):
+\[ H = -J \sum_{i} Z_i Z_{i+1} - h \sum_{i} X_i \]
+We used exact diagonalization (Lanczos algorithm) to find the ground state energy.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{complexity_plot.png}
+    \caption{Computational cost of finding the ground state energy vs. system size $N$. While the energy scales linearly, the Hilbert space dimension scales as $2^N$, making exact solution exponentially costly.}
+    \label{fig:complexity}
+\end{figure}
+
+As shown in Figure \ref{fig:complexity}, even for this simple, integrable model, the computational resources required for exact diagonalization grow exponentially with the number of spins. The Quantum PCP conjecture effectively asks if this hardness persists even when we are allowed a constant percentage of error in the energy estimation.
+
+\section{Conclusion}
+The Quantum PCP conjecture remains one of the most tantalizing open problems. A proof would imply that multi-particle entanglement is robust at constant temperatures, a statement with profound implications for condensed matter physics and the feasibility of self-correcting quantum memory. The recent proof of the NLTS conjecture via qLDPC codes is a promising step forward.
+
+\bibliographystyle{plain}
+\bibliography{references}
 
 \end{document}
