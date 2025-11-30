@@ -6,31 +6,24 @@ def generate_tex_plot(json_path, output_path):
     with open(json_path, 'r') as f:
         data = json.load(f)
 
-    # We want to generate the TikZ code for the plot
-    # The paper uses pgfplots
-
-    # We will generate a file that can be \input into the paper
-    # or just copy-pasted. Let's make it a standalone tex snippet.
-
     tex_content = r"""
 \begin{tikzpicture}
 \begin{axis}[
     title={\textbf{Budget--Performance Frontiers}},
     xlabel={Compute Budget (arbitrary units)},
     ylabel={Solution Quality (\%)},
-    xmin=10, xmax=120,
-    ymin=20, ymax=100,
-    xtick={10, 40, 80, 120},
-    ytick={20, 40, 60, 80, 100},
+    xmin=10, xmax=50,
+    ymin=0, ymax=100,
+    xtick={10, 20, 30, 40, 50},
+    ytick={0, 20, 40, 60, 80, 100},
     legend pos=south east,
     grid=major,
     width=0.9\textwidth,
-    height=0.4\textwidth,
+    height=0.5\textwidth,
     legend style={font=\tiny},
 ]
 """
 
-    # Colors and markers for different algorithms
     styles = {
         "IGD": "color=blue,mark=square*",
         "UCB-IGD": "color=cyan,mark=triangle*",
@@ -40,19 +33,22 @@ def generate_tex_plot(json_path, output_path):
         "Baselines": "color=red,mark=*"
     }
 
-    # Baseline surrogates (simplification for plotting)
-    # We treat CSC (low budget) or UCB (low budget) as proxies for baselines if needed,
-    # or just plot all our methods.
-    # The previous paper had "Baselines (SMR)" and "Ours (SMR)".
-    # Let's plot our actual algorithms.
+    # Map task names to labels
+    task_map = {
+        "GameOf24": "Math",
+        "BitSearch": "Code"
+    }
 
-    for task in ["SMR", "SCG"]:
-        dashed = ", dashed" if task == "SCG" else ""
-        suffix = "(SCG)" if task == "SCG" else "(SMR)"
+    for task_key, task_label in task_map.items():
+        if task_key not in data: continue
 
-        for algo in data[task]:
+        dashed = ", dashed" if task_label == "Code" else ""
+        suffix = f"({task_label})"
+
+        for algo in data[task_key]:
             name = algo['name']
             pts = algo['points']
+            # Scale Y to percentage
             coords = "\n".join([f"    ({x}, {y*100:.1f})" for x, y in pts])
 
             style = styles.get(name, "color=black")
@@ -69,9 +65,7 @@ def generate_tex_plot(json_path, output_path):
 \end{tikzpicture}
 """
 
-    # Ensure directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
     with open(output_path, 'w') as f:
         f.write(tex_content)
     print(f"Generated {output_path}")
