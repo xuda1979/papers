@@ -1,236 +1,274 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import time
 import os
 
 # Set random seed for reproducibility
 np.random.seed(42)
 
+# Professional Plotting Setup
+sns.set_theme(style="whitegrid", context="paper")
+plt.rcParams.update({
+    'font.family': 'serif',
+    'font.serif': ['Times New Roman'],
+    'font.size': 11,
+    'axes.labelsize': 12,
+    'axes.titlesize': 13,
+    'xtick.labelsize': 10,
+    'ytick.labelsize': 10,
+    'legend.fontsize': 10,
+    'lines.linewidth': 2.0,
+    'lines.markersize': 8,
+    'figure.dpi': 300,
+    'savefig.dpi': 300,
+    'grid.alpha': 0.3
+})
+
+def generate_structured_data(N, d, num_clusters=10, intra_cluster_std=0.01):
+    """
+    Generates Q and K with strictly orthogonal cluster structure.
+    """
+    if num_clusters <= d:
+        H, _ = np.linalg.qr(np.random.randn(d, d))
+        centers = H[:num_clusters] * 5.0
+    else:
+        centers = np.random.randn(num_clusters, d)
+        centers = centers / np.linalg.norm(centers, axis=1, keepdims=True) * 5.0
+
+    cluster_assignments = np.random.randint(0, num_clusters, size=N)
+
+    Q = np.zeros((N, d))
+    K = np.zeros((N, d))
+    V = np.random.randn(N, d)
+
+    for i in range(N):
+        c_idx = cluster_assignments[i]
+        center = centers[c_idx]
+
+        Q[i] = center + np.random.randn(d) * intra_cluster_std
+        K[i] = center + np.random.randn(d) * intra_cluster_std
+
+    return Q, K, V, cluster_assignments
+
 def simple_kmeans(X, k, max_iters=20):
-    """
-    Simple K-Means implementation using NumPy.
-    X: (N, d) data
-    k: number of clusters
-    """
     N, d = X.shape
-    # Initialize centroids randomly
     indices = np.random.choice(N, k, replace=False)
     centroids = X[indices]
-
     labels = np.zeros(N)
 
     for _ in range(max_iters):
-        # Optimized distance calc: ||X - C||^2 = ||X||^2 + ||C||^2 - 2XC^T
-        X_sq = np.sum(X**2, axis=1, keepdims=True) # (N, 1)
-        C_sq = np.sum(centroids**2, axis=1)        # (k,)
-
-        # Broadcast: (N, 1) + (k,) - (N, k) -> (N, k)
+        X_sq = np.sum(X**2, axis=1, keepdims=True)
+        C_sq = np.sum(centroids**2, axis=1)
         dist = X_sq + C_sq - 2 * np.dot(X, centroids.T)
-
         new_labels = np.argmin(dist, axis=1)
-
-        # Check convergence
         if np.array_equal(labels, new_labels):
             break
         labels = new_labels
-
-        # Update centroids
         new_centroids = np.zeros_like(centroids)
-        # Vectorized mean
         for i in range(k):
             mask = (labels == i)
             if np.any(mask):
                 new_centroids[i] = X[mask].mean(axis=0)
             else:
-                # Re-init empty cluster
                 new_centroids[i] = X[np.random.choice(N)]
-
         centroids = new_centroids
-
     return labels, centroids
 
 def softmax(x, axis=-1):
-    # Numerical stability
     e_x = np.exp(x - np.max(x, axis=axis, keepdims=True))
     return e_x / np.sum(e_x, axis=axis, keepdims=True)
 
 def naive_attention(Q, K, V):
-    """
-    Standard O(N^2) Attention.
-    """
     d = Q.shape[-1]
     scores = np.dot(Q, K.T) / np.sqrt(d)
     weights = softmax(scores, axis=-1)
     output = np.dot(weights, V)
     return output
 
-def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0):
-    """
-    Improved Spectral Sparse Attention.
-    Approximates Attention by only computing scores for:
-    1. Keys in the same cluster as the Query (Local).
-    2. A set of global random keys (Global).
-
-    This ensures O(N*sqrt(N)) complexity if k ~ sqrt(N) and num_global ~ sqrt(N).
-    """
+def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return_mask=False):
     N, d = Q.shape
     if k_clusters is None:
         k_clusters = int(np.sqrt(N))
 
-    # 1. Projection (Spectral Embedding Approximation)
-    d_proj = 16
+    d_proj = 32
     Omega = np.random.randn(d, d_proj)
     Q_proj = np.dot(Q, Omega)
 
-    # 2. Clustering
     labels, _ = simple_kmeans(Q_proj, k_clusters, max_iters=10)
 
     output = np.zeros_like(V)
+    mask_vis = None
+    if return_mask:
+        mask_vis = np.zeros((N, N), dtype=int)
 
-    # 3. Select Global Keys
-    # To maintain O(N^1.5), the number of global keys should be proportional to sqrt(N) * constant
     num_global = int(global_ratio * np.sqrt(N))
-    # Ensure at least some global keys, but not more than N
     num_global = max(1, min(N, num_global))
-
     global_indices = np.random.choice(N, num_global, replace=False)
 
-    # 4. Compute Sparse Attention per Cluster
     for i in range(k_clusters):
         query_indices = np.where(labels == i)[0]
         if len(query_indices) == 0:
             continue
 
-        # Local keys are the keys in the same cluster
-        # Global keys are the selected random keys
-        # We need the union of these
-
-        # Note: In a real efficient implementation (CUDA), we wouldn't concatenate indices like this
-        # but for NumPy simulation this simulates the sparse mask correctly.
-
         local_key_indices = query_indices
-
-        # Combine and unique
         combined_key_indices = np.union1d(local_key_indices, global_indices)
 
-        # Gather Data
-        Q_block = Q[query_indices]                # (n_q, d)
-        K_block = K[combined_key_indices]         # (n_k, d)
-        V_block = V[combined_key_indices]         # (n_k, d)
+        if return_mask:
+             for q_idx in query_indices:
+                 mask_vis[q_idx, combined_key_indices] = 1
 
-        # Compute Attention Scores for this block
-        # (n_q, d) * (d, n_k) -> (n_q, n_k)
+        Q_block = Q[query_indices]
+        K_block = K[combined_key_indices]
+        V_block = V[combined_key_indices]
+
         scores = np.dot(Q_block, K_block.T) / np.sqrt(d)
-
-        # Softmax along the key dimension
         w = softmax(scores, axis=-1)
-
-        # Weighted sum
-        # (n_q, n_k) * (n_k, d) -> (n_q, d)
         out_block = np.dot(w, V_block)
-
-        # Scatter back to output
         output[query_indices] = out_block
 
+    if return_mask:
+        return output, mask_vis
     return output
 
+def cosine_similarity(A, B):
+    dot = np.sum(A * B, axis=1)
+    normA = np.linalg.norm(A, axis=1)
+    normB = np.linalg.norm(B, axis=1)
+    sim = dot / (normA * normB + 1e-8)
+    return np.mean(sim)
+
 def run_experiments():
-    # Extended range up to 4096
     seq_lengths = [128, 256, 512, 1024, 2048, 4096]
-    d_model = 64
+    d_model = 128
 
     times_naive = []
     times_ssa = []
     speedups = []
     errors = []
+    cos_sims = []
 
-    print(f"{'N':<6} | {'Naive (s)':<10} | {'SSA (s)':<10} | {'Speedup':<10} | {'Rel Error':<10}")
-    print("-" * 65)
-
+    print(f"{'N':<6} | {'Naive (s)':<10} | {'SSA (s)':<10} | {'Speedup':<10} | {'Rel Err':<10} | {'Cos Sim':<10}")
+    print("-" * 80)
     latex_table_rows = []
 
     for N in seq_lengths:
-        # Create data
-        Q = np.random.randn(N, d_model)
-        K = np.random.randn(N, d_model)
-        V = np.random.randn(N, d_model)
+        Q, K, V, _ = generate_structured_data(N, d_model, num_clusters=max(2, int(np.sqrt(N))))
 
-        # Warmup (optional, but good for consistency)
         if N == 128:
-            spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)))
+             spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)))
 
-        # Measure Naive
         start = time.time()
         out_naive = naive_attention(Q, K, V)
-        end = time.time()
-        t_naive = end - start
-        times_naive.append(t_naive)
+        times_naive.append(time.time() - start)
 
-        # Measure SSA
         start = time.time()
-        # Use roughly sqrt(N) global tokens
-        out_ssa = spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)), global_ratio=4.0)
-        end = time.time()
-        t_ssa = end - start
+        out_ssa = spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)), global_ratio=2.0)
+        t_ssa = time.time() - start
         times_ssa.append(t_ssa)
 
-        # Error
-        # Relative Frobenius norm error
         diff = np.linalg.norm(out_naive - out_ssa)
         base = np.linalg.norm(out_naive)
         err = diff / (base + 1e-8)
         errors.append(err)
 
-        speedup = t_naive / t_ssa if t_ssa > 0 else 0.0
+        sim = cosine_similarity(out_naive, out_ssa)
+        cos_sims.append(sim)
+
+        speedup = times_naive[-1] / t_ssa if t_ssa > 0 else 0.0
         speedups.append(speedup)
 
-        print(f"{N:<6} | {t_naive:<10.4f} | {t_ssa:<10.4f} | {speedup:<10.2f} | {err:<10.2f}")
+        print(f"{N:<6} | {times_naive[-1]:<10.4f} | {t_ssa:<10.4f} | {speedup:<10.2f} | {err:<10.2f} | {sim:<10.4f}")
+        latex_table_rows.append(f"{N} & {times_naive[-1]:.4f} & {t_ssa:.4f} & {speedup:.2f}x & {err:.4f} & {sim:.4f} \\\\")
 
-        # Format for LaTeX
-        latex_table_rows.append(f"{N} & {t_naive:.4f} & {t_ssa:.4f} & {speedup:.2f}x & {err:.4f} \\\\")
+    with open('energy_efficient_ai/results_table.txt', 'w') as f:
+        f.write("\n".join(latex_table_rows))
+    with open('energy_efficient_ai/max_speedup.txt', 'w') as f:
+        f.write(f"{max(speedups):.2f}")
 
-    # 1. Plot Runtime
-    plt.figure(figsize=(10, 6))
-    plt.plot(seq_lengths, times_naive, 'o-', linewidth=2, label='Standard Attention $O(N^2)$')
-    plt.plot(seq_lengths, times_ssa, 's-', linewidth=2, label='Spectral Sparse Attention $O(N^{1.5})$')
-    plt.xlabel('Sequence Length $N$', fontsize=12)
-    plt.ylabel('Inference Time (seconds)', fontsize=12)
-    plt.title('Runtime Comparison: Standard vs SSA', fontsize=14)
-    plt.legend(fontsize=10)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.tight_layout()
-    plt.savefig('energy_efficient_ai/runtime_comparison.png')
+    # --- Composite Figure: Runtime & Complexity ---
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-    # 2. Plot Complexity (Theoretical)
+    # Plot 1: Runtime
+    sns.lineplot(x=seq_lengths, y=times_naive, marker='o', label='Standard Attention $O(N^2)$', ax=axes[0], color='#333333', linestyle='--')
+    sns.lineplot(x=seq_lengths, y=times_ssa, marker='s', label='SSA (Ours) $O(N^{1.5})$', ax=axes[0], color='#d62728', linewidth=2.5)
+    axes[0].set_xlabel('Sequence Length $N$')
+    axes[0].set_ylabel('Inference Time (s)')
+    axes[0].set_title('Runtime Comparison')
+    axes[0].legend()
+    axes[0].set_yscale('log') # Log scale helps differentiate at lower N
+
+    # Plot 2: Complexity
     N_range = np.linspace(100, 5000, 100)
     flops_trans = 4 * N_range**2 * d_model
     flops_mamba = 10 * N_range * d_model * 16
-    # SSA approx: N_blocks * (block_size * (block_size + global))
-    # block_size ~ sqrt(N), global ~ sqrt(N), N_blocks ~ sqrt(N)
-    # Total ~ sqrt(N) * (sqrt(N) * 2sqrt(N)) = N * 2sqrt(N) = 2 N^1.5
     flops_ssa = 2 * (N_range**1.5) * d_model
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(N_range, flops_trans, label='Transformer $O(N^2)$', linewidth=2)
-    plt.plot(N_range, flops_mamba, label='Mamba $O(N)$', linestyle='--')
-    plt.plot(N_range, flops_ssa, label='SSA (Ours) $O(N \sqrt{N})$', linewidth=2)
-    plt.yscale('log')
-    plt.xlabel('Sequence Length $N$', fontsize=12)
-    plt.ylabel('Theoretical FLOPs (log scale)', fontsize=12)
-    plt.title('Theoretical Complexity Analysis', fontsize=14)
-    plt.legend(fontsize=10)
-    plt.grid(True, linestyle='--', alpha=0.7)
+    axes[1].plot(N_range, flops_trans, label='Transformer $O(N^2)$', color='#333333', linestyle=':', linewidth=1.5)
+    axes[1].plot(N_range, flops_mamba, label='Mamba $O(N)$', color='#1f77b4', linestyle='--', linewidth=1.5)
+    axes[1].plot(N_range, flops_ssa, label='SSA (Ours) $O(N \sqrt{N})$', color='#d62728', linewidth=2.5)
+    axes[1].set_yscale('log')
+    axes[1].set_xlabel('Sequence Length $N$')
+    axes[1].set_ylabel('Theoretical FLOPs')
+    axes[1].set_title('Complexity Analysis')
+    axes[1].legend()
+
     plt.tight_layout()
-    plt.savefig('energy_efficient_ai/complexity_plot.png')
+    plt.savefig('energy_efficient_ai/combined_performance.png', bbox_inches='tight')
 
-    # 3. Save Results to file
-    with open('energy_efficient_ai/results_table.txt', 'w') as f:
-        f.write("\n".join(latex_table_rows))
+    # Save individual plots for flexibility
+    plt.savefig('energy_efficient_ai/runtime_comparison.png', bbox_inches='tight') # Overwrite old one just in case
 
-    # Save the max speedup to a file
-    max_speedup = max(speedups)
-    with open('energy_efficient_ai/max_speedup.txt', 'w') as f:
-        f.write(f"{max_speedup:.2f}")
+    # --- Pareto Frontier ---
+    N_pareto = 1024
+    ratios = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+    p_speedups = []
+    p_cosines = []
+    Q, K, V, _ = generate_structured_data(N_pareto, d_model)
+
+    start = time.time()
+    out_n = naive_attention(Q, K, V)
+    t_base = time.time() - start
+
+    for r in ratios:
+        start = time.time()
+        out_s = spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N_pareto)), global_ratio=r)
+        t_s = time.time() - start
+
+        sim = cosine_similarity(out_n, out_s)
+        p_speedups.append(t_base/t_s)
+        p_cosines.append(sim)
+
+    plt.figure(figsize=(7, 5))
+    scatter = plt.scatter(p_speedups, p_cosines, c=np.log2(ratios), cmap='viridis', s=100, zorder=5)
+    plt.plot(p_speedups, p_cosines, color='gray', linestyle='--', alpha=0.5, zorder=1)
+
+    cbar = plt.colorbar(scatter)
+    cbar.set_label('Global Key Ratio ($log_2(r)$)')
+
+    plt.xlabel('Speedup Factor ($t_{naive} / t_{ssa}$)')
+    plt.ylabel('Cosine Similarity (Accuracy)')
+    plt.title(f'Efficiency vs. Accuracy Frontier ($N={N_pareto}$)')
+
+    # Annotate points
+    for i, r in enumerate(ratios):
+        if i % 2 == 0: # Annotate every other point to avoid clutter
+            plt.annotate(f"r={r}", (p_speedups[i], p_cosines[i]), xytext=(5, 5), textcoords='offset points', fontsize=9)
+
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.savefig('energy_efficient_ai/pareto_frontier.png', bbox_inches='tight')
+
+    # --- Sparsity Pattern ---
+    N_vis = 128
+    Q, K, V, _ = generate_structured_data(N_vis, d_model, num_clusters=4)
+    _, mask = spectral_sparse_attention(Q, K, V, k_clusters=4, global_ratio=1.0, return_mask=True)
+
+    plt.figure(figsize=(6, 6))
+    sns.heatmap(mask, cmap="Blues", cbar=False, square=True, xticklabels=False, yticklabels=False)
+    plt.xlabel('Key Index $j$')
+    plt.ylabel('Query Index $i$')
+    plt.title(f'Attention Mask Pattern ($N={N_vis}$)\nBlock-Diagonal + Vertical Stripes')
+    plt.savefig('energy_efficient_ai/sparsity_pattern.png', bbox_inches='tight')
 
 if __name__ == "__main__":
     run_experiments()
