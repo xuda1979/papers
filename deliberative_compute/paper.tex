@@ -316,20 +316,21 @@ To validate our proposed algorithms, we conduct a series of experiments in simul
 
 \begin{table}[h!]
 \centering
-\caption{Compute budget allocation and performance on Simulated Math Reasoning (SMR). Budgets are normalized relative to a single Greedy CoT pass. Quality is measured as final accuracy. Our methods (IGD, RS-MCTT) achieve higher quality for the same or lower compute budget.}
+\caption{Compute budget allocation and performance on Simulated Math Reasoning (SMR). Budgets are in normalized simulation units. Quality is measured as final accuracy. Our methods (IGD, RS-MCTT, ADR, CSC) achieve competitive quality at varying compute budgets.}
 \label{tab:compute-budget}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}lcccccc@{}}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Method} & \textbf{Budget} & \textbf{Quality (\%)} & \textbf{Tokens (k)} & \textbf{Verifier Calls} & \textbf{Revisions} & \textbf{Wall-clock (s/ex)} \\
+\textbf{Method} & \textbf{Budget} & \textbf{Quality (\%)} & \textbf{Frontier Area (FA)} & \textbf{Efficiency (Qual/Cost)} \\
 \midrule
-Greedy CoT & 1.0$\times$ & 52.3 & 1.2 & 0 & 0 & 1.1 \\
-Self-Consistency (N=8) & 8.0$\times$ & 68.1 & 9.6 & 8 & 0 & 8.5 \\
-ToT (d=3, w=4) & 12.0$\times$ & 71.5 & 14.4 & 12 & 0 & 12.8 \\
+Greedy CoT (Proxy: IGD@10) & 10 & 23.5 & - & 2.35 \\
+Self-Consistency (Proxy: CSC@10) & 10 & 46.0 & - & 4.60 \\
 \midrule
-ADR (ours) & 4.0$\times$ & 70.2 & 3.5 & 6 & 2 & 4.2 \\
-IGD (ours) & 4.0$\times$ & \textbf{74.8} & 4.1 & 5 & 1 & 4.5 \\
-RS-MCTT (ours, $\eta=-0.5$) & 8.0$\times$ & \textbf{79.2} & 8.9 & 15 & 3 & 9.1 \\
+IGD (ours) & 40 & 46.4 & 62.6 & 1.16 \\
+UCB-IGD (ours) & 40 & 49.3 & 64.3 & 1.23 \\
+RS-MCTT (ours) & 40 & 28.9 & 31.9 & 0.72 \\
+CSC (ours) & 40 & 72.0 & 78.1 & 1.80 \\
+ADR (ours) & 40 & \textbf{95.5} & \textbf{104.1} & \textbf{2.39} \\
 \bottomrule
 \end{tabular}%
 }
@@ -339,58 +340,8 @@ RS-MCTT (ours, $\eta=-0.5$) & 8.0$\times$ & \textbf{79.2} & 8.9 & 15 & 3 & 9.1 \
 
 \begin{figure}[h!]
 \centering
-\begin{tikzpicture}
-\begin{axis}[
-    title={\textbf{Budget--Performance Frontiers}},
-    xlabel={Compute Budget (normalized)},
-    ylabel={Solution Quality (\%)},
-    xmin=0, xmax=16,
-    ymin=50, ymax=85,
-    xtick={1,4,8,12,16},
-    ytick={50,60,70,80},
-    legend pos=south east,
-    grid=major,
-    width=0.9\textwidth,
-    height=0.4\textwidth,
-]
-
-% SMR Task
-\addplot[color=red,mark=*, thick] coordinates {
-    (1, 52.3)
-    (8, 68.1)
-    (12, 71.5)
-};
-\addlegendentry{Baselines (SMR)}
-
-\addplot[color=blue,mark=square*, thick] coordinates {
-    (1, 55)
-    (2, 63)
-    (4, 74.8) % IGD
-    (8, 79.2) % RS-MCTT
-    (12, 81.5)
-};
-\addlegendentry{Ours (SMR)}
-
-% SCG Task
-\addplot[color=green,mark=*, dashed, thick] coordinates {
-    (1, 60.1)
-    (8, 72.4)
-    (12, 75.0)
-};
-\addlegendentry{Baselines (SCG)}
-
-\addplot[color=orange,mark=square*, dashed, thick] coordinates {
-    (1, 62)
-    (2, 68)
-    (4, 78.1) % IGD
-    (8, 82.3) % RS-MCTT
-    (12, 84.0)
-};
-\addlegendentry{Ours (SCG)}
-
-\end{axis}
-\end{tikzpicture}
-\caption{Budget--Performance Frontiers for Simulated Math Reasoning (SMR) and Simulated Code Generation (SCG). Our methods (solid/dashed blue and orange) consistently outperform baselines (solid/dashed red and green) by achieving higher quality at equivalent compute budgets.}
+\input{fig/bpf_curves_generated.tex}
+\caption{Budget--Performance Frontiers for Simulated Math Reasoning (SMR) and Simulated Code Generation (SCG). The plot compares Index-Guided Deliberation (IGD), UCB-IGD, Risk-Sensitive MCTT (RS-MCTT), Counterfactual Self-Consistency (CSC), and Abduction-Deduction-Refutation (ADR) across varying compute budgets.}
 \label{fig:bpf-curves}
 \end{figure}
 
