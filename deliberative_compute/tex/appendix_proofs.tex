@@ -1,0 +1,99 @@
+\section{Detailed Proofs}
+\label{app:proofs}
+
+In this appendix, we provide formal proofs for the key theoretical results stated in the main text.
+
+\subsection{Proof of Theorem 3.1 (Greedy Near-Optimality)}
+
+\begin{theorem}[Restatement of Theorem 3.1]
+Under Assumption~\ref{assump:dimret} (Monotone Submodularity), if cognitive micro-actions have unit costs and local EVC estimates are perfect, the greedy-EVC policy achieves at least a $(1 - 1/e)$ approximation of the optimal expected utility at any budget $B$.
+\end{theorem}
+
+\begin{proof}
+Let $\mathcal{A}$ be the set of all possible cognitive actions available over the course of deliberation (conceptually, we can view the decision tree as a massive ground set of potential actions). Let $S \subseteq \mathcal{A}$ be a set of actions selected. The objective function is $F(S) = \E[U(y;x) \mid S \text{ executed}]$.
+
+By Assumption~\ref{assump:dimret}, $F(S)$ is a monotone submodular function. The problem of maximizing expected utility under a budget constraint $B$ (with unit costs) is equivalent to:
+\[
+\max_{S \subseteq \mathcal{A}, |S| \le B} F(S).
+\]
+This is the canonical problem of maximizing a monotone submodular function under a cardinality constraint.
+
+The Greedy-EVC policy selects the action $a$ that maximizes the marginal gain:
+\[
+\Delta(a \mid S_t) = F(S_t \cup \{a\}) - F(S_t) = \text{EVC}(a \mid S_t) + \lambda c(a).
+\]
+(Note: EVC includes the cost penalty, but for budget-constrained maximization we focus on the utility gain).
+Since costs are unit ($c(a)=1$), maximizing EVC is equivalent to maximizing marginal utility gain.
+
+A classic result by Nemhauser et al. (1978) states that for monotone submodular maximization under a cardinality constraint $k$, the greedy algorithm produces a set $S_{greedy}$ such that:
+\[
+F(S_{greedy}) \ge \left(1 - \frac{1}{e}\right) F(S_{OPT}),
+\]
+where $S_{OPT}$ is the optimal set of size $k$.
+Substituting $B$ for $k$ completes the proof.
+\end{proof}
+
+\subsection{Proof of Proposition 3.2 (Concavity of the BPF)}
+
+\begin{proposition}[Restatement of Proposition 3.2]
+Under Assumption~\ref{assump:dimret} and a randomized micro-action cost model with bounded variance, the smoothed Budget--Performance Frontier $P(B)$ is concave in $B$ to first order.
+\end{proposition}
+
+\begin{proof}
+The Budget--Performance Frontier $P(B)$ is defined as:
+\[
+P(B) = \sup_{\pi: \E[C(\tau)] \le B} \E[U(y;x)].
+\]
+Consider the set of all possible deliberation policies $\Pi$. Each policy $\pi$ corresponds to a point $(C(\pi), U(\pi))$ in the cost-utility plane. The frontier $P(B)$ describes the upper boundary of the convex hull of these achievable points (since we can mix policies).
+
+Let the "ground set" of computation be the set of unit micro-actions. As established, the utility function $F(S)$ over these actions is submodular.
+The multilinear extension $f:[0,1]^{|\mathcal{A}|} \to \R$ of a submodular function $F$ is concave along any non-negative direction vector (Vondr\'ak, 2008).
+The problem of finding the optimal policy for a continuous budget $B$ can be relaxed to maximizing this multilinear extension subject to a linear cost constraint $\sum x_i c_i \le B$.
+
+Since we are maximizing a concave function (the multilinear extension) over a convex polytope (the budget constraint), the optimal value function $P(B)$ is concave.
+Specifically, let $B_1, B_2$ be two budgets and $\pi_1, \pi_2$ be the optimal policies achieving $P(B_1)$ and $P(B_2)$.
+For any $\alpha \in [0,1]$, we can form a mixture policy $\pi_\alpha$ that runs $\pi_1$ with probability $\alpha$ and $\pi_2$ with probability $1-\alpha$.
+The expected cost is $\alpha B_1 + (1-\alpha) B_2$.
+The expected utility is $\alpha P(B_1) + (1-\alpha) P(B_2)$.
+By definition of the frontier (supremum over all policies),
+\[
+P(\alpha B_1 + (1-\alpha) B_2) \ge \E[U(\pi_\alpha)] = \alpha P(B_1) + (1-\alpha) P(B_2).
+\]
+Thus, $P(B)$ is concave.
+The "smoothed" qualification refers to the fact that for discrete sets, the boundary is the piecewise linear upper concave envelope; in the limit of small micro-actions (randomized costs), this becomes a smooth concave curve.
+\end{proof}
+
+\subsection{Proof of Proposition 4.1 (Risk-Aware Threshold)}
+
+\begin{proposition}[Restatement of Proposition 4.1]
+If the incremental improvement $R_t$ is sub-Gaussian with variance proxy $\sigma_t^2$, then a risk-averse stopping rule that bounds the probability of non-positive net return by $\delta$ is given by:
+\[
+\E[R_{t+1} \mid \mathcal{F}_t] - \sqrt{2 \sigma_t^2 \log(1/\delta)} \le \lambda c.
+\]
+\end{proposition}
+
+\begin{proof}
+We wish to stop if the probability that the realized return exceeds the cost is too low, or conversely, continue only if we are confident the gain outweighs the cost.
+Specifically, in a risk-sensitive setting, we might require that the lower confidence bound of the gain exceeds the cost.
+
+Let $G_{t+1}$ be the random variable representing the gain at step $t+1$. We model $G_{t+1} = \mu_t + \epsilon_t$, where $\mu_t = \E[R_{t+1} \mid \mathcal{F}_t]$ is the expected gain and $\epsilon_t$ is zero-mean sub-Gaussian noise with parameter $\sigma_t$.
+We want to ensure that with high probability ($1-\delta$), the true gain is at least $\lambda c$.
+Using the sub-Gaussian tail bound (Hoeffding's inequality for bounded variables, or general sub-Gaussian property):
+\[
+\Prob(G_{t+1} \le \mu_t - t) \le \exp\left( - \frac{t^2}{2\sigma_t^2} \right).
+\]
+Set the right hand side to $\delta$:
+\[
+- \frac{t^2}{2\sigma_t^2} = \log \delta \implies t = \sqrt{2 \sigma_t^2 \log(1/\delta)}.
+\]
+Thus, with probability at least $1-\delta$, the realized gain $G_{t+1}$ is at least $\mu_t - \sqrt{2 \sigma_t^2 \log(1/\delta)}$.
+To justify continuing, we require this conservative estimate to exceed the cost $\lambda c$:
+\[
+\E[R_{t+1} \mid \mathcal{F}_t] - \sqrt{2 \sigma_t^2 \log(1/\delta)} > \lambda c.
+\]
+The stopping condition is the negation (or when this no longer holds):
+\[
+\E[R_{t+1} \mid \mathcal{F}_t] - \sqrt{2 \sigma_t^2 \log(1/\delta)} \le \lambda c.
+\]
+Comparing to the form in the proposition statement $\alpha \sigma_t$, we identify $\alpha = \sqrt{2 \log(1/\delta)}$.
+\end{proof}

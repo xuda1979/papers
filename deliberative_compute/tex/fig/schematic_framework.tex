@@ -1,0 +1,58 @@
+\begin{tikzpicture}[
+    node distance=2cm,
+    auto,
+    block/.style={
+        rectangle,
+        draw=black,
+        thick,
+        fill=blue!10,
+        text width=6em,
+        align=center,
+        rounded corners,
+        minimum height=3em
+    },
+    cloud/.style={
+        draw=red,
+        thick,
+        ellipse,
+        fill=red!10,
+        minimum height=2em,
+        align=center
+    },
+    decision/.style={
+        diamond,
+        draw=green!50!black,
+        thick,
+        fill=green!10,
+        text width=4.5em,
+        align=center,
+        inner sep=0pt
+    },
+    line/.style={
+        draw,
+        thick,
+        -latex,
+        shorten >=2pt
+    }
+]
+
+% Nodes
+\node [block] (state) {State $s_t$\\ (Context + History)};
+\node [block, right of=state, node distance=4cm] (policy) {Deliberation Policy $\pi(s_t)$};
+\node [block, right of=policy, node distance=4cm] (action) {Action Selection\\ (Max EVC / Index)};
+\node [cloud, below of=action, node distance=3cm] (llm) {LLM / Environment\\ (Generate / Verify)};
+\node [decision, below of=state, node distance=3cm] (decide) {Stop?};
+\node [block, left of=decide, node distance=3cm] (output) {Output Answer $y$};
+
+% Edges
+\path [line] (state) -- (policy);
+\path [line] (policy) -- (action);
+\path [line] (action) -- node [midway, right] {$a_t$} (llm);
+\path [line] (llm) -| node [near start, below] {Result $r_t$, Cost $c_t$} (decide);
+\path [line] (decide) -- node [midway, left] {No} (state);
+\path [line] (decide) -- node [midway, above] {Yes} (output);
+
+% Labels
+\node [above of=policy, node distance=1cm] {\textbf{Budgeted Deliberation Loop}};
+
+\end{tikzpicture}

@@ -8,6 +8,7 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{tikz}
+\usetikzlibrary{shapes, arrows, positioning}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.17}
 \usepackage{hyperref}
@@ -87,6 +88,13 @@ An LLM with parameters $\theta$ interacts with a \emph{deliberation environment}
 Each action incurs a compute cost $c(a) \ge 0$ (e.g., tokens, wall-clock, FLOPs) and transforms the deliberation state $s_t=(x,h_t)$ where $h_t$ is the transcript of thoughts, branches, and external-memory writes up to time $t$.
 At any step, the agent may output a final answer $y$ and stop.
 
+\begin{figure}[t]
+    \centering
+    \input{tex/fig/schematic_framework.tex}
+    \caption{A schematic view of the Budgeted Deliberation Framework. The agent maintains a deliberation state $s_t$, consults a policy $\pi$ to estimate the Expected Value of Computation (EVC) or dynamic indices for possible cognitive actions, and interacts with the LLM or environment. The loop continues until the estimated value of further computation falls below the cost threshold $\lambda$.}
+    \label{fig:framework}
+\end{figure}
+
 \begin{definition}[Deliberation policy]
 A \emph{deliberation policy} $\pi$ maps states to distributions over actions (including \textsc{Decide}).
 Given a utility $U(y;x) \in [0,1]$ measuring solution quality, a compute penalty $\lambda \ge 0$, and a costed trajectory $\tau=(a_1,\dots,a_T,y)$ with cost $C(\tau)=\sum_{t=1}^T c(a_t)$, the \emph{expected net utility} is
@@ -114,7 +122,7 @@ Under Assumption~\ref{assump:dimret} and a randomized micro-action cost model wi
 \end{proposition}
 
 \begin{proof}[Proof sketch]
-View deliberation as selecting costly micro-actions from a ground set $\mathcal{S}$ with costs $c_s$. The relaxation to fractional selection leads to a continuous knapsack with a concave closure when $F$ is submodular (via the multilinear extension). Standard arguments then imply diminishing marginal returns in the budget \cite{nemhauser1978}.
+View deliberation as selecting costly micro-actions from a ground set $\mathcal{S}$ with costs $c_s$. The relaxation to fractional selection leads to a continuous knapsack with a concave closure when $F$ is submodular (via the multilinear extension). Standard arguments then imply diminishing marginal returns in the budget \cite{nemhauser1978}. See \Cref{app:proofs} for details.
 \end{proof}
 
 \paragraph{Expected value of computation (EVC).} At state $s_t$, the \emph{EVC} of an action $a$ is
@@ -133,7 +141,7 @@ Under Assumption~\ref{assump:dimret}, unit-cost micro-actions, and perfect local
 \end{theorem}
 
 \begin{proof}[Proof idea]
-Map to monotone submodular maximization under a cardinality constraint and apply the Nemhauser bound \cite{nemhauser1978}. The per-step EVC ordering is equivalent to the marginal gains ordering.
+Map to monotone submodular maximization under a cardinality constraint and apply the Nemhauser bound \cite{nemhauser1978}. The per-step EVC ordering is equivalent to the marginal gains ordering. See \Cref{app:proofs} for the full proof.
 \end{proof}
 
 \section{Beyond CoT: ten algorithms for deliberative test-time compute}
@@ -260,6 +268,9 @@ If $R_t$ is sub-Gaussian with proxy $\sigma_t^2$, then a risk-averse EVC thresho
 $\E[R_{t+1}\mid \mathcal{F}_t] - \alpha \sigma_t \le \lambda c$,
 with $\alpha$ chosen for the desired tail probability of over-spending.
 \end{proposition}
+\begin{proof}
+See \Cref{app:proofs}.
+\end{proof}
 
 \subsection{Multi-thread scheduling as Whittle-style indexability}
 For multiple threads with decoupled dynamics under a Lagrange relaxation, \emph{indexability} obtains when increasing the compute price $\lambda$ monotonically shrinks the active set of states; IGD is then optimal for the relaxed problem. While exact indexability is task-dependent, monotone posteriors and nonincreasing returns suffice in many reasoning domains \cite{liedergriffiths2020}.
@@ -340,8 +351,8 @@ ADR (ours) & 40 & \textbf{95.5} & \textbf{104.1} & \textbf{2.39} \\
 
 \begin{figure}[h!]
 \centering
-\input{fig/bpf_curves_generated.tex}
-\caption{Budget--Performance Frontiers for Simulated Math Reasoning (SMR) and Simulated Code Generation (SCG). The plot compares Index-Guided Deliberation (IGD), UCB-IGD, Risk-Sensitive MCTT (RS-MCTT), Counterfactual Self-Consistency (CSC), and Abduction-Deduction-Refutation (ADR) across varying compute budgets.}
+\input{tex/fig/bpf_curves_generated.tex}
+\caption{Budget--Performance Frontiers for Simulated Math Reasoning (SMR) and Simulated Code Generation (SCG). The plot compares Index-Guided Deliberation (IGD), UCB-IGD, Risk-Sensitive MCTT (RS-MCTT), Counterfactual Self-Consistency (CSC), and Abduction-Deduction-Refutation (ADR) across varying compute budgets. Note: SMR baselines are represented by the start of the curves (lower budgets).}
 \label{fig:bpf-curves}
 \end{figure}
 
@@ -420,6 +431,11 @@ This setup allows us to rapidly prototype and evaluate the scheduling aspect of 
 \end{algorithmic}
 \end{algorithm}
 
+\input{tex/appendix_proofs.tex}
+
+\section{Broader Impact}
+The development of algorithms for allocating test-time compute has significant implications for the efficiency and capabilities of AI systems. By formalizing "deliberation" as a budgeted resource, we enable systems that can adaptively scale their cognitive effort to the difficulty of the task, potentially reducing energy consumption for simple queries while unlocking deeper reasoning for complex ones. However, this also introduces risks: systems might optimize for metrics that do not align with human values if the utility function $U(y;x)$ is not carefully designed. Furthermore, the ability to "think harder" could make systems more persuasive or capable of executing complex, multi-step plans that are harder to audit. We emphasize the need for transparency in how these budgets are allocated and for the integration of safety constraints directly into the deliberation policy.
+
 \section*{Appendix: Additional sketches}
 
 \paragraph{Submodular memory gains (DEMI).}
@@ -429,128 +445,6 @@ Let notes be elements of a ground set $\mathcal{S}$ and $G:2^{\mathcal{S}}\to\R_
 Let $Z_i \in \{0,1\}$ indicate whether chain $i$ is correct. After filtering, each incorrect chain is kept with prob.\ $\le 1-\epsilon$, each correct chain with prob.\ $\ge 1-\epsilon'$. The effective margin becomes $\delta'=\delta - (\epsilon-\epsilon')/2$. Hoeffding's inequality on the filtered Bernoulli sum yields Eq.~\eqref{eq:csc-bound}.
 
 \bibliographystyle{plain}
-\begin{thebibliography}{10}
-
-\bibitem{wei2022cot}
-Jason Wei, Xuezhi Wang, Dale Schuurmans, et~al.
-\newblock Chain-of-Thought prompting elicits reasoning in large language models.
-\newblock \emph{arXiv:2201.11903}, 2022.
-
-\bibitem{wang2023selfconsistency}
-Xuezhi Wang, Jason Wei, Dale Schuurmans, et~al.
-\newblock Self-consistency improves chain of thought reasoning in language models.
-\newblock \emph{arXiv:2203.11171}, 2023.
-
-\bibitem{yao2023tot}
-Shunyu Yao, Dian Yu, Jeffrey Zhao, et~al.
-\newblock Tree of Thoughts: Deliberate problem solving with large language models.
-\newblock \emph{arXiv:2305.10601}, 2023.
-
-\bibitem{russellwefald1991}
-Stuart Russell and Eric Wefald.
-\newblock \emph{Do the Right Thing: Studies in Limited Rationality}.
-\newblock MIT Press, 1991.
-
-\bibitem{horvitz1989}
-Eric~J. Horvitz.
-\newblock Reasoning under varying and uncertain resource constraints.
-\newblock In \emph{AAAI Workshop on Limited Rationality}, 1989.
-
-\bibitem{liedergriffiths2020}
-Falk Lieder and Thomas~L. Griffiths.
-\newblock Resource-rational analysis: Understanding human cognition as the optimal use of limited computational resources.
-\newblock \emph{Behavioral and Brain Sciences}, 43:e1, 2020.
-
-\bibitem{nemhauser1978}
-G.~L. Nemhauser, L.~A. Wolsey, and M.~L. Fisher.
-\newblock An analysis of approximations for maximizing submodular set functions.
-\newblock \emph{Mathematical Programming}, 14(1):265--294, 1978.
-
-\bibitem{hoeffding1963}
-Wassily Hoeffding.
-\newblock Probability inequalities for sums of bounded random variables.
-\newblock \emph{Journal of the American Statistical Association}, 58(301):13--30, 1963.
-
-\bibitem{kahneman2011}
-Daniel Kahneman.
-\newblock \emph{Thinking, Fast and Slow}.
-\newblock Farrar, Straus and Giroux, 2011.
-
-\bibitem{baddeley1992workingmemory}
-Alan Baddeley.
-\newblock Working memory.
-\newblock \emph{Science}, 255(5044):556--559, 1992.
-
-\bibitem{gershmandaw2017}
-Samuel~J. Gershman and Nathaniel~D. Daw.
-\newblock Reinforcement learning and episodic memory in humans and animals: An integrative framework.
-\newblock \emph{Annual Review of Psychology}, 68:101--128, 2017.
-
-\bibitem{pfeifferfoster2013}
-Brad~E. Pfeiffer and David~J. Foster.
-\newblock Hippocampal place-cell sequences depict future paths to remembered goals.
-\newblock \emph{Nature}, 497(7447):74--79, 2013.
-
-\bibitem{dehaene2011gnw}
-Stanislas Dehaene and Jean-Pierre Changeux.
-\newblock Experimental and theoretical approaches to conscious processing.
-\newblock \emph{Neuron}, 70(2):200--227, 2011.
-
-\bibitem{irving2018debate}
-Geoffrey Irving, Paul Christiano, and Dario Amodei.
-\newblock AI safety via debate.
-\newblock \emph{arXiv:1805.00899}, 2018.
-
-\bibitem{suttonbarto2018}
-Richard~S. Sutton and Andrew~G. Barto.
-\newblock \emph{Reinforcement Learning: An Introduction}.
-\newblock MIT Press, 2nd edition, 2018.
-
-\bibitem{wu2024inference}
-Yangzhen Wu, Zhiqing Sun, Shanda Li, Sean Welleck, and Yiming Yang.
-\newblock Inference Scaling Laws: An Empirical Analysis of Compute-Optimal Inference for Problem-Solving with Language Models.
-\newblock \emph{arXiv:2408.00724}, 2024.
-
-\bibitem{ji2025survey}
-Yixin Ji, Juntao Li, Yang Xiang, Hai Ye, Kaixin Wu, Kai Yao, Jia Xu, Linjian Mo, and Min Zhang.
-\newblock A Survey of Test-Time Compute: From Intuitive Inference to Deliberate Reasoning.
-\newblock \emph{arXiv:2501.02497}, 2025.
-
-\bibitem{guan2024delibalign}
-Melody~Y. Guan, Manas Joglekar, Eric Wallace, Saachi Jain, Boaz Barak, Alec Helyar, Rachel Dias, Andrea Vallone, Hongyu Ren, Jason Wei, Hyung~Won Chung, Sam Toyer, Johannes Heidecke, Alex Beutel, and Amelia Glaese.
-\newblock Deliberative Alignment: Reasoning Enables Safer Language Models.
-\newblock \emph{arXiv:2412.16339}, 2024.
-
-\bibitem{guo2025rrm}
-Jiaxin Guo, Zewen Chi, Li Dong, Qingxiu Dong, Xun Wu, Shaohan Huang, and Furu Wei.
-\newblock Reward Reasoning Model.
-\newblock \emph{arXiv:2505.14674}, 2025.
-
-\bibitem{kocsis2006uct}
-Levente Kocsis and Csaba Szepesv\'ari.
-\newblock Bandit based Monte-Carlo Planning.
-\newblock In \emph{ECML}, 2006.
-
-\bibitem{howardmatheson1972}
-Ronald~A. Howard and James~E. Matheson.
-\newblock Risk-sensitive Markov decision processes.
-\newblock \emph{Management Science}, 18(7):356--369, 1972.
-
-\bibitem{gittins1979}
-John~C. Gittins.
-\newblock Bandit Processes and Dynamic Allocation Indices.
-\newblock \emph{Journal of the Royal Statistical Society: Series B}, 41(2):148--164, 1979.
-
-\bibitem{whittle1988}
-Peter Whittle.
-\newblock Restless bandits: Activity allocation in a changing world.
-\newblock \emph{Journal of Applied Probability}, 25(A):287--298, 1988.
-
-\bibitem{itti2006surprise}
-Laurent Itti and Pierre~F. Baldi.
-\newblock Bayesian Surprise Attracts Human Attention.
-\newblock In \emph{NIPS}, 2006; see also \emph{Vision Research}, 49(10):1295--1306, 2009.
-
-\end{thebibliography}
+\bibliography{references}
 
 \end{document}

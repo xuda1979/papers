@@ -142,11 +142,15 @@ def main():
 
         results[profile.name] = task_results
 
-    # Save to JSON
-    os.makedirs("deliberative_compute/experiments/results", exist_ok=True)
-    with open("deliberative_compute/experiments/results/simulated_results.json", "w") as f:
+    # Save to JSON relative to the script location
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.join(script_dir, "results")
+    os.makedirs(results_dir, exist_ok=True)
+
+    output_file = os.path.join(results_dir, "simulated_results.json")
+    with open(output_file, "w") as f:
         json.dump(results, f, indent=2)
-    print("\nResults saved to deliberative_compute/experiments/results/simulated_results.json")
+    print(f"\nResults saved to {output_file}")
 
 if __name__ == "__main__":
     main()
