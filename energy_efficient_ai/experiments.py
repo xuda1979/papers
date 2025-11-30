@@ -52,27 +52,54 @@ def generate_structured_data(N, d, num_clusters=10, intra_cluster_std=0.01):
     return Q, K, V, cluster_assignments
 
 def simple_kmeans(X, k, max_iters=20):
+    """
+    K-means implementation with K-means++ style initialization for stability.
+    """
     N, d = X.shape
-    indices = np.random.choice(N, k, replace=False)
-    centroids = X[indices]
+
+    # K-means++ initialization
+    centroids = np.empty((k, d))
+    # 1. Choose first center uniformly at random
+    centroids[0] = X[np.random.choice(N)]
+
+    # 2. Choose remaining k-1 centers with probability proportional to D(x)^2
+    for i in range(1, k):
+        dist_sq = np.min(np.sum((X[:, None, :] - centroids[:i])**2, axis=2), axis=1)
+        probs = dist_sq / np.sum(dist_sq)
+        cumprobs = np.cumsum(probs)
+        r = np.random.rand()
+
+        # Find index where r falls
+        idx = np.searchsorted(cumprobs, r)
+        centroids[i] = X[idx]
+
     labels = np.zeros(N)
 
     for _ in range(max_iters):
+        # Compute distances
+        # dist[i, j] = ||X[i] - centroids[j]||^2
         X_sq = np.sum(X**2, axis=1, keepdims=True)
         C_sq = np.sum(centroids**2, axis=1)
         dist = X_sq + C_sq - 2 * np.dot(X, centroids.T)
+
         new_labels = np.argmin(dist, axis=1)
+
         if np.array_equal(labels, new_labels):
             break
+
         labels = new_labels
+
+        # Update centroids
         new_centroids = np.zeros_like(centroids)
         for i in range(k):
             mask = (labels == i)
             if np.any(mask):
                 new_centroids[i] = X[mask].mean(axis=0)
             else:
+                # Handle empty cluster: re-initialize to a random point
                 new_centroids[i] = X[np.random.choice(N)]
         centroids = new_centroids
+
     return labels, centroids
 
 def softmax(x, axis=-1):
@@ -139,6 +166,11 @@ def cosine_similarity(A, B):
     return np.mean(sim)
 
 def run_experiments():
+    # Use relative path assuming running from repo root
+    output_dir = 'energy_efficient_ai'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     seq_lengths = [128, 256, 512, 1024, 2048, 4096]
     d_model = 128
 
@@ -155,6 +187,7 @@ def run_experiments():
     for N in seq_lengths:
         Q, K, V, _ = generate_structured_data(N, d_model, num_clusters=max(2, int(np.sqrt(N))))
 
+        # Warmup for small N
         if N == 128:
              spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)))
 
@@ -181,9 +214,9 @@ def run_experiments():
         print(f"{N:<6} | {times_naive[-1]:<10.4f} | {t_ssa:<10.4f} | {speedup:<10.2f} | {err:<10.2f} | {sim:<10.4f}")
         latex_table_rows.append(f"{N} & {times_naive[-1]:.4f} & {t_ssa:.4f} & {speedup:.2f}x & {err:.4f} & {sim:.4f} \\\\")
 
-    with open('energy_efficient_ai/results_table.txt', 'w') as f:
+    with open(os.path.join(output_dir, 'results_table.txt'), 'w') as f:
         f.write("\n".join(latex_table_rows))
-    with open('energy_efficient_ai/max_speedup.txt', 'w') as f:
+    with open(os.path.join(output_dir, 'max_speedup.txt'), 'w') as f:
         f.write(f"{max(speedups):.2f}")
 
     # --- Composite Figure: Runtime & Complexity ---
@@ -214,10 +247,17 @@ def run_experiments():
     axes[1].legend()
 
     plt.tight_layout()
-    plt.savefig('energy_efficient_ai/combined_performance.png', bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'combined_performance.png'), bbox_inches='tight')
 
     # Save individual plots for flexibility
-    plt.savefig('energy_efficient_ai/runtime_comparison.png', bbox_inches='tight') # Overwrite old one just in case
+    # Save the runtime plot separately
+    extent1 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(os.path.join(output_dir, 'runtime_comparison.png'), bbox_inches=extent1.expanded(1.1, 1.2))
+
+    # Save the complexity plot separately
+    extent2 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(os.path.join(output_dir, 'complexity_plot.png'), bbox_inches=extent2.expanded(1.1, 1.2))
+
 
     # --- Pareto Frontier ---
     N_pareto = 1024
@@ -256,7 +296,7 @@ def run_experiments():
             plt.annotate(f"r={r}", (p_speedups[i], p_cosines[i]), xytext=(5, 5), textcoords='offset points', fontsize=9)
 
     plt.grid(True, linestyle=':', alpha=0.6)
-    plt.savefig('energy_efficient_ai/pareto_frontier.png', bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'pareto_frontier.png'), bbox_inches='tight')
 
     # --- Sparsity Pattern ---
     N_vis = 128
@@ -268,7 +308,7 @@ def run_experiments():
     plt.xlabel('Key Index $j$')
     plt.ylabel('Query Index $i$')
     plt.title(f'Attention Mask Pattern ($N={N_vis}$)\nBlock-Diagonal + Vertical Stripes')
-    plt.savefig('energy_efficient_ai/sparsity_pattern.png', bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, 'sparsity_pattern.png'), bbox_inches='tight')
 
 if __name__ == "__main__":
     run_experiments()
