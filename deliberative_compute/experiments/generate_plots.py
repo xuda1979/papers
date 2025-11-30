@@ -69,12 +69,16 @@ def generate_tex_plot(json_path, output_path):
 \end{tikzpicture}
 """
 
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     with open(output_path, 'w') as f:
         f.write(tex_content)
     print(f"Generated {output_path}")
 
 if __name__ == "__main__":
-    generate_tex_plot(
-        "deliberative_compute/experiments/results/simulated_results.json",
-        "deliberative_compute/tex/fig/bpf_curves_generated.tex"
-    )
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(script_dir, "results/simulated_results.json")
+    output_path = os.path.join(script_dir, "../tex/fig/bpf_curves_generated.tex")
+
+    generate_tex_plot(json_path, output_path)
