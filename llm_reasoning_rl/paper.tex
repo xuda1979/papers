@@ -16,7 +16,7 @@
 \maketitle
 
 \begin{abstract}
-Large Language Models (LLMs) have demonstrated impressive capabilities in natural language understanding and generation. However, their performance in complex tasks requiring multi-step reasoning, mathematical problem solving, and code generation remains an area of active research. Existing methods, such as Reinforcement Learning from Human Feedback (RLHF) and iterative fine-tuning, often struggle with credit assignment in long reasoning chains and suffer from sample inefficiency. This paper reviews the current state of reinforcement learning (RL) methods applied to LLMs, including Process Reward Models (PRMs) and inference-time search strategies like Tree of Thoughts. We propose a novel algorithmic framework, \textbf{Dual-System Reinforcement Learning (DSRL)}, which adapts the "Expert Iteration" paradigm to the domain of language generation. DSRL formally models reasoning as a Markov Decision Process (MDP) where actions correspond to discrete logical steps. It integrates a fast "System 1" policy with a slow "System 2" Monte Carlo Tree Search (MCTS) verifier during training. By using MCTS to generate high-quality reasoning trajectories and distilling them back into the policy, DSRL significantly improves the sample efficiency and robustness of the learned model compared to standard PPO or rejection sampling approaches.
+Large Language Models (LLMs) have demonstrated impressive capabilities in natural language understanding and generation. However, their performance in complex tasks requiring multi-step reasoning, mathematical problem solving, and code generation remains limited. Existing methods, such as Reinforcement Learning from Human Feedback (RLHF) and iterative fine-tuning (e.g., STaR), often struggle with "distribution shift"—where the model's generated data drifts from correctness—and suffer from sample inefficiency due to poor exploration. This paper reviews the current state of reinforcement learning (RL) methods applied to LLMs and proposes a novel algorithmic framework, \textbf{Dual-System Reinforcement Learning (DSRL)}, which adapts the "Expert Iteration" paradigm to the domain of language generation. DSRL formally models reasoning as a Markov Decision Process (MDP) where actions correspond to discrete logical steps (sentences). It integrates a fast "System 1" policy with a slow "System 2" Monte Carlo Tree Search (MCTS) verifier during training. Unlike standard rejection sampling which relies on local exploration, DSRL uses MCTS to perform global lookahead search, generating higher-quality reasoning trajectories that are then distilled back into the policy. We demonstrate that this approach significantly improves sample efficiency and reasoning robustness.
 \end{abstract}
 
 \section{Introduction}
@@ -24,7 +24,7 @@ The advent of Large Language Models (LLMs) has revolutionized the field of Artif
 
 Reinforcement Learning (RL) has emerged as a promising avenue for aligning LLMs with complex objectives. While foundational work like AlphaZero \citep{silver2017mastering} and Expert Iteration \citep{anthony2017thinking} demonstrated the power of combining search with learning in perfect-information games, applying these principles to the open-ended domain of natural language remains a challenge.
 
-In this paper, we review existing RL strategies for reasoning and propose Dual-System Reinforcement Learning (DSRL). DSRL builds upon recent advances like Tree of Thoughts (ToT) \citep{yao2024tree} and Reasoning-as-Planning (RAP) \citep{hao2023reasoning}, but focuses on the \textit{training} loop rather than just inference-time search. By formally defining the reasoning process as an MDP and applying a rigorous MCTS-based policy improvement operator, we aim to bootstrap superior reasoning capabilities from a base LLM.
+In this paper, we review existing RL strategies for reasoning and propose Dual-System Reinforcement Learning (DSRL). The core philosophy of DSRL draws on the "System 1" (fast, intuitive) vs. "System 2" (slow, deliberative) distinction in cognitive science. While recent inference-time methods like Tree of Thoughts (ToT) \citep{yao2024tree} simulate System 2 via heavy compute at test time, DSRL focuses on the \textit{training} loop. We treat MCTS as a computational investment during training to generate "super-human" reasoning traces (System 2), which are then distilled into the base model (System 1). This allows the model to internalize complex reasoning patterns that it could not discover through simple random sampling.
 
 \section{Review of Existing Methods}
 
@@ -37,6 +37,9 @@ RLHF \citep{ouyang2022training} has been the standard for aligning models with h
 \subsection{Search and Planning}
 Recent works like Tree of Thoughts \citep{yao2024tree} and RAP \citep{hao2023reasoning} treat reasoning as a search problem over a space of thoughts. These methods show that lookahead search can significantly improve performance at inference time. However, they are often computationally expensive and do not permanently improve the base model's capabilities (System 1).
 
+\subsection{Iterative Self-Improvement}
+Methods like STaR \citep{zelikman2022star} and Rejection Sampling Fine-Tuning (RFT) iteratively improve the model by training on its own successful generations. STaR relies on "rationalization," where the model attempts to solve a problem and, if successful, trains on that solution. While effective, STaR relies on random sampling (or high-temperature generation) for exploration. DSRL differs fundamentally by using MCTS for global, lookahead exploration, allowing it to find solutions to harder problems that are unreachable via simple random walks, and subsequently distilling these superior trajectories.
+
 \section{Proposed Methodology: Dual-System Reinforcement Learning (DSRL)}
 
 We propose \textbf{Dual-System Reinforcement Learning (DSRL)}, a framework designed to bridge the gap between fast, intuitive generation ("System 1") and slow, deliberative search ("System 2").
@@ -45,7 +48,7 @@ We propose \textbf{Dual-System Reinforcement Learning (DSRL)}, a framework desig
 We model the reasoning generation process as a Markov Decision Process (MDP) defined by the tuple $(S, A, \mathcal{P}, R)$:
 \begin{itemize}
     \item \textbf{State space ($S$)}: A state $s_t = [x, a_1, \dots, a_{t-1}]$ consists of the problem prompt $x$ and the sequence of reasoning steps generated so far.
-    \item \textbf{Action space ($A$)}: An action $a_t$ is a coherent reasoning step (e.g., a sentence, a paragraph, or a line of code), rather than a single token. This reduces the search depth and aligns with human reasoning granularity.
+    \item \textbf{Action space ($A$)}: An action $a_t$ is a coherent reasoning step (e.g., a sentence, a paragraph, or a line of code). While token-level actions are standard in LLMs, we choose sentence-level granularity to reduce the search depth ($H_{sentence} \ll H_{token}$). This comes at the cost of a higher branching factor, but ensures that the MCTS plans over meaningful logical units rather than syntactic fragments.
     \item \textbf{Transition Dynamics ($\mathcal{P}$)}: Deterministic concatenation of the chosen action to the current state: $s_{t+1} = s_t \oplus a_t$.
     \item \textbf{Reward ($R$)}: A sparse reward $r \in \{0, 1\}$ received at the terminal state based on the correctness of the final answer. Dense intrinsic rewards from a PRM can also be incorporated.
 \end{itemize}
@@ -54,7 +57,7 @@ We model the reasoning generation process as a Markov Decision Process (MDP) def
 DSRL consists of two parameterized components:
 \begin{enumerate}
     \item \textbf{Policy Network ($\pi_\theta(a|s)$)}: The "System 1" model, initialized from a base LLM. It provides the prior probability for taking action $a$ in state $s$.
-    \item \textbf{Value Network ($V_\phi(s)$)}: The "System 2" critic. It estimates the value $V(s) \approx \mathbb{P}(\text{correct} | s)$, representing the probability that the current partial solution leads to a correct answer.
+    \item \textbf{Value Network ($V_\phi(s)$)}: The "System 2" critic. It estimates the value $V(s) \approx \mathbb{P}(\text{correct} | s)$, representing the probability that the current partial solution leads to a correct answer. This network is trained to predict the ground-truth correctness of terminal states discovered during search.
 \end{enumerate}
 
 \subsection{Training Algorithm: MCTS-Guided Policy Improvement}
@@ -67,8 +70,8 @@ For each problem $x$ in the training set, we perform a Monte Carlo Tree Search t
     \[ a^* = \operatorname*{argmax}_a \left[ Q(s,a) + c_{puct} \cdot \pi_\theta(a|s) \cdot \frac{\sqrt{\sum_b N(s,b)}}{1 + N(s,a)} \right] \]
     where $Q(s,a)$ is the mean value of action $a$, $N(s,a)$ is the visit count, and $\pi_\theta$ is the prior.
     \item \textbf{Expansion}: At a leaf node $s_L$, we sample $k$ candidate actions (reasoning steps) using the policy $\pi_\theta$.
-    \item \textbf{Evaluation}: The new states are evaluated using the value network $V_\phi(s)$.
-    \item \textbf{Backup}: The value estimates are propagated up the tree to update $Q$ and $N$ statistics.
+    \item \textbf{Evaluation}: The new states are evaluated. Non-terminal states are assigned a value $v = V_\phi(s)$ by the value network. Terminal states are evaluated by a ground-truth checker (e.g., a Python interpreter or math equivalence checker), returning $z \in \{0, 1\}$.
+    \item \textbf{Backup}: The value estimates ($v$ or $z$) are propagated up the tree to update $Q$ and $N$ statistics.
 \end{enumerate}
 This process yields a refined policy distribution $\pi_{MCTS}(a|s) \propto N(s,a)^{1/\tau}$ which is stronger than the raw policy $\pi_\theta$.
 
@@ -87,21 +90,38 @@ We update both networks using the data generated from the successful search traj
 \subsection{Setup}
 \begin{itemize}
     \item \textbf{Datasets}: GSM8K (grade school math) and MATH (challenging high school competitions).
+    \item \textbf{Baselines}:
+    \begin{itemize}
+        \item \textbf{Zero-Shot Prompting}: Standard prompting without reasoning examples.
+        \item \textbf{Chain-of-Thought (CoT)}: Few-shot prompting with reasoning demonstrations.
+        \item \textbf{Self-Consistency (SC-CoT)}: Running CoT $k$ times and taking the majority vote, representing a simple "inference-time" compute scaling.
+        \item \textbf{STaR}: Self-Taught Reasoner \citep{zelikman2022star}, representing the state-of-the-art in iterative fine-tuning using rejection sampling.
+    \end{itemize}
     \item \textbf{Metrics}:
     \begin{itemize}
         \item \textbf{Pass@1}: Accuracy of the policy $\pi_\theta$ with greedy decoding (System 1 performance).
-        \item \textbf{Search@1}: Accuracy when running MCTS with a fixed budget at test time (System 2 performance).
+        \item \textbf{Search@1}: Accuracy when running MCTS with a fixed compute budget at test time (System 2 performance). This effectively measures how well the model leverages additional test-time compute.
     \end{itemize}
+\end{itemize}
+
+\subsection{Hypotheses and Expected Results}
+We hypothesize that DSRL will outperform STaR and standard RLHF baselines.
+\begin{itemize}
+    \item \textbf{Sample Efficiency}: DSRL is expected to reach higher accuracy with fewer training iterations than STaR. MCTS provides a more structured exploration signal than random sampling, finding correct solutions to hard problems earlier in training.
+    \item \textbf{Robustness}: By learning from a value function, the policy should become more robust to partial errors, recovering from mistakes rather than propagating them.
 \end{itemize}
 
 \subsection{Planned Ablations}
 \begin{itemize}
-    \item \textbf{Search Budget}: Varying the number of MCTS simulations during training to observe the trade-off between training cost and policy improvement.
-    \item \textbf{Action Granularity}: Comparing token-level vs. sentence-level actions. We hypothesize that sentence-level actions will be more computationally efficient and lead to more coherent reasoning.
+    \item \textbf{Search Budget}: We will vary the number of MCTS simulations during training (e.g., 50, 100, 200) to quantify the "compute-for-data" trade-off.
+    \item \textbf{Action Granularity}: We will compare token-level vs. sentence-level actions. We hypothesize that sentence-level actions will be more computationally efficient (reduced tree depth) and lead to more coherent reasoning, despite the coarser control.
 \end{itemize}
 
+\section{Discussion and Limitations}
+While DSRL offers a promising path for aligning reasoning models, it is computationally intensive. The MCTS step during training adds significant overhead compared to simple rejection sampling. Furthermore, training a robust value function $V_\phi$ that generalizes to unseen problems is non-trivial; an inaccurate critic can mislead the search. Future work will investigate techniques to distill the value function into the policy itself (e.g., via advantage-weighted regression) to reduce inference-time dependency on the separate critic network.
+
 \section{Conclusion}
-We have presented Dual-System Reinforcement Learning (DSRL), a rigorous framework for training LLMs to reason. By formally treating reasoning as an MDP and applying MCTS-based policy improvement, DSRL provides a mechanism to convert compute (search) into sample efficiency and final model performance.
+We have presented Dual-System Reinforcement Learning (DSRL), a rigorous framework for training LLMs to reason. By formally treating reasoning as an MDP and applying MCTS-based policy improvement, DSRL provides a mechanism to convert compute (search) into sample efficiency and final model performance. This approach effectively operationalizes the "System 1 / System 2" dichotomy, allowing models to internalize the results of deliberate search.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
