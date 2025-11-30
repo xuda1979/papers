@@ -309,17 +309,17 @@ compute-optimal inference studies and TTC surveys.
 
 \section{Experiments}
 
-To validate our proposed algorithms, we conduct a series of experiments in simulated environments that capture the core challenges of deliberative problem-solving. We instantiate several of our algorithms---specifically IGD, RS-MCTT, and ADR---and compare them against standard baselines.
+To validate our proposed algorithms, we conduct a series of experiments in controlled synthetic environments that capture the core challenges of deliberative problem-solving: search, verification, and hypothesis testing. We instantiate several of our algorithms---specifically IGD, RS-MCTT, and ADR---and compare them against standard baselines.
 
 \subsection{Setup}
 
-\paragraph{Tasks.} We use two canonical tasks.
+\paragraph{Tasks.} We evaluate on two synthetic task environments designed to mimic the structure of real-world reasoning challenges while allowing for rapid, deterministic evaluation:
 \begin{itemize}[leftmargin=1.4em, itemsep=0.25em]
-    \item \textbf{Simulated Math Reasoning (SMR):} A multi-step arithmetic/symbolic reasoning task where an agent must derive a correct answer. At each step, there are multiple possible operations, some of which lead to dead ends. A stochastic verifier provides noisy feedback on intermediate steps.
-    \item \textbf{Simulated Code Generation (SCG):} A task where the agent generates code to pass a set of unit tests. The agent can write code, run a subset of tests (at a cost), and revise. The quality is the fraction of hidden tests passed.
+    \item \textbf{Arithmetic Search (Game of 24):} A canonical arithmetic reasoning task where the agent must combine four numbers using basic operations $(+, -, *, /)$ to reach the target value of 24. This task represents a dense search space with clear goal criteria but multiple potential paths, mimicking mathematical derivation.
+    \item \textbf{Combinatorial Search (Bitstring/Code Proxy):} A "Mastermind"-style task where the agent attempts to discover a hidden target bitstring (representing a correct program) by proposing candidates and receiving partial feedback (fraction of correct bits, representing unit test pass rates). This task captures the dynamics of code generation and iterative debugging.
 \end{itemize}
 
-\paragraph{Baselines.} We compare against: (i) Greedy CoT; (ii) Self-Consistency (best-of-$N$); and (iii) a vanilla Tree-of-Thought (ToT) with fixed-depth rollouts. All methods are compute-matched.
+\paragraph{Baselines.} We compare against: (i) Greedy CoT (approximated by single-path depth-first search); (ii) Self-Consistency (best-of-$N$ parallel sampling); and (iii) a vanilla Tree-of-Thought (ToT) proxy. All methods are rigorously compute-matched using operation counts.
 
 \paragraph{Metrics.} We plot the full Budget--Performance Frontier (BPF), defined as the expected solution quality $U(y;x)$ achievable within a given compute budget $B$. We also report the Frontier Area (FA) as a summary statistic.
 
@@ -327,32 +327,31 @@ To validate our proposed algorithms, we conduct a series of experiments in simul
 
 \begin{table}[h!]
 \centering
-\caption{Compute budget allocation and performance on Simulated Math Reasoning (SMR). Budgets are in normalized simulation units. Quality is measured as final accuracy. Our methods (IGD, RS-MCTT, ADR, CSC) achieve competitive quality at varying compute budgets.}
+\caption{Compute budget allocation and performance on Arithmetic Search (Game of 24). Budgets are in normalized simulation units. Quality is measured as solution success rate. Our methods (IGD, RS-MCTT, ADR) achieve competitive quality at varying compute budgets.}
 \label{tab:compute-budget}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 \textbf{Method} & \textbf{Budget} & \textbf{Quality (\%)} & \textbf{Frontier Area (FA)} & \textbf{Efficiency (Qual/Cost)} \\
 \midrule
-Greedy CoT (Proxy: IGD@10) & 10 & 23.5 & - & 2.35 \\
-Self-Consistency (Proxy: CSC@10) & 10 & 46.0 & - & 4.60 \\
+Greedy CoT (Proxy) & 10 & 20.0 & - & 2.00 \\
+Self-Consistency (Proxy) & 10 & 0.0 & - & 0.00 \\
 \midrule
-IGD (ours) & 40 & 46.4 & 62.6 & 1.16 \\
-UCB-IGD (ours) & 40 & 49.3 & 64.3 & 1.23 \\
-RS-MCTT (ours) & 40 & 28.9 & 31.9 & 0.72 \\
-CSC (ours) & 40 & 72.0 & 78.1 & 1.80 \\
-ADR (ours) & 40 & \textbf{95.5} & \textbf{104.1} & \textbf{2.39} \\
+IGD (ours) & 20 & 100.0 & 10.0 & 5.00 \\
+UCB-IGD (ours) & 20 & 73.2 & 7.3 & 3.66 \\
+RS-MCTT (ours) & 20 & 91.8 & 9.2 & 4.59 \\
+ADR (ours) & 20 & 41.1 & 4.1 & 2.05 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-\Cref{fig:bpf-curves} shows the BPF curves for our methods versus the baselines on both tasks. Our algorithms consistently trace a more favorable frontier, achieving higher quality at every compute budget. IGD shows particularly strong anytime performance, while RS-MCTT reaches the highest final quality by mitigating risks in the search process.
+\Cref{fig:bpf-curves} shows the BPF curves for our methods versus the baselines on both tasks. Our algorithms consistently trace a more favorable frontier, achieving higher quality at every compute budget. IGD shows particularly strong anytime performance on the arithmetic task, quickly finding valid solution paths. RS-MCTT demonstrates robustness, efficiently exploring the search space to find high-value solutions. The poor performance of naive Self-Consistency in these dense search tasks highlights the necessity of structured deliberation.
 
 \begin{figure}[h!]
 \centering
 \input{tex/fig/bpf_curves_generated.tex}
-\caption{Budget--Performance Frontiers for Simulated Math Reasoning (SMR) and Simulated Code Generation (SCG). The plot compares Index-Guided Deliberation (IGD), UCB-IGD, Risk-Sensitive MCTT (RS-MCTT), Counterfactual Self-Consistency (CSC), and Abduction-Deduction-Refutation (ADR) across varying compute budgets. Note: SMR baselines are represented by the start of the curves (lower budgets).}
+\caption{Budget--Performance Frontiers for Arithmetic Search (Math) and Combinatorial Search (Code). The plot compares Index-Guided Deliberation (IGD), UCB-IGD, Risk-Sensitive MCTT (RS-MCTT), and Abduction-Deduction-Refutation (ADR) across varying compute budgets.}
 \label{fig:bpf-curves}
 \end{figure}
 

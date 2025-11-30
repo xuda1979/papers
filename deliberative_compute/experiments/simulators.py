@@ -1,90 +1,239 @@
-import math, random
-from dataclasses import dataclass
-from typing import List, Tuple, Dict, Callable
+import math
+import random
+from dataclasses import dataclass, field
+from typing import List, Tuple, Optional, Any
+from abc import ABC, abstractmethod
 
 Rnd = random.Random
 
-
 @dataclass
-class ThreadState:
+class SearchState:
+    data: Any
+    value: float = 0.0
     depth: int = 0
-    value: float = 0.0  # best-so-far utility
-    history: List[float] = None  # Track history for more complex state
+    history: List[str] = field(default_factory=list)
+    is_terminal: bool = False
 
-    def __post_init__(self):
-        if self.history is None:
-            self.history = []
+class DeliberationTask(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+    @abstractmethod
+    def initial_state(self, rnd: Rnd) -> SearchState:
+        pass
+
+    @abstractmethod
+    def get_actions(self, state: SearchState) -> List[Any]:
+        """Return list of possible actions."""
+        pass
+
+    @abstractmethod
+    def transition(self, state: SearchState, action: Any, rnd: Rnd) -> Tuple[SearchState, float]:
+        """Apply action, return (next_state, cost)."""
+        pass
+
+    @abstractmethod
+    def evaluate(self, state: SearchState, rnd: Rnd) -> float:
+        """Heuristic evaluation (noisy)."""
+        pass
+
+    @abstractmethod
+    def verify(self, state: SearchState, rnd: Rnd) -> bool:
+        """Ground truth verification (or high-fidelity check)."""
+        pass
+
+# --- 1. Game of 24 Task ---
 
 @dataclass
-class TaskProfile:
-    name: str
-    improvement_rate: float
-    improvement_scale: float
-    noise_level: float
-    branching_factor: int
-    cost_per_step: float
-    verifier_noise: float # 0.0 means perfect, 0.5 means random
+class Game24State_Data:
+    nums: List[float]
+    ops_history: List[str]
 
-# Define profiles for the two tasks mentioned in the paper
-SMR_PROFILE = TaskProfile(
-    name="SMR",
-    improvement_rate=0.3, # Harder to find improvements
-    improvement_scale=0.3, # But improvements are significant
-    noise_level=0.1,
-    branching_factor=4,
-    cost_per_step=1.0,
-    verifier_noise=0.2
-)
+class GameOf24Task(DeliberationTask):
+    def __init__(self):
+        self._name = "GameOf24"
+        self.ops = ['+', '-', '*', '/']
+        # Hardcoded set of solvable 24 puzzles for stability
+        self.puzzles = [
+            [4, 4, 10, 10], # (10*10 - 4) / 4 = 24
+            [1, 5, 5, 5],   # 5 * (5 - 1/5) = 24
+            [3, 3, 8, 8],   # 8 / (3 - 8/3) = 24
+            [5, 5, 5, 1],
+            [1, 3, 4, 6],   # 6 / (1 - 3/4) = 24
+            [8, 8, 3, 3],
+            [2, 4, 10, 10],
+            [1, 2, 8, 8],
+        ]
 
-SCG_PROFILE = TaskProfile(
-    name="SCG",
-    improvement_rate=0.7, # Easier to make incremental progress
-    improvement_scale=0.1, # But steps are smaller (passing one more test)
-    noise_level=0.05,
-    branching_factor=2,
-    cost_per_step=1.5, # Code generation is more expensive
-    verifier_noise=0.05 # Unit tests are reliable
-)
+    @property
+    def name(self) -> str:
+        return self._name
 
+    def initial_state(self, rnd: Rnd) -> SearchState:
+        nums = list(rnd.choice(self.puzzles))
+        return SearchState(
+            data=Game24State_Data(nums=nums, ops_history=[]),
+            value=self._heuristic(nums),
+            depth=0
+        )
 
-def geometric_improvement(rnd: Rnd, profile: TaskProfile) -> float:
-    """Stochastically decreasing expected increments based on profile."""
-    if rnd.random() > profile.improvement_rate:
-        return 0.0
+    def get_actions(self, state: SearchState) -> List[Any]:
+        if state.is_terminal:
+            return []
 
-    # Base improvement
-    imp = rnd.random() * profile.improvement_scale
-    # Decaying returns based on current value would be handled by the caller or state,
-    # but here we simulate 'difficulty' by just returning the raw potential improvement.
-    return imp
+        nums = state.data.nums
+        actions = []
+        n = len(nums)
+        if n < 2: return []
 
+        # Generate all pairs and ops
+        # To limit branching factor for simulation, we can sample
+        # But 4 numbers -> 4*3/2 = 6 pairs * 4 ops = 24 actions. Manageable.
+        for i in range(n):
+            for j in range(n):
+                if i == j: continue
+                for op in self.ops:
+                    if op in ['+', '*'] and i > j: continue # Commutativity
+                    if op == '/' and abs(nums[j]) < 1e-4: continue # Div by zero
+                    actions.append((i, j, op))
+        return actions
 
-def make_threads(n: int, rnd: Rnd) -> List[ThreadState]:
-    return [ThreadState() for _ in range(n)]
+    def transition(self, state: SearchState, action: Any, rnd: Rnd) -> Tuple[SearchState, float]:
+        i, j, op = action
+        nums = state.data.nums
+        a, b = nums[i], nums[j]
 
+        res = 0.0
+        if op == '+': res = a + b
+        elif op == '-': res = a - b
+        elif op == '*': res = a * b
+        elif op == '/': res = a / b
 
-def rollout_value(rnd: Rnd, depth: int, base: float, profile: TaskProfile) -> float:
-    """Rollout value simulation."""
-    noise = (rnd.random() - 0.5) * 2 * profile.noise_level
-    # Diminishing returns with depth
-    penalty = 0.01 * depth
-    return max(0.0, min(1.0, base + noise - penalty))
+        new_nums = [x for k, x in enumerate(nums) if k != i and k != j] + [res]
+        new_hist = state.data.ops_history + [f"{a} {op} {b} = {res}"]
 
+        is_sol = False
+        if len(new_nums) == 1 and abs(new_nums[0] - 24.0) < 1e-4:
+            is_sol = True
 
-def verifier_likelihood_ratios(rnd: Rnd, m: int, is_correct: bool, profile: TaskProfile) -> List[float]:
-    """Return m likelihood ratios."""
-    lrs = []
-    # If verifier is noisy, it flips the signal with prob verifier_noise
-    effective_correct = is_correct
-    if rnd.random() < profile.verifier_noise:
-        effective_correct = not is_correct
+        new_state = SearchState(
+            data=Game24State_Data(nums=new_nums, ops_history=new_hist),
+            value=1.0 if is_sol else self._heuristic(new_nums),
+            depth=state.depth + 1,
+            is_terminal=is_sol or len(new_nums) == 1
+        )
 
-    for _ in range(m):
-        # Separation between correct/incorrect distributions
-        # Correct: N(1.5, 0.5), Incorrect: N(0.5, 0.5) roughly
-        if effective_correct:
-            val = 1.2 + rnd.random() * 0.6
-        else:
-            val = 0.4 + rnd.random() * 0.6
-        lrs.append(val)
-    return lrs
+        # Cost: arithmetic is cheap, but let's say 1.0 unit
+        return new_state, 1.0
+
+    def _heuristic(self, nums: List[float]) -> float:
+        # Distance to 24.
+        # Simple heuristic: how close is the closest number or pair sum to 24?
+        if not nums: return 0.0
+        best_dist = min(abs(x - 24.0) for x in nums)
+        # Check simple 1-step reachability (pairs)
+        for i in range(len(nums)):
+            for j in range(i+1, len(nums)):
+                a, b = nums[i], nums[j]
+                for v in [a+b, a-b, b-a, a*b, a/b if abs(b)>1e-4 else 1e9]:
+                    best_dist = min(best_dist, abs(v - 24.0))
+
+        return 1.0 / (1.0 + 0.1 * best_dist)
+
+    def evaluate(self, state: SearchState, rnd: Rnd) -> float:
+        # Simulated LLM self-eval: add noise to heuristic
+        base = state.value
+        noise = (rnd.random() - 0.5) * 0.2
+        return max(0.0, min(1.0, base + noise))
+
+    def verify(self, state: SearchState, rnd: Rnd) -> bool:
+        # Check if 24
+        if not state.data.nums: return False
+        for x in state.data.nums:
+            if abs(x - 24.0) < 1e-4:
+                return True
+        return False
+
+# --- 2. Bitstring Search (Code Gen Proxy) ---
+
+@dataclass
+class BitstringData:
+    bits: List[int]
+    target: List[int]
+
+class BitstringTask(DeliberationTask):
+    """
+    Task: Find a hidden bitstring.
+    Analogy: Writing code to pass N unit tests.
+    """
+    def __init__(self, length=12):
+        self._name = "BitSearch"
+        self.length = length
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def initial_state(self, rnd: Rnd) -> SearchState:
+        # Each episode/thread has its own target
+        target = [rnd.randint(0, 1) for _ in range(self.length)]
+        start_bits = [rnd.randint(0, 1) for _ in range(self.length)]
+
+        # Calculate initial score
+        score = self._score(start_bits, target)
+
+        return SearchState(
+            data=BitstringData(bits=start_bits, target=target),
+            value=score,
+            depth=0
+        )
+
+    def _score(self, bits: List[int], target: List[int]) -> float:
+        match = sum(1 for a, b in zip(bits, target) if a == b)
+        return match / self.length
+
+    def get_actions(self, state: SearchState) -> List[Any]:
+        if state.is_terminal: return []
+        # Actions: Flip 1 bit, Flip 2 bits
+        actions = []
+        indices = list(range(self.length))
+        # 1-bit flips
+        for i in indices:
+            actions.append(('flip', i))
+        # 2-bit flips (a few)
+        for _ in range(5):
+             i, j = random.sample(indices, 2)
+             actions.append(('flip2', i, j))
+        return actions
+
+    def transition(self, state: SearchState, action: Any, rnd: Rnd) -> Tuple[SearchState, float]:
+        bits = list(state.data.bits)
+        op = action[0]
+        if op == 'flip':
+            bits[action[1]] = 1 - bits[action[1]]
+        elif op == 'flip2':
+            bits[action[1]] = 1 - bits[action[1]]
+            bits[action[2]] = 1 - bits[action[2]]
+
+        # Use target from state
+        val = self._score(bits, state.data.target)
+        is_solved = (val == 1.0)
+
+        new_state = SearchState(
+            data=BitstringData(bits=bits, target=state.data.target),
+            value=val,
+            depth=state.depth + 1,
+            is_terminal=is_solved
+        )
+        return new_state, 1.0 # Cost 1
+
+    def evaluate(self, state: SearchState, rnd: Rnd) -> float:
+        # Self-eval: Noisy estimate
+        true_val = state.value
+        noise = (rnd.random() - 0.5) * 0.1
+        return max(0.0, min(1.0, true_val + noise))
+
+    def verify(self, state: SearchState, rnd: Rnd) -> bool:
+        return state.value == 1.0

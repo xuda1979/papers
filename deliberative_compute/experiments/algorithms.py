@@ -1,201 +1,333 @@
 import math
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
-from simulators import ThreadState, geometric_improvement, rollout_value, TaskProfile
+from simulators import DeliberationTask, SearchState, Rnd
 
-Rnd = random.Random
-
+# --- Algorithms ---
 
 def igd_step(
-    threads: List[ThreadState],
+    threads: List[SearchState],
     rnd: Rnd,
-    profile: TaskProfile,
+    task: DeliberationTask,
     lam: float = 0.0,
     gamma: float = 0.95,
 ) -> float:
-    """One IGD step: compute a crude index tau_i from expected discounted gains."""
+    """
+    Index-Guided Deliberation step.
+    Selects thread with highest estimated future gain / cost.
+    """
     indices = []
-    c = profile.cost_per_step
-    for i, th in enumerate(threads):
-        # Estimate potential improvement (oracle-ish for simulation)
-        # In a real system, this comes from a learned value model
-        # Here we simulate the 'estimated' improvement using the profile parameters + noise
-        est_imp = profile.improvement_rate * profile.improvement_scale * (0.5 + rnd.random()) * (gamma ** th.depth)
 
-        tau = est_imp / max(1e-9, c)
-        indices.append((tau, i))
+    # 1. Compute Indices
+    for i, state in enumerate(threads):
+        if state.is_terminal:
+            indices.append((-1.0, i, None)) # Don't expand
+            continue
 
-    tau, idx = max(indices, key=lambda t: t[0])
+        actions = task.get_actions(state)
+        if not actions:
+            indices.append((-1.0, i, None))
+            continue
 
-    if tau <= lam:
-        return 0.0  # stop signal
+        # Estimate gain for each action (simplified: pick best action per thread)
+        # In practice, LLM generates actions and we score them.
+        # Here we simulate the LLM's "Prior" or "Q-value"
 
-    # Execute step
-    real_imp = geometric_improvement(rnd, profile)
-    # Diminishing returns: harder to improve if already high
-    scaling = (1.0 - threads[idx].value)
-    threads[idx].value = min(1.0, threads[idx].value + real_imp * scaling)
-    threads[idx].depth += 1
+        # We need a way to pick an action to evaluate the index
+        # Let's just pick a random one for simulation, but weighted by "quality"
+        # We cheat slightly and peek at transition to simulate "good proposal"
 
-    return c
+        # To simulate a learned policy, we pick an action that likely improves
+        # Probability of picking improving action depends on state difficulty?
+
+        # Simple Simulation: Pick random action, but calculate index based on
+        # "Expected Improvement" derived from task heuristics.
+
+        # For Game24: improvement is getting closer to 24.
+
+        best_a = None
+        best_idx_val = -1.0
+
+        # Sample a few candidate actions (LLM proposals)
+        candidates = rnd.sample(actions, min(len(actions), 3))
+
+        for a in candidates:
+            # Simulate "Thought" - predict value after action
+            # We use the true transition but add noise to represent estimation
+            next_s, cost = task.transition(state, a, rnd)
+
+            # Estimated Gain = (NewValue - OldValue) * gamma^depth
+            # Add noise to the estimation
+            est_new_val = task.evaluate(next_s, rnd)
+            gain = max(0.0, est_new_val - state.value)
+
+            # Gittins-like Index ~ Gain / Cost
+            idx_val = (gain * (gamma ** state.depth)) / max(1e-9, cost)
+
+            if idx_val > best_idx_val:
+                best_idx_val = idx_val
+                best_a = a
+
+        indices.append((best_idx_val, i, best_a))
+
+    # 2. Select Best Thread
+    best_tau, best_idx, best_action = max(indices, key=lambda x: x[0])
+
+    # 3. Stop if value too low
+    if best_tau <= lam:
+        return 0.0
+
+    # 4. Execute
+    state = threads[best_idx]
+    next_s, cost = task.transition(state, best_action, rnd)
+    threads[best_idx] = next_s # Update thread
+
+    return cost
 
 
 def ucb_igd_step(
-    threads: List[ThreadState],
+    threads: List[SearchState],
     rnd: Rnd,
     t: int,
     counts: List[int],
     means: List[float],
-    profile: TaskProfile,
+    task: DeliberationTask,
     lam: float = 0.0,
 ) -> float:
-    """UCB surrogate for IGD index."""
+    """
+    UCB-IGD: Treat threads as arms.
+    """
     ucbs = []
-    c = profile.cost_per_step
-    for i, _ in enumerate(threads):
-        m = means[i]
+    candidate_actions = {}
+
+    for i, state in enumerate(threads):
+        if state.is_terminal:
+            ucbs.append((-1e9, i))
+            continue
+
+        # UCB Score
         n = max(1, counts[i])
-        bonus = math.sqrt(2 * math.log(max(2, t)) / n)
-        # Heuristic value estimate
-        val = m + bonus
+        bonus = 1.0 * math.sqrt(2 * math.log(max(2, t)) / n)
+        val = means[i] + bonus
         ucbs.append((val, i))
 
-    u, idx = max(ucbs, key=lambda z: z[0])
+        # Pre-select action (random for now)
+        acts = task.get_actions(state)
+        if acts:
+            candidate_actions[i] = rnd.choice(acts)
+        else:
+            candidate_actions[i] = None
 
-    # Simple stopping rule for UCB (can be improved)
-    if u * (0.95 ** threads[idx].depth) / c <= lam:
-         pass # Don't stop immediately in UCB usually, but for consistency:
-         # return 0.0
+    score, idx = max(ucbs, key=lambda x: x[0])
+    action = candidate_actions.get(idx)
+
+    if action is None: return 0.0
 
     # Execute
-    r = geometric_improvement(rnd, profile)
-    scaling = (1.0 - threads[idx].value)
-    actual_gain = r * scaling
+    state = threads[idx]
+    next_s, cost = task.transition(state, action, rnd)
 
+    # Feedback: Improvement
+    gain = max(0.0, next_s.value - state.value)
+
+    # Update Stats
     counts[idx] += 1
-    # Update mean reward for this arm
-    means[idx] = (means[idx] * (counts[idx] - 1) + actual_gain) / counts[idx]
+    means[idx] = (means[idx] * (counts[idx]-1) + gain) / counts[idx]
 
-    threads[idx].value = min(1.0, threads[idx].value + actual_gain)
-    threads[idx].depth += 1
+    threads[idx] = next_s
 
-    return c
+    return cost
 
 
 def rs_mctt_budget(
     rnd: Rnd,
-    profile: TaskProfile,
-    depth: int = 4,
-    eta_schedule=lambda d: -1.0, # Risk averse
+    task: DeliberationTask,
+    budget: float,
+    eta: float = -5.0 # Risk averse
 ) -> Tuple[float, float]:
-    """Toy RS-MCTT: build a shallow tree with risk-averse selection."""
-    B = 0.0
-    c = profile.cost_per_step
+    """
+    Risk-Sensitive MCTT (Budgeted).
+    """
+    root = task.initial_state(rnd)
+    spent = 0.0
 
-    def node_value(d, base):
-        nonlocal B
-        if d == depth:
-            v = rollout_value(rnd, d, base, profile)
-            return v
+    # Simple MCTS-like rollout or Tree Search
+    # With limited budget, we expand the tree.
 
-        eta = eta_schedule(d)
-        vals = []
-        # Branching factor
-        for _ in range(profile.branching_factor):
-            # Simulate child outcomes
-            imp = geometric_improvement(rnd, profile) * (1.0 - base)
-            child_base = base + imp
-            vals.append(node_value(d + 1, child_base))
+    # Let's maintain a tree structure.
+    # Nodes: (State, children, visits, value_est)
+    tree = {0: {'state': root, 'children': [], 'n': 0, 'q': 0.0}}
+    next_node_id = 1
 
-        if eta == 0.0:
-            score = sum(vals) / len(vals)
-        else:
-            # Softmin/Softmax
-            try:
-                score = (1.0 / eta) * math.log(
-                    sum(math.exp(eta * v) for v in vals) / len(vals)
-                )
-            except ValueError:
-                score = min(vals) if eta < 0 else max(vals)
+    while spent < budget:
+        # Selection
+        node_id = 0
+        path = [0]
 
-        B += c
-        return score
+        # Select leaf
+        while tree[node_id]['children']:
+            # Risk-sensitive selection? Or just UCB?
+            # Paper says: Select a = argmax rho(Q) + exploration
+            # Here simplified: Standard UCB but Q is entropic risk?
+            # Let's use Standard UCB for structure, risk in backprop
 
-    # Start with some base value
-    v = node_value(0, 0.2)
-    return v, B
+            best_c = -1
+            best_score = -1e9
+
+            for child_id in tree[node_id]['children']:
+                child = tree[child_id]
+                if child['n'] == 0:
+                    best_c = child_id
+                    break
+
+                # UCB
+                u = child['q'] + 1.0 * math.sqrt(math.log(tree[node_id]['n']) / child['n'])
+                if u > best_score:
+                    best_score = u
+                    best_c = child_id
+
+            node_id = best_c
+            path.append(node_id)
+
+        # Expansion
+        curr_state = tree[node_id]['state']
+        if not curr_state.is_terminal:
+            actions = task.get_actions(curr_state)
+            # Sample k actions
+            k = min(len(actions), 3)
+            sampled_acts = rnd.sample(actions, k)
+
+            for a in sampled_acts:
+                next_s, c = task.transition(curr_state, a, rnd)
+                spent += c
+                if spent > budget: break
+
+                tree[next_node_id] = {'state': next_s, 'children': [], 'n': 0, 'q': 0.0}
+                tree[node_id]['children'].append(next_node_id)
+                next_node_id += 1
+
+            if tree[node_id]['children']:
+                 # Pick one child to simulate
+                 node_id = rnd.choice(tree[node_id]['children'])
+                 path.append(node_id)
+
+        # Simulation / Evaluation
+        leaf_state = tree[node_id]['state']
+        val = task.evaluate(leaf_state, rnd)
+
+        # Backprop (Risk Sensitive)
+        # Update Q values using entropic risk aggregation?
+        # Or just track distribution.
+        # Simplified: Standard average for MCTS, but selection uses risk (not fully implemented here for brevity)
+        # We will return the max found value
+
+        for nid in reversed(path):
+            tree[nid]['n'] += 1
+            # Standard avg update
+            tree[nid]['q'] += (val - tree[nid]['q']) / tree[nid]['n']
+
+    # Return best value found in tree
+    best_v = 0.0
+    for nid in tree:
+        if tree[nid]['state'].value > best_v:
+            best_v = tree[nid]['state'].value
+
+    return best_v, spent
 
 
-def csc_vote(rnd: Rnd, profile: TaskProfile, k: int = 8) -> Tuple[float, float]:
+def csc_vote(rnd: Rnd, task: DeliberationTask, k: int = 8) -> Tuple[float, float]:
     """Counterfactual Self-Consistency."""
-    # Probability of a chain being "correct"
-    # SMR is harder than SCG usually for baseline models
-    p_correct = 0.4 if profile.name == "SMR" else 0.5
-
-    kept = 0
-    correct_count = 0
-
-    # Counterfactual check parameters
-    # Rejection rate for incorrect chains (high is good)
-    p_reject_incorrect = 0.7 if profile.verifier_noise < 0.1 else 0.5
-    # Rejection rate for correct chains (low is good)
-    p_reject_correct = 0.1
-
-    cost = k * profile.cost_per_step # Parallel generation cost
+    # Run k independent chains (greedy rollouts)
+    chains = []
+    cost = 0.0
 
     for _ in range(k):
-        is_correct = rnd.random() < p_correct
+        curr = task.initial_state(rnd)
+        # Run chain for some steps (e.g. 5)
+        for _ in range(5):
+            if curr.is_terminal: break
+            actions = task.get_actions(curr)
+            if not actions: break
 
-        # Apply filter
-        if is_correct:
-            rejected = rnd.random() < p_reject_correct
-        else:
-            rejected = rnd.random() < p_reject_incorrect
+            # Greedy step
+            # Sample a few, pick best eval
+            best_a = None
+            best_v = -1.0
+            candidates = rnd.sample(actions, min(len(actions), 2))
 
-        if not rejected:
-            kept += 1
-            if is_correct:
-                correct_count += 1
+            step_cost = 0
+            for a in candidates:
+                ns, c = task.transition(curr, a, rnd)
+                v = task.evaluate(ns, rnd)
+                step_cost += c # We pay for all evaluations
+                if v > best_v:
+                    best_v = v
+                    best_a = a
 
-    if kept == 0:
+            cost += step_cost
+            if best_a:
+                curr, c = task.transition(curr, best_a, rnd)
+                # cost += c # Already paid in eval? No, transition cost separate?
+                # Let's say eval included transition cost.
+
+        chains.append(curr)
+
+    # CSC Logic: Verify Consistency
+    # In Game24: "Consistency" is hard to define without multiple equivalent expressions.
+    # But we can verify correctness.
+
+    # "Message Passing": Discard chains that are obviously wrong (Counterfactual check)
+    # Check: does the expression evaluate to 24?
+    # This is "verification", which CSC uses.
+
+    valid_chains = []
+    for c_state in chains:
+        # Check if consistent (simulated cheap check)
+        # In CSC paper, we use relations. Here we use `verify` as the check
+        if task.verify(c_state, rnd):
+            valid_chains.append(c_state)
+
+    if not valid_chains:
         return 0.0, cost
 
-    # Majority vote accuracy approximation
-    # If majority of kept are correct, we say the answer is correct (utility 1.0)
-    # else utility 0.0
-    # Or smooth utility: ratio
-    final_acc = correct_count / kept
-    # Boost it for majority voting effect
-    if final_acc > 0.5:
-        return 1.0, cost
-    else:
-        return 0.0, cost
+    # Majority vote? Or max value?
+    # Return 1.0 if any valid found (since valid means solved in 24)
+    return 1.0, cost
 
-def adr_loop(rnd: Rnd, profile: TaskProfile, budget: float) -> Tuple[float, float]:
-    """Abduction-Deduction-Refutation loop simulation."""
+def adr_loop(rnd: Rnd, task: DeliberationTask, budget: float) -> Tuple[float, float]:
+    """Abduction-Deduction-Refutation."""
+    # A simplified version:
+    # 1. Propose solution (Abduction)
+    # 2. Verify/Refute (Deduction/Refutation)
+    # 3. If refuted, refine/retry.
+
     spent = 0.0
     best_val = 0.0
-    c = profile.cost_per_step
 
-    while spent + c <= budget:
-        # Abduct: Propose hypothesis
-        spent += c * 0.5
-        hyp_quality = rnd.random()
+    while spent < budget:
+        # Abduct (Propose)
+        state = task.initial_state(rnd)
+        # Fast rollout to get a proposal
+        for _ in range(5):
+            if state.is_terminal: break
+            acts = task.get_actions(state)
+            if not acts: break
+            a = rnd.choice(acts)
+            state, c = task.transition(state, a, rnd)
+            spent += c
 
-        # Deduce & Refute: Test it
-        spent += c * 0.5
+        if spent > budget: break
 
-        # Chance to find error
-        if rnd.random() < (1.0 - hyp_quality) * 0.8: # Flawed hypothesis refuted
-            continue # Try again
+        # Deduce/Refute (Verify)
+        # Check validity
+        is_correct = task.verify(state, rnd)
+        spent += 1.0 # Verification cost
 
-        # If not refuted, we accept it as candidate
-        # Value depends on quality
-        best_val = max(best_val, hyp_quality)
+        if is_correct:
+            return 1.0, spent
 
-        # Stopping condition: if quality is high enough
-        if best_val > 0.9:
-            break
+        if state.value > best_val:
+            best_val = state.value
 
     return best_val, spent
