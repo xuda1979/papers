@@ -1,13 +1,22 @@
-# The Quantum PCP (Probabilistically Checkable Proof) Conjecture
+# Quantum PCP Conjecture Review
 
-## Domain
-Quantum Complexity Theory
+This directory contains a review paper on the Quantum PCP Conjecture and a Python simulation demonstrating the computational hardness of the Local Hamiltonian problem.
 
-## The Problem
-This is likely the "grand challenge" of quantum complexity. In classical complexity, the PCP theorem states that for any problem in NP, there exists a proof that can be verified by reading only a constant number of bits. The **Quantum PCP conjecture** asks if there is a quantum analogue: *Is calculating the ground state energy of a local Hamiltonian (a physical energy function) hard to approximate even with a constant error margin?*
+## Contents
 
-## Implications
-If true, it would mean that "entanglement" makes finding even *approximate* solutions to quantum physical systems extremely difficult (QMA-hard). It is deeply connected to the stability of entanglement at room temperature.
+*   `paper.tex`: The review paper in LaTeX format.
+*   `simulation.py`: A Python script that calculates the ground state energy of a 1D Transverse Field Ising Model (TFIM) for increasing system sizes.
+*   `references.bib`: Bibliography for the paper.
 
-## Status
-**Open.** A related precursor, the **NLTS (No Low-Energy Trivial States) Conjecture**, was **solved** recently (2023) by Anshu, Breuckmann, and Nirkhe, proving that there *are* systems where all low-energy states remain highly entangled. However, the full Quantum PCP conjecture remains unsolved.
+## Running the Simulation
+
+The simulation requires `numpy`, `scipy`, and `matplotlib`.
+
+```bash
+python3 simulation.py
+```
+
+This will:
+1.  Compute the ground state energy for TFIM chains of length $N=2$ to $N=10$.
+2.  Print the results and execution time.
+3.  Generate `complexity_plot.png` showing the exponential time scaling.
