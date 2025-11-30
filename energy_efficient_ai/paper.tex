@@ -90,6 +90,39 @@ Summing over $k$ clusters: $O(N (\frac{N}{k} + s) d) = O((\frac{N^2}{k} + Ns)d)$
 Setting $k \approx \sqrt{N}$ and $s \approx \sqrt{N}$, the complexity becomes $O((N^{1.5} + N^{1.5})d) = O(N^{1.5}d)$.
 \end{proof}
 
+\section{Theoretical Analysis: Expressivity and Generalization}
+In this section, we analyze the expressive power of Spectral Sparse Attention and derive generalization bounds based on the Vapnik-Chervonenkis (VC) dimension theory and Rademacher complexity.
+
+\subsection{Expressive Power and Universality}
+A key concern with sparse attention is whether it limits the model's ability to represent complex dependencies. We show that SSA preserves the universal approximation capabilities of standard Transformers.
+
+\begin{theorem}[Universal Approximation]
+\label{thm:universality}
+Let $f: \mathbb{R}^{N \times d} \to \mathbb{R}^{N \times d}$ be a continuous sequence-to-sequence function on a compact domain. For any $\epsilon > 0$, there exists an SSA network with sufficient depth $L$ and hidden dimension $d_{model}$ such that $\|f(X) - \text{SSA}(X)\|_\infty < \epsilon$.
+\end{theorem}
+
+\begin{proof}
+(Sketch) It has been established that standard Transformers are universal approximators (Yun et al., 2020). The proof relies on the ability of the attention heads to form "contextual mappings" between any pair of tokens. In SSA, direct connections are sparse. However, the inclusion of \textit{global keys} ensures that the attention graph has a diameter of at most 2. Specifically, any token $i$ can attend to a global token $g$, which can in turn be attended to (or broadcast information to) any other token $j$ in subsequent layers. Thus, a 2-layer SSA block can simulate a single dense attention layer. By stacking SSA layers, we recover the full expressive power of dense Transformers.
+\end{proof}
+
+\subsection{Generalization Capabilities and VC Dimension}
+The sparsity of SSA not only improves efficiency but also acts as a structural regularizer, potentially improving generalization by limiting the hypothesis space. We analyze this using the concept of Pseudo-dimension (a generalization of VC dimension to real-valued functions).
+
+\begin{theorem}[Generalization Bound]
+\label{thm:generalization}
+Let $\mathcal{H}$ be the hypothesis class of SSA networks with fixed sparsity pattern density $\rho = |E|/N^2$. For any $\delta > 0$, with probability at least $1-\delta$ over the choice of a training set $S$ of size $m$, the generalization error $R(h)$ for any $h \in \mathcal{H}$ is bounded by:
+\[
+R(h) \le \hat{R}_S(h) + O\left(\sqrt{\frac{d_{Pdim} \log m}{m}}\right) + \sqrt{\frac{\log(1/\delta)}{2m}}
+\]
+where $\hat{R}_S(h)$ is the empirical error and $d_{Pdim}$ is the Pseudo-dimension of $\mathcal{H}$.
+\end{theorem}
+
+\begin{proof}
+(Sketch) The Pseudo-dimension $d_{Pdim}$ of a neural network is typically bounded by $O(W L \log W)$, where $W$ is the number of parameters and $L$ is the depth. While SSA shares the same weight matrices $W_Q, W_K, W_V$ as a standard Transformer, the effective connectivity is determined by the spectral mask $M$.
+
+The SSA constraint restricts the attention mechanism to the manifold of \textit{spectrally clustered graphs}. This reduces the effective capacity of the attention patterns the model can implement compared to the unconstrained $N \times N$ attention of dense Transformers. Specifically, the number of active edges in SSA is $O(N^{1.5})$ versus $O(N^2)$. While the parameter count is identical, the \textit{Rademacher complexity} $\mathfrak{R}_S(\mathcal{H})$ is reduced because the function class is constrained to those decomposable into local and global interactions. This tighter control on complexity implies tighter generalization bounds, reducing the risk of overfitting to spurious long-range correlations.
+\end{proof}
+
 \section{Experimental Results}
 We implemented SSA in Python and evaluated it against a standard naive attention baseline. To ensure a fair evaluation of accuracy, we generated synthetic structured data where tokens are grouped into orthogonal clusters, simulating semantic topics.
 
