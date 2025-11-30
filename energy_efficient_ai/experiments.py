@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 import os
+import scipy.sparse.linalg
 
 # Set random seed for reproducibility
 np.random.seed(42)
@@ -158,6 +159,34 @@ def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return
         return output, mask_vis
     return output
 
+def compute_algebraic_connectivity(adj_matrix):
+    """
+    Computes the second smallest eigenvalue (Fiedler value) of the Laplacian.
+    Args:
+        adj_matrix: N x N binary adjacency matrix (symmetric or made symmetric)
+    Returns:
+        lambda_2: Algebraic connectivity. > 0 implies connected graph.
+    """
+    # Ensure symmetry for undirected graph interpretation
+    A = np.maximum(adj_matrix, adj_matrix.T)
+    degrees = np.sum(A, axis=1)
+    L = np.diag(degrees) - A
+
+    # Compute eigenvalues. Since L is real symmetric, eigvals are real.
+    # We want smallest ones.
+    try:
+        if A.shape[0] > 1000:
+             # Use sparse solver for speed if large (though dense matrix passed)
+             vals = scipy.sparse.linalg.eigsh(L, k=2, which='SM', return_eigenvectors=False)
+        else:
+             vals = np.linalg.eigvalsh(L)
+
+        vals = np.sort(vals)
+        # vals[0] should be close to 0
+        return vals[1]
+    except:
+        return 0.0
+
 def cosine_similarity(A, B):
     dot = np.sum(A * B, axis=1)
     normA = np.linalg.norm(A, axis=1)
@@ -309,6 +338,36 @@ def run_experiments():
     plt.ylabel('Query Index $i$')
     plt.title(f'Attention Mask Pattern ($N={N_vis}$)\nBlock-Diagonal + Vertical Stripes')
     plt.savefig(os.path.join(output_dir, 'sparsity_pattern.png'), bbox_inches='tight')
+
+    # --- Spectral Properties Analysis ---
+    # Analyze algebraic connectivity as a function of global ratio
+    N_spec = 256
+    ratios_spec = [0.0, 0.1, 0.5, 1.0, 2.0, 4.0]
+    connectivities = []
+
+    Q, K, V, _ = generate_structured_data(N_spec, d_model, num_clusters=8)
+
+    print("\nRunning Spectral Analysis...")
+    for r in ratios_spec:
+        _, mask = spectral_sparse_attention(Q, K, V, k_clusters=8, global_ratio=r, return_mask=True)
+        # Symmetrize mask for Laplacian analysis (treat as undirected graph)
+        fiedler = compute_algebraic_connectivity(mask)
+        connectivities.append(fiedler)
+        print(f"Ratio: {r}, Fiedler Value: {fiedler:.4f}")
+
+    plt.figure(figsize=(7, 5))
+    plt.plot(ratios_spec, connectivities, marker='o', color='#2ca02c', linewidth=2.5)
+    plt.axhline(y=0, color='r', linestyle='--', alpha=0.5)
+    plt.xlabel('Global Key Ratio ($r$)')
+    plt.ylabel('Algebraic Connectivity ($\lambda_2$)')
+    plt.title(f'Graph Connectivity vs. Global Keys ($N={N_spec}$)')
+    plt.grid(True, alpha=0.3)
+
+    # Annotate zero
+    plt.annotate('Disconnected (Local Only)', xy=(0, 0), xytext=(0.5, 0.5),
+                 arrowprops=dict(facecolor='black', shrink=0.05))
+
+    plt.savefig(os.path.join(output_dir, 'spectral_properties.png'), bbox_inches='tight')
 
 if __name__ == "__main__":
     run_experiments()
