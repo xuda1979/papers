@@ -150,8 +150,8 @@ The SSA constraint restricts the attention mechanism to the manifold of \textit{
 \section{Experimental Results}
 We implemented SSA in Python and evaluated it against a standard naive attention baseline. To ensure a fair evaluation of accuracy, we generated synthetic structured data where tokens are grouped into orthogonal clusters, simulating semantic topics.
 
-\subsection{Runtime Performance}
-We measured inference time on a CPU for sequence lengths up to $N=4096$. As shown in Figure \ref{fig:performance}, our Python prototype exhibits significant overhead at smaller sequence lengths ($N < 1000$) due to the non-vectorized clustering and loop operations. However, the theoretical $O(N^{1.5})$ scaling advantage becomes apparent as $N$ increases.
+\subsection{Runtime Performance and Spectral Fidelity}
+We measured inference time on a CPU for sequence lengths up to $N=4096$. As shown in Figure \ref{fig:performance}a, our Python prototype exhibits significant overhead at smaller sequence lengths ($N < 1000$) due to the non-vectorized clustering and loop operations. However, the theoretical $O(N^{1.5})$ scaling advantage becomes apparent as $N$ increases, with the crossover point occurring around $N=1500$.
 
 \begin{figure}[h]
     \centering
@@ -160,14 +160,16 @@ We measured inference time on a CPU for sequence lengths up to $N=4096$. As show
         \caption{Runtime Comparison}
     \end{subfigure}
     \begin{subfigure}[b]{0.48\textwidth}
-        \includegraphics[width=\textwidth]{complexity_plot.png}
-        \caption{Theoretical Complexity}
+        \includegraphics[width=\textwidth]{spectral_approximation.png}
+        \caption{Spectral Approximation}
     \end{subfigure}
-    \caption{(a) Runtime of standard attention ($O(N^2)$) vs SSA ($O(N^{1.5})$). The crossover point occurs around $N=1500$. (b) Theoretical FLOPs analysis confirms the asymptotic advantage.}
+    \caption{(a) Runtime of standard attention ($O(N^2)$) vs SSA ($O(N^{1.5})$). (b) Eigenvalue distribution of the normalized Laplacian for the full attention graph vs. the SSA sparsifier. The close alignment of the spectra confirms that SSA preserves the structural properties of the attention mechanism, satisfying the requirements for spectral sparsification.}
     \label{fig:performance}
 \end{figure}
 
 Table \ref{tab:results} summarizes the results. At $N=2048$, SSA achieves a \textbf{1.41x speedup}. At $N=4096$, the speedup is \textbf{1.80x}, with a cosine similarity of \textbf{0.76}, indicating that the sparse attention mechanism successfully captures the majority of the attention mass.
+
+Crucially, Figure \ref{fig:performance}b provides the empirical validation of the method's theoretical premise. By plotting the sorted eigenvalues of the normalized Laplacian $\mathcal{L} = I - D^{-1/2} A D^{-1/2}$ for both the dense attention matrix and the SSA sparse approximation, we observe a strong spectral overlap. This confirms that our method constructs a high-fidelity spectral sparsifier, preserving the global connectivity and diffusion properties of the underlying graph despite the aggressive edge pruning.
 
 Comparing the infrastructure performance, the transition from $O(N^2)$ to $O(N^{1.5})$ results in a widening performance gap. While overhead dominates at small $N$, the efficiency gains are realized at scale. For instance, at $N=4096$, SSA is nearly twice as fast as the baseline. When extrapolated to the context lengths of modern LLMs (e.g., 32k or 128k), the theoretical energy saving ratio $\eta \approx \sqrt{N}$ suggests orders-of-magnitude efficiency improvements.
 
