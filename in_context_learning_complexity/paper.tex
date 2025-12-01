@@ -4,6 +4,9 @@
 \usepackage{microtype}
 \usepackage{booktabs}
 \usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
 
 \geometry{a4paper, margin=1in}
 
@@ -15,48 +18,104 @@
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\trans}{^\top}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-Large Language Models exhibit "In-Context Learning" (ICL), the ability to learn tasks from a few examples in the prompt without parameter updates. We investigate the mechanism of ICL, distinguishing between Bayesian task location and gradient-based learning. By modeling the self-attention mechanism as a kernel regression step, we derive sample complexity bounds for ICL. We prove that under certain conditions, a Transformer layer acts as a contraction mapping, ensuring convergence to the target function with a rate determined by the prompt size.
+Large Language Models exhibit "In-Context Learning" (ICL), the ability to learn tasks from a few examples in the prompt without parameter updates. We investigate the mechanism of ICL, distinguishing between Bayesian task location and gradient-based learning. By modeling the self-attention mechanism as a kernel regression step, we derive sample complexity bounds for ICL. We prove that under certain conditions, a Transformer layer acts as a contraction mapping in the space of predictors, ensuring linear convergence to the target function with a rate determined by the prompt size. We provide empirical verification of these bounds on a simulated linear regression task, confirming that the error decays as $O(1/n)$ and exhibits exponential contraction across layers.
 \end{abstract}
 
 \section{Introduction}
-How do Transformers learn on the fly? This paper provides a theoretical foundation for ICL. We view the forward pass of a Transformer on a sequence of examples $S_n = \{(x_i, y_i)\}_{i=1}^n$ as an implicit gradient descent step on a meta-learned loss function.
+The emergence of In-Context Learning (ICL) in Large Language Models (LLMs) challenges traditional paradigms of machine learning, where training and inference are distinct phases. In ICL, the model adapts its behavior based on a sequence of examples $S_n = \{(x_i, y_i)\}_{i=1}^n$ provided in the context window, effectively performing "learning" during the forward pass \cite{vaswani2017attention, garg2022can}.
 
-\section{Preliminaries}
-We consider a linear attention mechanism. The output of an attention head on a query $x$ given context keys $K$ and values $V$ is:
+Recent work has hypothesized that Transformers implement an implicit gradient descent (GD) step on a meta-learned loss function \cite{von2023transformers, dai2022can}. While this analogy is compelling, a rigorous characterization of the convergence properties and sample complexity of this process is still developing.
+
+In this paper, we formalize the "ICL as Gradient Descent" hypothesis using operator theory. Our main contributions are:
+\begin{enumerate}
+    \item \textbf{Contraction Mapping View:} We define an "Attention Operator" and prove it is a contraction mapping under suitable conditions on the data distribution.
+    \item \textbf{Sample Complexity Bounds:} We derive a theoretical bound of $O(1/n)$ for the generalization error of ICL, linking it to the spectral properties of the empirical covariance matrix.
+    \item \textbf{Empirical Verification:} We validate our theory with simulations, demonstrating the predicted error decay and layer-wise contraction dynamics.
+\end{enumerate}
+
+\section{Theoretical Framework}
+
+\subsection{Linear Attention as Gradient Descent}
+Consider a simplified linear attention mechanism. Given a query $x$, keys $K \in \R^{n \times d}$, and values $V \in \R^{n \times d}$, the output is:
 \begin{equation}
-    \text{Attn}(x, K, V) = V \text{softmax}(K^T x / \sqrt{d})
+    \text{Attn}(x, K, V) = \sum_{i=1}^n \frac{\langle x, k_i \rangle}{Z} v_i \approx \frac{1}{n} X^\top Y
 \end{equation}
-Approximating the softmax with a linear kernel, this resembles the Nadaraya-Watson estimator.
-
-\section{Main Results}
-
-\begin{definition}[ICL Error]
-Let $f^*$ be the target function. The ICL error with $n$ examples is $\epsilon_n = \mathbb{E}[\| \hat{f}_n(x) - f^*(x) \|^2]$, where $\hat{f}_n$ is the Transformer's output.
-\end{definition}
-
-\begin{theorem}[Sample Complexity of ICL]
-For a task distribution $\mathcal{T}$ and a pre-trained Transformer model satisfying the ``meta-learning'' assumption, the ICL error decays as:
+where we assume a linearized setting. As shown in \cite{von2023transformers}, a Transformer layer updating a weight vector $w_l$ can be modeled as:
 \begin{equation}
-    \epsilon_n \le \frac{C}{n} + \delta_{approx}
+    w_{l+1} = w_l + \eta X^\top (Y - X w_l)
 \end{equation}
-where $C$ depends on the task diversity and $\delta_{approx}$ is the approximation error of the attention mechanism.
+This is exactly one step of Gradient Descent on the least-squares objective $L(w) = \frac{1}{2} \|Y - Xw\|^2$.
+
+\subsection{Contraction Dynamics}
+We analyze the dynamics of the weight vector $w_l$ across layers $l=1, \dots, L$.
+
+\begin{theorem}[Contraction Mapping]
+\label{thm:contraction}
+Let $H = \frac{1}{n} X^\top X$ be the empirical covariance matrix of the context inputs. If the step size $\eta$ satisfies $0 < \eta < \frac{2}{\lambda_{\max}(H)}$, then the operator $T(w) = w - \eta \nabla L(w)$ is a contraction with constant $\rho = \max \{ |1 - \eta \lambda_{\min}(H)|, |1 - \eta \lambda_{\max}(H)| \} < 1$.
 \end{theorem}
 
 \begin{proof}
-(Sketch) We model the attention update as a step of preconditioned gradient descent. Using Banach Fixed-Point Theory, we show that successive attention layers contract the error. The rate of contraction depends on the condition number of the empirical data matrix formed by the prompt examples. We apply concentration inequalities to bound the deviation of the empirical covariance from the population covariance.
+The update rule is $w_{l+1} = (I - \eta H) w_l + \eta \frac{1}{n} X^\top Y$. Let $w^*$ be the optimal solution (ridge estimator). Then the error $e_l = w_l - w^*$ evolves as:
+\begin{equation}
+    e_{l+1} = (I - \eta H) e_l
+\end{equation}
+Taking norms, $\|e_{l+1}\| \le \|I - \eta H\| \|e_l\|$. The spectral norm $\|I - \eta H\|$ is strictly less than 1 under the stated condition on $\eta$. Thus, the error contracts exponentially with depth $L$.
 \end{proof}
 
-\section{Skill Recognition vs. Skill Learning}
-Our analysis helps distinguish between these two regimes. Skill recognition corresponds to a small $C$ (fast convergence), implying the task lies in a low-dimensional subspace already covered by the pre-training priors. Skill learning corresponds to a slower rate, where the model must construct a new predictor.
+\section{Sample Complexity Analysis}
+
+\begin{theorem}[Sample Complexity of ICL]
+\label{thm:sample_complexity}
+Assume the data is generated as $y = x^\top w^* + \xi$ with noise variance $\sigma^2$. For a Transformer implementing $L$ steps of preconditioned GD (effectively converging to the ridge solution), the expected in-context learning error on a new query $x \sim \mathcal{D}$ scales as:
+\begin{equation}
+    \E_{x} [(\hat{y} - y^*)^2] \le \sigma^2 \frac{d}{n} + O\left(\frac{1}{n^2}\right)
+\end{equation}
+where $d$ is the dimension of the inputs and $n$ is the number of context examples.
+\end{theorem}
+
+\begin{proof}
+(Sketch) The implicit solution converges to $\hat{w}_{OLS} = (X^\top X)^{-1} X^\top Y$. The risk of the OLS estimator is well-known to be $\sigma^2 \text{Tr}((X^\top X)^{-1})$. Using the law of large numbers, $\frac{1}{n} X^\top X \to \Sigma$. For standard Gaussian data $\Sigma = I$, so $\text{Tr}((X^\top X)^{-1}) \approx \text{Tr}(\frac{1}{n} I) = \frac{d}{n}$.
+\end{proof}
+
+\section{Empirical Verification}
+To validate our theoretical findings, we simulated ICL on a linear regression task using the "Linear Attention as Gradient Descent" model.
+
+\subsection{Sample Complexity}
+We varied the number of context examples $n$ from 10 to 300 and measured the Mean Squared Error (MSE) on a held-out query. The results are shown in Figure \ref{fig:sample_complexity}.
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{tex/fig/sample_complexity.pdf}
+    \caption{Empirical MSE vs. Number of Context Examples. The error follows the predicted $O(1/n)$ power law decay, confirming Theorem \ref{thm:sample_complexity}.}
+    \label{fig:sample_complexity}
+\end{figure}
+
+The empirical curve (blue) closely tracks the theoretical $O(1/n)$ reference (dashed gray), confirming that ICL efficiency improves linearly with context size in the realizable setting.
+
+\subsection{Contraction Dynamics}
+We also tracked the MSE across simulated Transformer layers. Figure \ref{fig:contraction} demonstrates the rapid convergence.
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{tex/fig/contraction_dynamics.pdf}
+    \caption{Contraction of error across Transformer layers. The linear trend on the log-scale plot indicates exponential convergence, validating the Contraction Mapping hypothesis (Theorem \ref{thm:contraction}).}
+    \label{fig:contraction}
+\end{figure}
+
+The error decays exponentially with depth, consistent with the spectral contraction factor $\rho$ derived in Theorem \ref{thm:contraction}. This suggests that deeper Transformers can perform more iterations of "in-context optimization," leading to more precise solutions.
 
 \section{Conclusion}
-We have derived rigorous bounds for the sample complexity of In-Context Learning, characterizing the efficiency of Transformers as meta-learners.
+We have presented a rigorous framework for In-Context Learning, characterizing it as a contraction mapping in function space. Our theoretical bounds and empirical simulations confirm that ICL behaves like an efficient meta-optimization process, with error rates dictated by standard statistical learning theory ($O(1/n)$). Future work will extend this analysis to non-linear attention and deeper architectures.
 
 \bibliographystyle{plain}
 \bibliography{references}
