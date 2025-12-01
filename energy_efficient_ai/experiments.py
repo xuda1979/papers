@@ -106,14 +106,16 @@ def softmax(x, axis=-1):
     e_x = np.exp(x - np.max(x, axis=axis, keepdims=True))
     return e_x / np.sum(e_x, axis=axis, keepdims=True)
 
-def naive_attention(Q, K, V):
+def naive_attention(Q, K, V, return_weights=False):
     d = Q.shape[-1]
     scores = np.dot(Q, K.T) / np.sqrt(d)
     weights = softmax(scores, axis=-1)
     output = np.dot(weights, V)
+    if return_weights:
+        return output, weights
     return output
 
-def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return_mask=False):
+def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return_mask=False, return_sparse_weights=False):
     N, d = Q.shape
     if k_clusters is None:
         k_clusters = int(np.sqrt(N))
@@ -125,6 +127,12 @@ def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return
     labels, _ = simple_kmeans(Q_proj, k_clusters, max_iters=10)
 
     output = np.zeros_like(V)
+
+    # For spectral analysis, we might want the full sparse weight matrix
+    full_weights = None
+    if return_sparse_weights:
+        full_weights = np.zeros((N, N))
+
     mask_vis = None
     if return_mask:
         mask_vis = np.zeros((N, N), dtype=int)
@@ -151,11 +159,19 @@ def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return
 
         scores = np.dot(Q_block, K_block.T) / np.sqrt(d)
         w = softmax(scores, axis=-1)
+
+        if return_sparse_weights:
+            # Place the weights back into the full matrix
+            for local_idx, q_idx in enumerate(query_indices):
+                full_weights[q_idx, combined_key_indices] = w[local_idx]
+
         out_block = np.dot(w, V_block)
         output[query_indices] = out_block
 
     if return_mask:
         return output, mask_vis
+    if return_sparse_weights:
+        return output, full_weights
     return output
 
 def cosine_similarity(A, B):
@@ -164,6 +180,31 @@ def cosine_similarity(A, B):
     normB = np.linalg.norm(B, axis=1)
     sim = dot / (normA * normB + 1e-8)
     return np.mean(sim)
+
+def compute_spectrum(W):
+    """
+    Computes the eigenvalues of the normalized Laplacian L = I - D^{-1/2} W D^{-1/2}.
+    Assumes W is non-negative (attention weights).
+    """
+    N = W.shape[0]
+    # Symmetrize roughly for spectral analysis if not symmetric (Attention is not symmetric usually)
+    # However, for Laplacian analysis of directed graphs, we often look at singular values or
+    # symmetrize W = (W + W^T)/2 or use L = I - W_norm.
+    # Standard spectral graph theory usually deals with symmetric adjacency.
+    # Let's use the singular values of the Attention Matrix itself,
+    # or the eigenvalues of the symmetrized version to represent "connectivity".
+    # A common proxy for graph structural similarity is the spectrum of the Laplacian of the symmetrized graph.
+
+    W_sym = 0.5 * (W + W.T)
+    degrees = np.sum(W_sym, axis=1)
+    # Avoid division by zero
+    degrees[degrees < 1e-10] = 1e-10
+    D_inv_sqrt = np.diag(1.0 / np.sqrt(degrees))
+
+    L_norm = np.eye(N) - D_inv_sqrt @ W_sym @ D_inv_sqrt
+
+    eigenvalues = np.linalg.eigvalsh(L_norm) # eigvalsh for symmetric matrices
+    return np.sort(eigenvalues)
 
 def run_experiments():
     # Use relative path assuming running from repo root
@@ -219,7 +260,7 @@ def run_experiments():
     with open(os.path.join(output_dir, 'max_speedup.txt'), 'w') as f:
         f.write(f"{max(speedups):.2f}")
 
-    # --- Composite Figure: Runtime & Complexity ---
+    # --- Composite Figure: Runtime & Spectral Analysis ---
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
     # Plot 1: Runtime
@@ -231,32 +272,40 @@ def run_experiments():
     axes[0].legend()
     axes[0].set_yscale('log') # Log scale helps differentiate at lower N
 
-    # Plot 2: Complexity
-    N_range = np.linspace(100, 5000, 100)
-    flops_trans = 4 * N_range**2 * d_model
-    flops_mamba = 10 * N_range * d_model * 16
-    flops_ssa = 2 * (N_range**1.5) * d_model
+    # Plot 2: Spectral Analysis (Replacing Complexity Plot)
+    N_spec = 512
+    Q_s, K_s, V_s, _ = generate_structured_data(N_spec, d_model, num_clusters=8)
 
-    axes[1].plot(N_range, flops_trans, label='Transformer $O(N^2)$', color='#333333', linestyle=':', linewidth=1.5)
-    axes[1].plot(N_range, flops_mamba, label='Mamba $O(N)$', color='#1f77b4', linestyle='--', linewidth=1.5)
-    axes[1].plot(N_range, flops_ssa, label='SSA (Ours) $O(N \sqrt{N})$', color='#d62728', linewidth=2.5)
-    axes[1].set_yscale('log')
-    axes[1].set_xlabel('Sequence Length $N$')
-    axes[1].set_ylabel('Theoretical FLOPs')
-    axes[1].set_title('Complexity Analysis')
+    # Get Full Weights
+    _, W_naive = naive_attention(Q_s, K_s, V_s, return_weights=True)
+    # Get Sparse Weights
+    _, W_ssa = spectral_sparse_attention(Q_s, K_s, V_s, k_clusters=8, global_ratio=2.0, return_sparse_weights=True)
+
+    eig_naive = compute_spectrum(W_naive)
+    eig_ssa = compute_spectrum(W_ssa)
+
+    # Plot Eigenvalue distribution
+    x_axis = np.arange(len(eig_naive))
+    axes[1].plot(x_axis, eig_naive, label='Full Attention Spectrum', color='#333333', linewidth=1.5, alpha=0.8)
+    axes[1].plot(x_axis, eig_ssa, label='SSA Approximation', color='#d62728', linestyle='--', linewidth=2.0)
+
+    axes[1].set_xlabel('Eigenvalue Index $k$')
+    axes[1].set_ylabel('Eigenvalue $\lambda_k(\mathcal{L})$')
+    axes[1].set_title('Spectral Approximation (Laplacian)')
     axes[1].legend()
+    axes[1].text(0.5, 0.5, f"High overlap implies\nstructural preservation", transform=axes[1].transAxes,
+                 ha='center', va='center', bbox=dict(facecolor='white', alpha=0.8))
 
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'combined_performance.png'), bbox_inches='tight')
 
-    # Save individual plots for flexibility
-    # Save the runtime plot separately
+    # Save Spectral Plot separately
+    extent2 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(os.path.join(output_dir, 'spectral_approximation.png'), bbox_inches=extent2.expanded(1.1, 1.2))
+
+    # Save Runtime plot separately
     extent1 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     fig.savefig(os.path.join(output_dir, 'runtime_comparison.png'), bbox_inches=extent1.expanded(1.1, 1.2))
-
-    # Save the complexity plot separately
-    extent2 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    fig.savefig(os.path.join(output_dir, 'complexity_plot.png'), bbox_inches=extent2.expanded(1.1, 1.2))
 
 
     # --- Pareto Frontier ---
