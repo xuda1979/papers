@@ -4,6 +4,18 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
+"""
+Reasoning Gap Simulation
+========================
+This script simulates the ability of fixed-depth Transformers to solve the Graph Reachability problem.
+It validates the "No-Go Theorem" by showing that for any fixed depth L, there is a graph size N
+beyond which the accuracy collapses.
+
+Assumption:
+    - Fixed Depth L: Can solve reachability if path length <= L (Linear Propagation).
+    - CoT (Chain-of-Thought): Can solve reachability if path length <= N (Adaptive Depth).
+"""
+
 def simulate_reachability():
     # Settings
     N_range = range(10, 105, 5)
@@ -25,46 +37,33 @@ def simulate_reachability():
 
         for _ in range(num_graphs):
             # Generate random directed graph
-            # p = 1.5 * log(N) / N ensures connectivity usually, but we want some path variety
-            # p = 3/N for sparse graphs
+            # p = 3/N for sparse graphs to ensure non-trivial structure
             p = 3.0 / N
             G = nx.fast_gnp_random_graph(N, p, directed=True)
 
-            # Select random start and end
+            # Calculate all pairs shortest paths for ground truth
             try:
-                # Calculate all pairs shortest paths
                 paths = dict(nx.all_pairs_shortest_path_length(G))
             except:
                 continue
 
-            # Sample pairs to check
-            # We check if pairs (u, v) that ARE connected are "solvable" by depth L
-            # i.e. distance(u, v) <= L (assuming linear propagation per layer)
-            # Some papers argue L layers = 2^L propagation. We will be conservative and assume Linear:
-            # In standard Attention, 1 layer = 1 step of mixing.
-            # We can also plot 2^L if we want "Pointer Jumping" assumption.
-            # Let's do Linear Receptive Field = Depth (standard view)
-
-            # We'll sample 10 pairs per graph
+            # Sample 10 random pairs to evaluate reasoning
             nodes = list(G.nodes())
             for _ in range(10):
                 u, v = np.random.choice(nodes, 2, replace=False)
 
+                # We only care about cases where a path actually exists (Ground Truth = True)
                 if v in paths[u]:
                     dist = paths[u][v]
                     total_connected_pairs += 1
 
                     # Check fixed depths
                     for d in Depths:
-                        # Assuming 1 layer propagates 1 hop of information (standard MPNN view)
-                        # Even with attention, global attention can see everything,
-                        # but composing relations requires depth.
-                        # Transitive closure of path length k requires depth O(log k) or O(k) depending on mechanism.
-                        # We use the strict "Logical Depth" assumption: Depth >= Path Length for 0-shot.
+                        # Success condition: Model depth >= Path length
                         if d >= dist:
                             solved_counts[d] += 1
 
-                    # CoT always solves it if connected
+                    # CoT always solves it if connected (assuming sufficient context)
                     solved_cot += 1
 
         # Calculate percentages
@@ -72,7 +71,7 @@ def simulate_reachability():
             if total_connected_pairs > 0:
                 results[d].append(solved_counts[d] / total_connected_pairs * 100)
             else:
-                results[d].append(100.0) # Trivial
+                results[d].append(100.0) # Trivial case
 
         if total_connected_pairs > 0:
             results['CoT'].append(100.0)
