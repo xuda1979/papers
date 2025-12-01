@@ -25,13 +25,15 @@
 \newcommand{\F}{\mathcal{F}}
 \newcommand{\Alg}{\mathbf{Alg}}
 \newcommand{\Set}{\mathbf{Set}}
+\newcommand{\cat}[1]{\mathbf{#1}}
+\newcommand{\colim}{\mathop{\mathrm{colim}}}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-While Transformers have achieved remarkable success in language tasks, their ability to perform compositional reasoning remains constrained by their fixed-depth architecture. In this work, we propose a rigorous framework based on Category Theory to model the reasoning capabilities of Large Language Models (LLMs). We define reasoning tasks as the construction of the \textit{Initial Algebra} (or Catamorphism) for a specific recursive endofunctor, and model the Transformer as a composition of bounded polynomial functors. We prove a ``No-Go Theorem'' demonstrating that fixed-depth Transformers cannot represent the solution to recursive problems (such as graph connectivity or transitive closure) for unbounded inputs, as they are structurally incapable of preserving the colimit of the recursive chain. We validate this theoretical result with empirical simulations showing a sharp phase transition in solvability as problem scale exceeds model depth. Finally, we formalize ``Chain-of-Thought'' prompting as an externalized fixpoint iteration scheme that restores universality by unrolling the recursion into the token stream.
+While Transformers have achieved remarkable success in language tasks, their ability to perform compositional reasoning remains constrained by their fixed-depth architecture. In this work, we propose a rigorous framework based on Category Theory to model the reasoning capabilities of Large Language Models (LLMs). We define reasoning tasks as the construction of the \textit{Initial Algebra} for a specific recursive endofunctor, and model the Transformer as a bounded composition of functors. We prove a ``No-Go Theorem'' demonstrating that fixed-depth Transformers cannot represent the solution to recursive problems (such as graph connectivity or transitive closure) for unbounded inputs, as they are structurally incapable of preserving the filtered colimit of the recursive chain. We validate this theoretical result with empirical simulations showing a sharp phase transition in solvability as problem scale exceeds model depth. Finally, we formalize ``Chain-of-Thought'' prompting as an externalized fixpoint iteration scheme that restores universality by unrolling the recursion into the token stream.
 \end{abstract}
 
 \section{Introduction}
@@ -42,7 +44,7 @@ In this work, we elevate this analysis to the level of \textbf{Category Theory}.
 Our main contributions are:
 \begin{enumerate}
     \item A formal categorical framework where reasoning tasks are initial algebras of endofunctors.
-    \item A rigorous "No-Go Theorem" proving the impossibility of solving recursive tasks with fixed-depth composition, linked to the failure of preserving filtered colimits.
+    \item A rigorous "No-Go Theorem" proving the impossibility of solving recursive tasks with fixed-depth composition, invoking Ad\'amek's Theorem on the construction of initial algebras via colimits.
     \item Empirical verification of the "Reasoning Gap" via controlled simulations of graph reachability.
     \item A theoretical justification for Chain-of-Thought (CoT) \citep{wei2022chain} as an externalized fixpoint iteration.
 \end{enumerate}
@@ -81,19 +83,19 @@ We focus on the problem of \textbf{Transitive Closure} (Graph Connectivity), whi
 \begin{theorem}[No-Go Theorem for Fixed-Depth Reasoning]
 \label{thm:nogo}
 Let $\mathcal{P}_{conn}$ be the problem of determining if two nodes in a graph $G$ of size $N$ are connected. This corresponds to computing the limit of the sequence $A^k$ in the boolean semiring.
-A Transformer of fixed depth $L$ cannot solve $\mathcal{P}_{conn}$ for all $N > 2^L$.
+A Transformer of fixed depth $L$ cannot solve $\mathcal{P}_{conn}$ for all $N > C \cdot L$ (where $C$ is a constant related to the mixing capacity).
 \end{theorem}
 
 \begin{proof}
 We formulate the proof using the properties of the endofunctor $T(X) = I + A \cdot X$.
-The transitive closure $A^*$ is given by the colimit of the chain $A^{(k)}$ where $A^{(k)}$ represents paths of length at most $k$.
-To compute connectivity between arbitrary nodes, information must propagate across the graph diameter $D$. For a path graph, $D = N-1$.
+According to Ad\'amek's Theorem \citep{adamek1974free}, if $T$ is an $\omega$-continuous functor, the initial algebra $\mu T$ is isomorphic to the colimit of the $\omega$-chain:
+\[ \bot \xrightarrow{!} T(\bot) \xrightarrow{T(!)} T^2(\bot) \to \dots \]
+The $k$-th term in this sequence, $T^k(\bot)$, represents the set of paths of length at most $k$.
 
-A Transformer layer allows information to propagate effectively by mixing tokens. However, the mixing is structurally bounded.
-1. \textbf{Receptive Field Argument}: In a single layer, a token can attend to all other tokens, but the *composition* of relations (logic) is limited. Computing "A is connected to C" from "A-B" and "B-C" requires one layer of depth.
-2. \textbf{Functorial Limit}: The solution object is $\mu T \cong \varinjlim_k T^k(\bot)$. The Transformer implements $F_{Tr}^L$.
-Since $L$ is fixed and finite, the functor $F_{Tr}^L$ factors through a finite stage of the filtration. It cannot represent the map to the colimit for unbounded $N$.
-Specifically, if $N > 2^L$ (assuming exponentiation by pointer jumping) or $N > L$ (assuming linear mixing), there exist graphs where the connectivity cannot be resolved. The functor fails to preserve the colimit required for the initial algebra.
+A Transformer of depth $L$ implements a function that factors through a finite iterate $T^{D(L)}$, where $D(L)$ is the effective logical depth.
+1. \textbf{Effective Logical Depth}: In standard self-attention, information propagates between token pairs in $O(1)$ layers, but the \textit{composition} of relational dependencies requires sequential processing. To deduce $u \sim v$ from a chain $u \to x_1 \to \dots \to x_k \to v$, the model must effectively compute the $(k+1)$-th power of the adjacency matrix.
+2. \textbf{Failure of Colimit Preservation}: The solution object is $\mu T \cong \colim_k T^k(\bot)$. The map computed by the Transformer is $\Phi_L: \text{Input} \to \text{Output}$, which is structurally bounded by the depth $L$. Even assuming optimal "pointer jumping" (where depth $L$ reaches distance $2^L$), for any fixed $L$, there exists an $N \gg 2^L$ such that the required dependency chain exceeds the receptive field of the model.
+3. \textbf{Categorical Gap}: Since the functor $T$ does not stabilize at any finite $k$ for arbitrary graphs (it requires $k \ge \text{diameter}(G)$), and the Transformer is a compact object representing a finite composition, there is no natural transformation from the Transformer functor to the Initial Algebra functor that holds for all $N$. The fixed-depth model fails to preserve the filtered colimit required to construct $\mu T$.
 \end{proof}
 
 \begin{figure}[h]
@@ -111,7 +113,7 @@ Specifically, if $N > 2^L$ (assuming exponentiation by pointer jumping) or $N > 
 To validate our theoretical findings, we performed a controlled simulation of the "Reachability" task. We generated random directed graphs of size $N \in [10, 100]$ and evaluated the ability of fixed-depth models to resolve connectivity between arbitrary node pairs.
 
 \paragraph{Methodology.}
-We assume a generous "Logical Depth" model where a Transformer of depth $L$ can resolve transitive dependencies of length up to $2^L$ (simulating pointer jumping) or $L$ (linear message passing). We plot the theoretical maximum accuracy for fixed depths $L \in \{2, 4, 8, 12\}$ against the graph size $N$.
+We assume a "Logical Depth" model where a Transformer of depth $L$ can resolve transitive dependencies of length up to $L$ (linear message passing). While some theoretical arguments suggest $2^L$ reach via pointer jumping, standard training often relies on local mixing. We plot the theoretical accuracy for fixed depths $L \in \{2, 4, 8, 12\}$ against the graph size $N$.
 
 \begin{figure}[H]
     \centering
