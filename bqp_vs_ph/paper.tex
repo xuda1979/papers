@@ -78,14 +78,17 @@ This problem is efficiently solvable on a quantum computer using 1 query to $f$ 
 The probability of measuring $0^n$ is $|\Phi(f,g)|^2$. If correlations are high ($\ge 0.6$), the probability is at least $0.36$. If correlations are low ($\le 0.01$), the probability is $\le 0.0001$. This gap allows efficient distinction with high probability.
 
 \subsection{Classical Hardness (PH)}
-Raz and Tal proved that $\text{Forrelation} \notin PH$. Specifically, they showed that any constant-depth $AC^0$ circuit of size $2^{n^{\epsilon}}$ has negligible correlation with the Forrelation distribution.
-The proof uses the method of random restrictions and Fourier analysis.
-Key Lemma: $AC^0$ circuits have their Fourier mass concentrated on low-degree coefficients.
-However, the Forrelation function $\Phi(f,g)$ depends on the correlation between $f$ and $\hat{g}$.
-For random $f, g$, $\Phi$ is small.
-The hard distribution involves $g(y) = \text{sign}(\hat{f}(y))$.
-The proof establishes that for $k$-fold Forrelation, $AC^0$ circuits cannot distinguish it from random noise.
-Since $PH \subseteq AC^0$ (relative to a random oracle, or more precisely, $PH$ functions can be approximated by low-degree polynomials), this establishes the separation.
+The proof that Forrelation is hard for PH (and specifically for $AC^0$) relies on the Fourier spectrum of functions computable by constant-depth circuits.
+
+\textbf{Linial-Mansour-Nisan (LMN) Theorem:}
+A key tool is the result by Linial, Mansour, and Nisan \citep{linial1993constant}, which states that the Fourier spectrum of any function $h \in AC^0$ (constant depth, polynomial size) is concentrated on low-degree coefficients.
+Specifically, for any $\epsilon > 0$, there exists a degree $d = O(\log^{O(1)}(n/\epsilon))$ such that:
+\[ \sum_{S \subseteq [n], |S| > d} \hat{h}(S)^2 \le \epsilon \]
+This implies that $AC^0$ functions cannot capture "high-frequency" structures.
+
+\textbf{Raz-Tal Separation:}
+Raz and Tal generalized this intuition to the query complexity setting using the method of random restrictions. They showed that for the Forrelation problem, the target distribution looks like random noise to any low-depth circuit because the correlation $\Phi(f, g)$ involves a summation over *all* Fourier coefficients, whereas the circuit can only "see" the low-degree part of the spectrum.
+Since $PH$ relative to an oracle can be approximated by such low-degree polynomials, $PH$ cannot distinguish the Forrelation cases, establishing $BQP^{\mathcal{O}} \not\subseteq PH^{\mathcal{O}}$.
 
 \section{Random Circuit Sampling and Supremacy}
 
@@ -102,9 +105,23 @@ The claim that classical computers cannot efficiently sample from $\mathcal{D}_C
     \end{theorem}
 
 2.  \textbf{Worst-to-Average Case Reduction}: The core argument is that if one could efficiently sample from $\mathcal{D}_C$ with small total variation distance error, then one could estimate output probabilities $P(x)$ for \textit{most} random circuits.
-    If there exists a classical algorithm $A$ that samples from a distribution $\epsilon$-close to $\mathcal{D}_C$, then $P(x)$ can be estimated in $BPP^{NP}$.
-    Combined with the $\#P$-hardness of the worst case, and assuming the average-case hardness of calculating probabilities (which relies on the algebraic structure of the unitary group and polynomial interpolation), this implies $P^{\#P} \subseteq BPP^{NP}$.
-    By Toda's Theorem, $PH \subseteq P^{\#P}$, so this would collapse the Polynomial Hierarchy to the third level.
+
+    \subsubsection{Stockmeyer Counting}
+    A critical component of this reduction is \textbf{Stockmeyer's Approximate Counting Algorithm} \citep{stockmeyer1983complexity}.
+    Suppose there exists a classical algorithm $S$ that can sample from a distribution $\mathcal{D}'$ such that $\|\mathcal{D}_C - \mathcal{D}'\|_{TV} \le \epsilon$.
+    Can we use $S$ to compute the probability $P(x) = |\bra{x}C\ket{0}|^2$?
+
+    Directly, no. However, in the complexity class $BPP^{NP}$, we can approximate the size of sets. Stockmeyer's algorithm uses a hierarchy of hash functions to "bucket" the outputs of $S$. By querying an $NP$ oracle to check if a bucket is empty, one can estimate the probability mass of specific outcomes.
+
+    If such a sampler $S$ exists, then for a typical random circuit $C$, we could estimate $P(0)$ in $BPP^{NP}$.
+    But we know that computing $P(0)$ is $\#P$-hard (in the worst case).
+    Therefore, if we assume:
+    \begin{itemize}
+        \item \textbf{Worst-to-Average Hardness}: Computing $P(0)$ is $\#P$-hard even on average (over the choice of random circuits).
+    \end{itemize}
+    Then the existence of an efficient classical sampler $S$ implies:
+    \[ P^{\#P} \subseteq BPP^{NP} \]
+    By Toda's Theorem, $PH \subseteq P^{\#P}$. Thus, this inclusion would imply that the Polynomial Hierarchy collapses to the third level ($PH \subseteq \Sigma_3^P$), which is considered highly unlikely.
 
 \subsection{Anti-Concentration}
 A crucial requirement for the hardness proofs is \textbf{Anti-Concentration}: the probability mass must be spread out over the Hilbert space.
@@ -118,13 +135,20 @@ Specifically, $\mathbb{E}[p^2] = 2/N^2$, which is twice the value for the unifor
 
 \section{Numerical Verification}
 
-To verify the statistical properties required for the hardness arguments, we simulated a random quantum circuit acting on $N=12$ qubits. The circuit consists of layers of random single-qubit gates (Haar random $SU(2)$) and CNOT gates.
+To verify the statistical properties required for the hardness arguments, we simulated a Random Quantum Circuit acting on $N=12$ qubits.
+Unlike previous simplified models using global Haar random unitaries, this simulation explicitly implements a local circuit architecture similar to those used in supremacy experiments:
+\begin{itemize}
+    \item \textbf{Depth $D=15$}: Alternating layers of single-qubit gates and two-qubit entangling gates.
+    \item \textbf{Single-Qubit Gates}: Random unitaries drawn from the Haar measure on $SU(2)$.
+    \item \textbf{Two-Qubit Gates}: $CZ$ gates applied to adjacent qubits, alternating between even pairs $(2i, 2i+1)$ and odd pairs $(2i+1, 2i+2)$.
+\end{itemize}
+
 The resulting probability distribution is plotted below.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{porter_thomas.png}
-    \caption{Distribution of output probabilities for a 12-qubit Random Circuit. The blue histogram represents the simulated probabilities scaled by the Hilbert space dimension $N=2^{12}$. The red curve is the theoretical Porter-Thomas prediction $P(x) = e^{-x}$. The close agreement confirms the chaotic nature of the circuit, satisfying the Anti-Concentration condition.}
+    \caption{Distribution of output probabilities for a 12-qubit Random Circuit (Depth 15). The blue histogram represents the simulated probabilities scaled by the Hilbert space dimension $N=2^{12}$. The red curve is the theoretical Porter-Thomas prediction $P(x) = e^{-x}$. The close agreement confirms that the local random circuit efficiently scrambles the state to explore the Hilbert space ergodically, satisfying the Anti-Concentration condition.}
     \label{fig:porter_thomas}
 \end{figure}
 
@@ -132,7 +156,7 @@ The agreement with the Porter-Thomas distribution confirms that the circuit expl
 
 \section{Conclusion}
 
-The separation of BQP from PH is supported by deep theoretical results like the Raz-Tal Forrelation theorem and experimental milestones like Random Circuit Sampling. The Forrelation problem highlights the specific power of quantum Fourier sampling, while RCS leverages quantum chaos (Porter-Thomas statistics) to establish worst-case to average-case hardness. Together, they form the rigorous bedrock of Quantum Supremacy.
+The separation of BQP from PH is supported by deep theoretical results like the Raz-Tal Forrelation theorem and experimental milestones like Random Circuit Sampling. The Forrelation problem highlights the specific power of quantum Fourier sampling, while RCS leverages quantum chaos (Porter-Thomas statistics) to establish worst-case to average-case hardness via Stockmeyer Counting. Together, they form the rigorous bedrock of Quantum Supremacy.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
