@@ -8,9 +8,13 @@ def simulate_reachability():
     # Settings
     N_range = range(10, 105, 5)
     Depths = [2, 4, 8, 12] # Fixed depths
+    # We also simulate "Pointer Jumping" for one depth to illustrate the difference
+    PJ_Depth = 4
+
     num_graphs = 100
 
     results = {d: [] for d in Depths}
+    results['PJ_4'] = []
     results['CoT'] = [] # "Infinite" depth
 
     print("Starting simulation...")
@@ -20,12 +24,12 @@ def simulate_reachability():
 
         # Stats for this N
         solved_counts = {d: 0 for d in Depths}
+        solved_pj = 0
         solved_cot = 0
         total_connected_pairs = 0
 
         for _ in range(num_graphs):
             # Generate random directed graph
-            # p = 1.5 * log(N) / N ensures connectivity usually, but we want some path variety
             # p = 3/N for sparse graphs
             p = 3.0 / N
             G = nx.fast_gnp_random_graph(N, p, directed=True)
@@ -37,16 +41,10 @@ def simulate_reachability():
             except:
                 continue
 
-            # Sample pairs to check
-            # We check if pairs (u, v) that ARE connected are "solvable" by depth L
-            # i.e. distance(u, v) <= L (assuming linear propagation per layer)
-            # Some papers argue L layers = 2^L propagation. We will be conservative and assume Linear:
-            # In standard Attention, 1 layer = 1 step of mixing.
-            # We can also plot 2^L if we want "Pointer Jumping" assumption.
-            # Let's do Linear Receptive Field = Depth (standard view)
-
             # We'll sample 10 pairs per graph
             nodes = list(G.nodes())
+            if len(nodes) < 2: continue
+
             for _ in range(10):
                 u, v = np.random.choice(nodes, 2, replace=False)
 
@@ -54,15 +52,15 @@ def simulate_reachability():
                     dist = paths[u][v]
                     total_connected_pairs += 1
 
-                    # Check fixed depths
+                    # Check fixed depths (Linear Mixing Hypothesis)
                     for d in Depths:
-                        # Assuming 1 layer propagates 1 hop of information (standard MPNN view)
-                        # Even with attention, global attention can see everything,
-                        # but composing relations requires depth.
-                        # Transitive closure of path length k requires depth O(log k) or O(k) depending on mechanism.
-                        # We use the strict "Logical Depth" assumption: Depth >= Path Length for 0-shot.
                         if d >= dist:
                             solved_counts[d] += 1
+
+                    # Check Pointer Jumping Hypothesis for Depth 4
+                    # Effective Depth = 2^L
+                    if (2**PJ_Depth) >= dist:
+                        solved_pj += 1
 
                     # CoT always solves it if connected
                     solved_cot += 1
@@ -75,8 +73,10 @@ def simulate_reachability():
                 results[d].append(100.0) # Trivial
 
         if total_connected_pairs > 0:
+            results['PJ_4'].append(solved_pj / total_connected_pairs * 100)
             results['CoT'].append(100.0)
         else:
+            results['PJ_4'].append(100.0)
             results['CoT'].append(100.0)
 
     # Plotting
@@ -87,7 +87,10 @@ def simulate_reachability():
     palette = sns.color_palette("viridis", len(Depths))
 
     for i, d in enumerate(Depths):
-        plt.plot(N_range, results[d], marker='o', label=f'Fixed Depth L={d}', color=palette[i], linewidth=2.5)
+        plt.plot(N_range, results[d], marker='o', label=f'Linear Mixing L={d}', color=palette[i], linewidth=2.5)
+
+    # Plot Pointer Jumping for L=4
+    plt.plot(N_range, results['PJ_4'], marker='^', linestyle=':', label=f'Pointer Jumping L={PJ_Depth} ($2^L$)', color='orange', linewidth=2.5)
 
     plt.plot(N_range, results['CoT'], marker='*', linestyle='--', label='Chain-of-Thought (Adaptive)', color='red', linewidth=2.5)
 
