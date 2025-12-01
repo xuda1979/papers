@@ -25,13 +25,16 @@
 \newcommand{\F}{\mathcal{F}}
 \newcommand{\Alg}{\mathbf{Alg}}
 \newcommand{\Set}{\mathbf{Set}}
+\newcommand{\Rel}{\mathbf{Rel}}
+\newcommand{\cat}[1]{\mathbf{#1}}
+\newcommand{\colim}{\mathop{\mathrm{colim}}}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-While Transformers have achieved remarkable success in language tasks, their ability to perform compositional reasoning remains constrained by their fixed-depth architecture. In this work, we propose a rigorous framework based on Category Theory to model the reasoning capabilities of Large Language Models (LLMs). We define reasoning tasks as the construction of the \textit{Initial Algebra} (or Catamorphism) for a specific recursive endofunctor, and model the Transformer as a composition of bounded polynomial functors. We prove a ``No-Go Theorem'' demonstrating that fixed-depth Transformers cannot represent the solution to recursive problems (such as graph connectivity or transitive closure) for unbounded inputs, as they are structurally incapable of preserving the colimit of the recursive chain. We validate this theoretical result with empirical simulations showing a sharp phase transition in solvability as problem scale exceeds model depth. Finally, we formalize ``Chain-of-Thought'' prompting as an externalized fixpoint iteration scheme that restores universality by unrolling the recursion into the token stream.
+While Transformers have achieved remarkable success in language tasks, their ability to perform compositional reasoning remains constrained by their fixed-depth architecture. In this work, we propose a rigorous framework based on Category Theory to model the reasoning capabilities of Large Language Models (LLMs). We define reasoning tasks as the construction of the \textit{Initial Algebra} for a specific recursive endofunctor, and model the Transformer as a bounded composition of functors. We prove a ``No-Go Theorem'' demonstrating that fixed-depth Transformers cannot represent the solution to recursive problems (such as graph connectivity or transitive closure) for unbounded inputs, as they are structurally incapable of preserving the filtered colimit of the recursive chain. We validate this theoretical result with empirical simulations showing a sharp phase transition in solvability as problem scale exceeds the model's effective logical depth. Finally, we formalize ``Chain-of-Thought'' prompting as an externalized fixpoint iteration scheme that restores universality by unrolling the recursion into the token stream, effectively computing the Adámek limit via the sequence of generated tokens.
 \end{abstract}
 
 \section{Introduction}
@@ -42,27 +45,29 @@ In this work, we elevate this analysis to the level of \textbf{Category Theory}.
 Our main contributions are:
 \begin{enumerate}
     \item A formal categorical framework where reasoning tasks are initial algebras of endofunctors.
-    \item A rigorous "No-Go Theorem" proving the impossibility of solving recursive tasks with fixed-depth composition, linked to the failure of preserving filtered colimits.
-    \item Empirical verification of the "Reasoning Gap" via controlled simulations of graph reachability.
+    \item A rigorous "No-Go Theorem" proving the impossibility of solving recursive tasks with fixed-depth composition, invoking Ad\'amek's Theorem on the construction of initial algebras via colimits.
+    \item Empirical verification of the "Reasoning Gap" via controlled simulations of graph reachability, contrasting Linear Mixing and Pointer Jumping regimes.
     \item A theoretical justification for Chain-of-Thought (CoT) \citep{wei2022chain} as an externalized fixpoint iteration.
 \end{enumerate}
 
 \section{Categorical Framework for Reasoning}
 
-We model the "reasoning space" using category theory. Let $\C$ be a category representing the state space of the problem (e.g., $\Set$ or a category of vector spaces).
+We model the "reasoning space" using category theory. Let $\C$ be a category representing the state space of the problem (e.g., $\Set$, $\Rel$ or a category of vector spaces).
 
 \subsection{Reasoning as Initial Algebras}
 Many logical tasks can be framed as finding a fixed point of a recursive rule.
 \begin{definition}[Reasoning Endofunctor]
-Let $T: \C \to \C$ be an endofunctor representing a single step of logical deduction. For a graph connectivity problem, if $X$ represents the adjacency matrix, $T(X)$ might represent the operation $I + A \cdot X$ (in the boolean semiring).
+Let $T: \C \to \C$ be an endofunctor representing a single step of logical deduction. For the Graph Connectivity problem on a graph with adjacency matrix $A$, the state is the matrix of paths $X$. The Bellman-Ford or matrix multiplication step is given by the functor $T(X) = I + A \cdot X$ (where $+$ and $\cdot$ are operations in the appropriate semiring, e.g., Boolean).
 \end{definition}
 
 The "solution" to the recursive problem is the \textit{Initial Algebra} of the functor $T$.
 \begin{definition}[Initial Algebra]
-An algebra for an endofunctor $T$ is a pair $(A, \alpha)$, where $\alpha: T(A) \to A$ is a morphism in $\C$. The initial algebra $(\mu T, in)$ is the initial object in the category of $T$-algebras. For any other algebra $(A, \alpha)$, there exists a unique homomorphism $h: \mu T \to A$ making the diagram commute.
+An algebra for an endofunctor $T$ is a pair $(X, \alpha)$, where $\alpha: T(X) \to X$ is a morphism in $\C$. The initial algebra $(\mu T, in)$ is the initial object in the category of $T$-algebras. For any other algebra $(Y, \beta)$, there exists a unique homomorphism $h: \mu T \to Y$ (the catamorphism) making the diagram commute.
 \end{definition}
 
-This unique homomorphism $h = \llparenthesis \alpha \rrparenthesis$ is called the \textit{catamorphism}. It represents the "fold" operation that consumes the recursive structure to produce a result. Solving a reasoning task is equivalent to computing this catamorphism.
+Solving a reasoning task is equivalent to computing this catamorphism. By Ad\'amek's Theorem, if $T$ is $\omega$-continuous, the initial algebra $\mu T$ is the colimit of the initial chain:
+\[ \bot \xrightarrow{!} T(\bot) \xrightarrow{T(!)} T^2(\bot) \dots \xrightarrow{} \mu T \cong \colim_{k < \omega} T^k(\bot) \]
+where $\bot$ is the initial object (e.g., the zero matrix). The object $T^k(\bot)$ represents the state of reasoning after $k$ steps (e.g., paths of length $\le k$).
 
 \subsection{Transformers as Bounded Functors}
 A Transformer of depth $L$ computes a function $f: X \to Y$ that is a composition of $L$ layers.
@@ -70,30 +75,28 @@ A Transformer of depth $L$ computes a function $f: X \to Y$ that is a compositio
 Let $\F_{Tr}: \C \to \C$ be the functor represented by a single Transformer layer (Attention + MLP). A depth-$L$ Transformer implements the functor composition $\F_{Tr}^L = \F_{Tr} \circ \dots \circ \F_{Tr}$ ($L$ times).
 \end{definition}
 
-Crucially, while $\F_{Tr}$ can approximate the deductive step $T$, the composition $\F_{Tr}^L$ is fixed at training time. The true solution $\mu T$ corresponds to the colimit of the chain:
-\[ \bot \to T(\bot) \to T^2(\bot) \to \dots \to \mu T \]
-where the number of steps required depends on the input size $N$.
+Crucially, while $\F_{Tr}$ can approximate the deductive step $T$, the composition $\F_{Tr}^L$ is fixed at training time. The true solution $\mu T$ corresponds to the colimit of the chain.
 
 \section{The No-Go Theorem}
 
-We focus on the problem of \textbf{Transitive Closure} (Graph Connectivity), which is the canonical example of a problem requiring recursion depth proportional to the input size.
+We focus on the problem of \textbf{Transitive Closure} (Graph Connectivity), which is the canonical example of a problem requiring recursion depth proportional to the input size (or logarithmic in it, depending on the parallelism).
 
 \begin{theorem}[No-Go Theorem for Fixed-Depth Reasoning]
 \label{thm:nogo}
-Let $\mathcal{P}_{conn}$ be the problem of determining if two nodes in a graph $G$ of size $N$ are connected. This corresponds to computing the limit of the sequence $A^k$ in the boolean semiring.
-A Transformer of fixed depth $L$ cannot solve $\mathcal{P}_{conn}$ for all $N > 2^L$.
+Let $\mathcal{P}_{conn}$ be the problem of determining if two nodes in a graph $G$ of size $N$ are connected. This corresponds to computing the initial algebra $\mu T$ for $T(X) = I + A \cdot X$.
+A Transformer of fixed depth $L$ cannot solve $\mathcal{P}_{conn}$ for all $N > C \cdot L$ (where $C$ is a constant related to the mixing capacity).
 \end{theorem}
 
 \begin{proof}
 We formulate the proof using the properties of the endofunctor $T(X) = I + A \cdot X$.
-The transitive closure $A^*$ is given by the colimit of the chain $A^{(k)}$ where $A^{(k)}$ represents paths of length at most $k$.
-To compute connectivity between arbitrary nodes, information must propagate across the graph diameter $D$. For a path graph, $D = N-1$.
+According to Ad\'amek's Theorem \citep{adamek1974free}, if $T$ is an $\omega$-continuous functor, the initial algebra $\mu T$ is isomorphic to the colimit of the $\omega$-chain:
+\[ \bot \xrightarrow{!} T(\bot) \xrightarrow{T(!)} T^2(\bot) \to \dots \]
+The $k$-th term in this sequence, $T^k(\bot)$, represents the set of paths of length at most $k$.
 
-A Transformer layer allows information to propagate effectively by mixing tokens. However, the mixing is structurally bounded.
-1. \textbf{Receptive Field Argument}: In a single layer, a token can attend to all other tokens, but the *composition* of relations (logic) is limited. Computing "A is connected to C" from "A-B" and "B-C" requires one layer of depth.
-2. \textbf{Functorial Limit}: The solution object is $\mu T \cong \varinjlim_k T^k(\bot)$. The Transformer implements $F_{Tr}^L$.
-Since $L$ is fixed and finite, the functor $F_{Tr}^L$ factors through a finite stage of the filtration. It cannot represent the map to the colimit for unbounded $N$.
-Specifically, if $N > 2^L$ (assuming exponentiation by pointer jumping) or $N > L$ (assuming linear mixing), there exist graphs where the connectivity cannot be resolved. The functor fails to preserve the colimit required for the initial algebra.
+A Transformer of depth $L$ implements a function that factors through a finite iterate $T^{D(L)}$, where $D(L)$ is the effective logical depth.
+1. \textbf{Effective Logical Depth}: In standard self-attention, information propagates between token pairs in $O(1)$ layers, but the \textit{composition} of relational dependencies requires sequential processing. To deduce $u \sim v$ from a chain $u \to x_1 \to \dots \to x_k \to v$, the model must effectively compute the $(k+1)$-th power of the adjacency matrix. This requires either $N$ steps of linear mixing or $\log N$ steps of pointer jumping.
+2. \textbf{Failure of Colimit Preservation}: The solution object is $\mu T \cong \colim_k T^k(\bot)$. The map computed by the Transformer is $\Phi_L: \text{Input} \to \text{Output}$, which is structurally bounded by the depth $L$. Even assuming optimal "pointer jumping" (where depth $L$ reaches distance $2^L$), for any fixed $L$, there exists an $N \gg 2^L$ such that the required dependency chain exceeds the receptive field of the model.
+3. \textbf{Categorical Gap}: Since the functor $T$ does not stabilize at any finite $k$ for arbitrary graphs (it requires $k \ge \text{diameter}(G)$), and the Transformer is a compact object representing a finite composition, there is no natural transformation from the Transformer functor to the Initial Algebra functor that holds for all $N$. The fixed-depth model fails to preserve the filtered colimit required to construct $\mu T$.
 \end{proof}
 
 \begin{figure}[h]
@@ -111,7 +114,12 @@ Specifically, if $N > 2^L$ (assuming exponentiation by pointer jumping) or $N > 
 To validate our theoretical findings, we performed a controlled simulation of the "Reachability" task. We generated random directed graphs of size $N \in [10, 100]$ and evaluated the ability of fixed-depth models to resolve connectivity between arbitrary node pairs.
 
 \paragraph{Methodology.}
-We assume a generous "Logical Depth" model where a Transformer of depth $L$ can resolve transitive dependencies of length up to $2^L$ (simulating pointer jumping) or $L$ (linear message passing). We plot the theoretical maximum accuracy for fixed depths $L \in \{2, 4, 8, 12\}$ against the graph size $N$.
+We distinguish between two hypotheses for the effective logical depth of a Transformer:
+\begin{itemize}
+    \item \textbf{Linear Mixing Hypothesis}: Each layer resolves one step of transitive dependency. Effective depth $\approx L$. This corresponds to standard message passing.
+    \item \textbf{Pointer Jumping Hypothesis}: Each layer doubles the path length resolved ($A^2, A^4, \dots$). Effective depth $\approx 2^L$. This is the theoretical upper bound for attention mechanisms.
+\end{itemize}
+Our simulation focuses on the \textbf{Linear Mixing} regime, as it represents the behavior of standard models without specific "algorithmic" pre-training. We define a pair $(u,v)$ as solvable if $d(u,v) \le L$.
 
 \begin{figure}[H]
     \centering
@@ -132,7 +140,7 @@ From a categorical perspective, generating tokens sequentially allows the model 
 If the reasoning chain has length $M$, the effective depth of the computation becomes $L \times M$. If $M$ is allowed to scale with $N$ (e.g., $M \propto N$), the system can compute the full limit $\mu T$.
 
 \begin{corollary}[Sufficiency of CoT]
-A fixed-depth Transformer equipped with a scratchpad (CoT) of length $O(N)$ can solve $\mathcal{P}_{conn}$ by simulating the fixed-point iteration step-by-step.
+A fixed-depth Transformer equipped with a scratchpad (CoT) of length $O(N)$ can solve $\mathcal{P}_{conn}$ by simulating the fixed-point iteration step-by-step, effectively constructing the initial algebra $\mu T$ in the limit of the token sequence.
 \end{corollary}
 
 This aligns with results by \cite{wei2022chain} and formalizes the intuition that "thinking time" (context length) is computationally equivalent to depth. CoT transforms the Transformer from a static function approximator into a Turing-complete machine (or at least a Linear Bounded Automaton) capable of executing the catamorphism.

@@ -8,10 +8,14 @@ def simulate_reachability():
     # Settings
     N_range = range(10, 105, 5)
     Depths = [2, 4, 8, 12] # Fixed depths
+    # We also simulate "Pointer Jumping" for one depth to illustrate the difference
+    PJ_Depth = 4
+
     num_graphs = 100
 
-    results = {d: [] for d in Depths}
-    results['CoT'] = [] # "Infinite" depth
+    results_linear = {d: [] for d in Depths}
+    results_pj = {d: [] for d in Depths}
+    results_cot = []
 
     print("Starting simulation...")
 
@@ -19,13 +23,13 @@ def simulate_reachability():
         print(f"Simulating N={N}...")
 
         # Stats for this N
-        solved_counts = {d: 0 for d in Depths}
+        solved_counts_linear = {d: 0 for d in Depths}
+        solved_counts_pj = {d: 0 for d in Depths}
         solved_cot = 0
         total_connected_pairs = 0
 
         for _ in range(num_graphs):
             # Generate random directed graph
-            # p = 1.5 * log(N) / N ensures connectivity usually, but we want some path variety
             # p = 3/N for sparse graphs
             p = 3.0 / N
             G = nx.fast_gnp_random_graph(N, p, directed=True)
@@ -37,16 +41,10 @@ def simulate_reachability():
             except:
                 continue
 
-            # Sample pairs to check
-            # We check if pairs (u, v) that ARE connected are "solvable" by depth L
-            # i.e. distance(u, v) <= L (assuming linear propagation per layer)
-            # Some papers argue L layers = 2^L propagation. We will be conservative and assume Linear:
-            # In standard Attention, 1 layer = 1 step of mixing.
-            # We can also plot 2^L if we want "Pointer Jumping" assumption.
-            # Let's do Linear Receptive Field = Depth (standard view)
-
-            # We'll sample 10 pairs per graph
+            # Sample 10 pairs per graph
             nodes = list(G.nodes())
+            if len(nodes) < 2: continue
+
             for _ in range(10):
                 u, v = np.random.choice(nodes, 2, replace=False)
 
@@ -56,13 +54,13 @@ def simulate_reachability():
 
                     # Check fixed depths
                     for d in Depths:
-                        # Assuming 1 layer propagates 1 hop of information (standard MPNN view)
-                        # Even with attention, global attention can see everything,
-                        # but composing relations requires depth.
-                        # Transitive closure of path length k requires depth O(log k) or O(k) depending on mechanism.
-                        # We use the strict "Logical Depth" assumption: Depth >= Path Length for 0-shot.
+                        # Linear: Depth >= Path Length
                         if d >= dist:
-                            solved_counts[d] += 1
+                            solved_counts_linear[d] += 1
+
+                        # Exponential (Pointer Jumping): 2^Depth >= Path Length
+                        if (2**d) >= dist:
+                            solved_counts_pj[d] += 1
 
                     # CoT always solves it if connected
                     solved_cot += 1
@@ -70,14 +68,16 @@ def simulate_reachability():
         # Calculate percentages
         for d in Depths:
             if total_connected_pairs > 0:
-                results[d].append(solved_counts[d] / total_connected_pairs * 100)
+                results_linear[d].append(solved_counts_linear[d] / total_connected_pairs * 100)
+                results_pj[d].append(solved_counts_pj[d] / total_connected_pairs * 100)
             else:
-                results[d].append(100.0) # Trivial
+                results_linear[d].append(100.0)
+                results_pj[d].append(100.0)
 
         if total_connected_pairs > 0:
-            results['CoT'].append(100.0)
+            results_cot.append(100.0)
         else:
-            results['CoT'].append(100.0)
+            results_cot.append(100.0)
 
     # Plotting
     sns.set_theme(style="whitegrid")
@@ -86,10 +86,14 @@ def simulate_reachability():
     # Custom palette
     palette = sns.color_palette("viridis", len(Depths))
 
+    # Plot Linear (Solid lines)
     for i, d in enumerate(Depths):
-        plt.plot(N_range, results[d], marker='o', label=f'Fixed Depth L={d}', color=palette[i], linewidth=2.5)
+        plt.plot(N_range, results_linear[d], marker='o', label=f'Linear L={d}', color=palette[i], linewidth=2.5)
 
-    plt.plot(N_range, results['CoT'], marker='*', linestyle='--', label='Chain-of-Thought (Adaptive)', color='red', linewidth=2.5)
+    # Plot Pointer Jumping for L=4 (example)
+    # plt.plot(N_range, results_pj[4], marker='^', linestyle=':', label=f'Pointer Jumping L={PJ_Depth} ($2^L$)', color='orange', linewidth=2.5)
+
+    plt.plot(N_range, results_cot, marker='*', linestyle='--', label='Chain-of-Thought (Adaptive)', color='red', linewidth=2.5)
 
     plt.title('The "Categorical Gap": Fixed-Depth Transformers vs. Problem Scale', fontsize=16)
     plt.xlabel('Problem Size (N) - Graph Nodes', fontsize=14)

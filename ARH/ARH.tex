@@ -15,6 +15,8 @@
 \usepackage{algpseudocode}
 \usepackage{xcolor}
 \usepackage{mathtools}
+\usepackage{caption}
+\usepackage{subcaption}
 
 % Define hyperlink colours for a professional look
 \hypersetup{
@@ -36,6 +38,7 @@
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{proposition}[theorem]{Proposition}
 \newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{assumption}[theorem]{Assumption}
 \newtheorem{definition}[theorem]{Definition}
 
@@ -49,150 +52,184 @@
 \maketitle
 
 \begin{abstract}
-The pursuit of artificial general intelligence necessitates models that can autonomously adapt their internal \emph{structure} in response to non‑stationary environments.  Prevailing deep‑learning architectures rely on fixed hierarchies, rendering them brittle when faced with novel abstractions that require new reasoning pathways.  We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganises its own reasoning hierarchy during inference.  Inspired by principles from Predictive Coding (PC) and Adaptive Resonance Theory (ART), ARH operates by testing top‑down predictions against bottom‑up evidence.  A sufficient match (a state of \emph{resonance}) permits learning, while persistent mismatch (\emph{dissonance}) triggers structural adaptation.  The core of the architecture is the \emph{Gated Resonant Unit} (GRU‑R), a recurrent unit that couples temporal sequence processing with a vigilance‑gated plasticity mechanism.  The hierarchy adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes for new patterns) and \emph{Vertical Expansion} (spawning new layers for new abstractions).  The latter is driven by a process we term \emph{Spatio‑Temporal Dissonance Consolidation} (STDC).  We formalise the ARH framework, derive theoretical guarantees for its stability and growth, present pseudocode for the core algorithms, and provide illustrative results from a principled simulation of a challenging hierarchical concept‑drift benchmark.  We also include a related‑work survey situating ARH within the landscape of dynamic architectures.  Our analysis demonstrates that ARH can achieve significantly faster adaptation than static baselines while maintaining stability.
+The pursuit of artificial general intelligence necessitates models that can autonomously adapt their internal \emph{structure} in response to non-stationary environments. Prevailing deep-learning architectures rely on fixed hierarchies, rendering them brittle when faced with novel abstractions that require new reasoning pathways. We introduce the \textbf{Adaptive Resonance Hierarchy (ARH)}, a neural framework that grows and reorganises its own reasoning hierarchy during inference. Inspired by principles from Predictive Coding (PC) and Adaptive Resonance Theory (ART), ARH operates by testing top-down predictions against bottom-up evidence. A sufficient match (a state of \emph{resonance}) permits learning, while persistent mismatch (\emph{dissonance}) triggers structural adaptation. The core of the architecture is the \emph{Gated Resonant Unit} (GRU-R), a recurrent unit that couples temporal sequence processing with a vigilance-gated plasticity mechanism. The hierarchy adapts via two primary mechanisms: \emph{Horizontal Expansion} (recruiting new nodes for new patterns) and \emph{Vertical Expansion} (spawning new layers for new abstractions). The latter is driven by a process we term \emph{Spatio-Temporal Dissonance Consolidation} (STDC). We formalise the ARH framework, derive theoretical guarantees for its response time to novelty, present pseudocode for the core algorithms, and provide illustrative results from a principled simulation of a challenging hierarchical concept-drift benchmark. Our analysis demonstrates that ARH can achieve significantly faster adaptation than static baselines while maintaining stability.
 \end{abstract}
 
-\keywords{Hierarchical reasoning, Predictive Coding, Adaptive Resonance Theory, Dynamic architectures, Structural learning, Continual learning, Stability–Plasticity dilemma}
+\keywords{Hierarchical reasoning, Predictive Coding, Adaptive Resonance Theory, Dynamic architectures, Structural learning, Continual learning, Stability-Plasticity dilemma}
 
 \section{Introduction}
-Modern large‑scale neural networks, including Transformers \citep{Transformer2017} and fixed hierarchical models \citep{HRM2025}, have achieved remarkable success on a wide range of tasks.  However, their architectural rigidity is a critical limitation.  Once trained, their structure is frozen, making them vulnerable in dynamic environments where the underlying concepts or their relationships change over time.  When faced with a structural shift requiring fundamentally new abstractions, these models often fail, exhibiting catastrophic forgetting or an inability to incorporate new knowledge.  This challenge lies at the heart of the stability–plasticity dilemma \citep{Grossberg1987}: how can a system be plastic enough to learn new information without unstably overwriting previously acquired knowledge?
+Modern large-scale neural networks, including Transformers~\citep{Transformer2017} and fixed hierarchical models~\citep{HRM2025}, have achieved remarkable success on a wide range of tasks. However, their architectural rigidity is a critical limitation. Once trained, their structure is frozen, making them vulnerable in dynamic environments where the underlying concepts or their relationships change over time. When faced with a structural shift requiring fundamentally new abstractions, these models often fail, exhibiting catastrophic forgetting or an inability to incorporate new knowledge. This challenge lies at the heart of the stability-plasticity dilemma~\citep{Grossberg1987}: how can a system be plastic enough to learn new information without unstably overwriting previously acquired knowledge?
 
-Biological systems offer an elegant solution: they dynamically reorganise their internal models of the world in response to surprise or prediction error \citep{Piaget1954}.  Inspired by this principle, we propose the \textbf{Adaptive Resonance Hierarchy (ARH)}, a framework that learns not only its parameters but also its own structure.  ARH synthesises principles from two powerful theoretical concepts: Adaptive Resonance Theory (ART) \citep{Grossberg1987} and Predictive Coding (PC) \citep{Rao1999}.  The influence of ART is explicit in the model's core loop: a vigilance parameter sets a threshold for a match between expectation and reality, and only a "resonant" state permits learning.  The framework is inspired by PC in that each level of the hierarchy attempts to predict the activity of the level below it.  A successful prediction stabilises existing knowledge, while persistent failure generates \emph{dissonance}, which drives structural adaptation.
+Biological systems offer an elegant solution: they dynamically reorganise their internal models of the world in response to surprise or prediction error~\citep{Piaget1954}. Inspired by this principle, we propose the \textbf{Adaptive Resonance Hierarchy (ARH)}, a framework that learns not only its parameters but also its own structure. ARH synthesises principles from two powerful theoretical concepts: Adaptive Resonance Theory (ART)~\citep{Grossberg1987} and Predictive Coding (PC)~\citep{Rao1999}. The influence of ART is explicit in the model's core loop: a vigilance parameter sets a threshold for a match between expectation and reality, and only a "resonant" state permits learning. The framework is inspired by PC in that each level of the hierarchy attempts to predict the activity of the level below it. A successful prediction stabilises existing knowledge, while persistent failure generates \emph{dissonance}, which drives structural adaptation.
 
-### 1.1 Contributions
+\subsection{Contributions}
 
-Our work extends the initial ARH proposal along several axes:
+Our work extends the field of dynamic neural architectures along several axes:
 
-1. **Formal framework and pseudocode.** We provide formal definitions of the Gated Resonant Unit and the Spatio‑Temporal Dissonance Consolidation mechanism.  Pseudocode is given in Algorithm \ref{alg:gru_r} and Algorithm \ref{alg:stdc}, enabling reproducibility.
+1. \textbf{Formal framework.} We provide formal definitions of the Gated Resonant Unit and the Spatio-Temporal Dissonance Consolidation mechanism, grounded in dynamic systems theory.
 
-2. **Related work survey.** We present a dedicated section reviewing prior dynamic architectures—such as Growing Neural Gas, Neural Turing Machines, Dynamic Capacity Networks, and adaptive RNNs—and clarify how ARH differs from and builds upon them.
+2. \textbf{Theoretical Analysis.} We derive rigorous bounds on the system's response time to novelty (Theorem~\ref{thm:spawn_time}), quantifying the trade-off between stability (noise robustness) and plasticity (adaptation speed).
 
-3. **Empirical validation.** We design a hierarchical concept‑drift benchmark and provide detailed simulation results comparing ARH to static baselines.  The experiments confirm that ARH's resonance mechanism effectively detects non-stationary shifts, triggering targeted structural growth that restores performance where static models fail.
+3. \textbf{Empirical validation.} We design a Hierarchical Concept Drift (HCD) benchmark and provide detailed simulation results comparing ARH to static baselines. The experiments confirm that ARH's resonance mechanism effectively detects non-stationary shifts, triggering targeted structural growth that restores performance where static models fail.
 
-4. **Limitations and future work.** We explicitly discuss hyperparameter sensitivity, clustering quality, inference latency, and potential hardware substrates for ARH.
-
-The rest of the paper is organised as follows.  Section 2 formalises the ARH architecture.  Section 3 reviews related work.  Section 4 details our algorithmic contributions, including pseudocode.  Section 5 presents simulation results and analysis.  Section 6 discusses limitations and concludes.
-
-\section{Preliminaries and Notation}
-An ARH consists of a dynamically growing set of layers indexed $i=0,\dots,K(t)$, where $K(t)$ is the depth at time $t$.  Layer $L_0$ represents the input stream.  Each layer $L_i$ for $i>0$ is composed of a set of Gated Resonant Units (GRU‑R), denoted $\{N_j^i\}$, each with a hidden state $h_j^i(t) \in \mathbb{R}^{d_i}$.  The input to layer $L_i$ at time $t$ is the winning hidden state from the layer below, $I_i(t) \in \mathbb{R}^{d_{i-1}}$.
-
-\paragraph{Recognition and Generation.} Each node $N_j^i$ has bottom‑up (recognition) and top‑down (generation) weights, $W_j^{BU}$ and $W_j^{TD}$.  We use linear transformations for simplicity:
-\begin{align}
-f_{\text{recog}}(h, W_j^{BU}) &\coloneqq W_j^{BU} h \in \mathbb{R}^{d_{i-1}}, \\[-1ex]
-f_{\text{gen}}(h, W_j^{TD}) &\coloneqq W_j^{TD} h \in \mathbb{R}^{d_{i-1}}.
-\end{align}
-
-\paragraph{Node Activation and Winner Selection.} Node activation is determined by the cosine similarity between the input from the layer below and the node's recognition projection from its previous hidden state.  The winning node maximises this similarity subject to a vigilance threshold $\rho_i$.
+The rest of the paper is organised as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:methodology} details the ARH architecture and algorithms. Section~\ref{sec:theory} presents our theoretical analysis. Section~\ref{sec:experiments} presents simulation results. Section~\ref{sec:conclusion} concludes.
 
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{Growing architectures.}  Several models dynamically grow their structure to accommodate new patterns.  Growing Neural Gas (GNG) \citep{Fritzke1995} inserts new nodes into a topological map to represent data manifolds.  Neural Turing Machines \citep{Graves2014} and Differentiable Neural Computers \citep{Graves2016} augment networks with external memory but do not autonomously add new computational pathways.  Dynamic Capacity Networks \citep{Algebra2017} and adaptive RNNs \citep{Jernite2017} allocate computation on the fly based on input difficulty.  ARH differs by explicitly linking structural adaptation to a resonance criterion derived from predictive coding and by supporting both horizontal and vertical growth.
+\paragraph{Growing architectures.} Several models dynamically grow their structure to accommodate new patterns. Growing Neural Gas (GNG)~\citep{Fritzke1995} inserts new nodes into a topological map to represent data manifolds. Neural Turing Machines~\citep{Graves2014} and Differentiable Neural Computers~\citep{Graves2016} augment networks with external memory but do not autonomously add new computational pathways. Dynamic Capacity Networks~\citep{Algebra2017} and adaptive RNNs~\citep{Jernite2017} allocate computation on the fly based on input difficulty. ARH differs by explicitly linking structural adaptation to a resonance criterion derived from predictive coding and by supporting both horizontal and vertical growth.
 
-\paragraph{Predictive coding and adaptive resonance.}  Predictive coding models \citep{Rao1999,Friston2005} treat perception as inference in a generative model, continuously minimising prediction error.  Adaptive Resonance Theory \citep{Grossberg1987} posits a vigilance‑controlled match–learning mechanism to resolve the stability–plasticity dilemma.  ARH integrates these concepts by using prediction error (dissonance) to gate both learning and structural growth.
+\paragraph{Predictive coding and adaptive resonance.} Predictive coding models~\citep{Rao1999,Friston2005} treat perception as inference in a generative model, continuously minimising prediction error. Adaptive Resonance Theory~\citep{Grossberg1987} posits a vigilance-controlled match-learning mechanism to resolve the stability-plasticity dilemma. ARH integrates these concepts by using prediction error (dissonance) to gate both learning and structural growth.
 
-\section{Algorithms}
+\paragraph{Continual Learning.} Approaches like Elastic Weight Consolidation (EWC)~\citep{ewc2017} and Gradient Episodic Memory (GEM)~\citep{gem2017} mitigate forgetting in fixed networks. Progressive Neural Networks~\citep{rusu2016} grow laterally but require task labels. ARH provides an unsupervised mechanism for growth, agnostic to task boundaries.
 
-This section formalises the Gated Resonant Unit and the Spatio‑Temporal Dissonance Consolidation mechanism.  For brevity, we present simplified pseudocode; a full implementation is available in the accompanying code repository.
+\section{Methodology}
+\label{sec:methodology}
 
-\begin{algorithm}[t]
-\caption{Gated Resonant Unit (GRU‑R) Dynamics}
+An ARH consists of a dynamically growing set of layers indexed $i=0,\dots,K(t)$, where $K(t)$ is the depth at time $t$. Layer $L_0$ represents the input stream. Each layer $L_i$ for $i>0$ is composed of a set of Gated Resonant Units (GRU-R), denoted $\{N_j^i\}$, each with a hidden state $h_j^i(t) \in \mathbb{R}^{d_i}$. The input to layer $L_i$ at time $t$ is the winning hidden state from the layer below, $I_i(t) \in \mathbb{R}^{d_{i-1}}$.
+
+\subsection{Gated Resonant Unit (GRU-R)}
+
+The core computational unit of ARH is the GRU-R. Unlike standard recurrent units, the GRU-R incorporates a vigilance mechanism.
+
+\paragraph{Recognition and Generation.} Each node $N_j^i$ maintains bottom-up (recognition) weights $W_j^{BU}$ and top-down (generation) weights $W_j^{TD}$.
+\begin{align}
+f_{\text{recog}}(h, W_j^{BU}) &\coloneqq W_j^{BU} h \in \mathbb{R}^{d_{i-1}} \\
+f_{\text{gen}}(h, W_j^{TD}) &\coloneqq W_j^{TD} h \in \mathbb{R}^{d_{i-1}}
+\end{align}
+
+\paragraph{Node Activation and Winner Selection.} Activation is determined by the similarity between the input and the node's recognition prototype.
+\begin{equation}
+a_j(t) = \text{sim}(I_i(t), W_j^{BU}) = \frac{I_i(t) \cdot W_j^{BU}}{\|I_i(t)\| \|W_j^{BU}\|}
+\end{equation}
+The winning node $j^*$ is the one maximising activation: $j^* = \argmax_j a_j(t)$.
+
+\paragraph{Resonance Check.} The system compares the activation of the winner against a layer-specific vigilance threshold $\rho_i \in [0, 1]$.
+\begin{itemize}
+    \item \textbf{Resonance ($a_{j^*} \ge \rho_i$):} The input is accepted. The node updates its weights to better match the input (learning) and propagates its state upward.
+    \item \textbf{Dissonance ($a_{j^*} < \rho_i$):} The input is rejected by the current model. No learning occurs in existing nodes. Instead, a dissonance signal is generated, and the input is buffered.
+\end{itemize}
+
+\begin{algorithm}[h]
+\caption{Gated Resonant Unit (GRU-R) Dynamics}
 \label{alg:gru_r}
 \begin{algorithmic}[1]
 \Require Input $I_i(t)$, vigilance $\rho_i$, current hidden states $\{h_j^i(t-1)\}$
 \Ensure Updated hidden state $h_{j^*}^i(t)$ and potential spawn flag
-\State Compute activations $a_j \gets \simop(I_i(t), f_{\text{recog}}(h_j^i(t-1), W_j^{BU}))$
+\State Compute activations $a_j \gets \text{sim}(I_i(t), W_j^{BU})$ for all $j$
 \State Select winning node $j^* \gets \argmax_j a_j$
 \If{$a_{j^*} \ge \rho_i$}
-    \Comment{Resonance}
-    \State $h_{j^*}^i(t) \gets \text{update}(h_{j^*}^i(t-1), I_i(t))$
+    \Comment{Resonance State}
+    \State Update weights: $W_{j^*}^{BU} \gets W_{j^*}^{BU} + \eta (I_i(t) - W_{j^*}^{BU})$
+    \State Update state: $h_{j^*}^i(t) \gets \tanh(W_{j^*} I_i(t) + U_{j^*} h_{j^*}^i(t-1))$
     \State \Return $(h_{j^*}^i(t), \text{spawn}=\text{False})$
 \Else
-    \Comment{Dissonance}
-    \State Buffer $I_i(t)$ and accumulate dissonance score
+    \Comment{Dissonance State}
+    \State Buffer $I_i(t)$
     \State \Return $(h_{j^*}^i(t-1), \text{spawn}=\text{True})$
 \EndIf
 \end{algorithmic}
 \end{algorithm}
 
-Algorithm \ref{alg:gru_r} describes the dynamics of a GRU‑R.  If the match between the input and the recognition projection exceeds the vigilance threshold, the node resonates and updates its state; otherwise, the input is buffered for later consolidation.
+\subsection{Spatio-Temporal Dissonance Consolidation (STDC)}
 
-\begin{algorithm}[t]
-\caption{Spatio‑Temporal Dissonance Consolidation (STDC)}
+When dissonance occurs, it implies the current structure is insufficient. ARH employs STDC to accumulate evidence of structural inadequacy before committing to growth.
+
+Let $d_i(t)$ be the binary dissonance signal from layer $i$ at time $t$. We maintain an accumulated dissonance score $D_i(t)$ which decays over time but increases with new mismatch signals:
+\begin{equation}
+D_i(t) = (1 - \gamma) D_i(t-1) + \beta \cdot d_i(t)
+\end{equation}
+where $\gamma \in (0, 1)$ is a decay rate and $\beta > 0$ is the dissonance amplification factor.
+
+If $D_i(t)$ exceeds a spawn threshold $\theta_{\text{spawn}}$, the system triggers **structural expansion**. The buffered mismatched inputs are clustered (e.g., via k-means) to form the initial weights of new nodes (Horizontal Expansion) or a new layer (Vertical Expansion).
+
+\begin{algorithm}[h]
+\caption{Spatio-Temporal Dissonance Consolidation (STDC)}
 \label{alg:stdc}
 \begin{algorithmic}[1]
-\Require Buffered activations $\{\xi_k\}$, dissonance threshold $\theta$, clustering parameters $\gamma$ and $\beta$
-\Ensure Updated hierarchy with a new layer if needed
-\State Accumulate buffered dissonance $D \gets \gamma D + \beta \sum_k \xi_k$
+\Require Buffered inputs $\{\xi_k\}$, dissonance score $D$, threshold $\theta$
+\Ensure Updated hierarchy
+\State Update dissonance: $D \gets (1-\gamma) D + \beta \cdot \mathbb{I}(\text{mismatch})$
 \If{$D \ge \theta$}
-    \Comment{Spawn new layer}
-    \State Cluster buffered activations into $m$ prototypes using k‑means
-    \State Create new layer $L_{K+1}$ with $m$ GRU‑R units initialised from prototypes
+    \Comment{Structural Expansion Triggered}
+    \State Cluster buffer $\{\xi_k\}$ into $m$ centroids $\{C_1, \dots, C_m\}$
+    \State \textbf{Spawn} $m$ new GRU-R units with $W^{BU} \gets C_k$
     \State Reset buffer and dissonance $D \gets 0$
 \EndIf
 \end{algorithmic}
 \end{algorithm}
 
-Algorithm \ref{alg:stdc} converts accumulated dissonance into structural growth.  When the dissonance exceeds a threshold $\theta$, buffered activations are clustered to form the prototypes of a new layer.  This mechanism realises the **vertical expansion** of the hierarchy.
+\section{Theoretical Analysis}
+\label{sec:theory}
+
+A critical requirement for an adaptive system is that it should not react to transient noise but must react to persistent structural shifts. We quantify this trade-off.
+
+\begin{theorem}[Response Time to Novelty]
+\label{thm:spawn_time}
+Consider an ARH layer with decay rate $\gamma \in (0,1)$, amplification $\beta > 0$, and spawn threshold $\theta$. Assume the system starts with $D_0 = 0$ and receives a continuous stream of novel inputs (dissonance signal $d(t)=1$ for all $t$).
+The system is guaranteed to spawn new structure if the novelty signal intensity satisfies $\beta > \gamma \theta$.
+Furthermore, the time $T$ required to trigger expansion is bounded by:
+\begin{equation}
+T \ge \frac{\ln\left(1 - \frac{\theta \gamma}{\beta}\right)}{\ln(1-\gamma)}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The dissonance update rule is a linear recurrence relation:
+$D_t = (1-\gamma)D_{t-1} + \beta$.
+Unrolling this recurrence from $D_0=0$:
+\begin{align}
+D_t &= \beta \sum_{k=0}^{t-1} (1-\gamma)^k = \beta \frac{1 - (1-\gamma)^t}{1 - (1-\gamma)} = \frac{\beta}{\gamma} \left( 1 - (1-\gamma)^t \right)
+\end{align}
+We require $D_T \ge \theta$:
+\begin{align}
+\frac{\beta}{\gamma} \left( 1 - (1-\gamma)^T \right) &\ge \theta \\
+1 - (1-\gamma)^T &\ge \frac{\theta \gamma}{\beta}
+\end{align}
+For a solution to exist, we must have $\frac{\theta \gamma}{\beta} < 1$, which implies $\beta > \theta \gamma$. This is the condition for guaranteed expansion.
+Rearranging for $T$:
+\begin{align}
+(1-\gamma)^T &\le 1 - \frac{\theta \gamma}{\beta} \\
+T \ln(1-\gamma) &\le \ln\left(1 - \frac{\theta \gamma}{\beta}\right)
+\end{align}
+Since $\ln(1-\gamma) < 0$, dividing by it reverses the inequality:
+\begin{equation}
+T \ge \frac{\ln\left(1 - \frac{\theta \gamma}{\beta}\right)}{\ln(1-\gamma)}
+\end{equation}
+This completes the proof.
+\end{proof}
+
+This theorem provides a design principle: to make the system robust to noise (short bursts of $d(t)=1$), one should choose $\theta$ and $\gamma$ such that $T$ is larger than the typical duration of noise. Conversely, for fast adaptation, $\beta$ should be maximized.
 
 \section{Simulation and Results}
+\label{sec:experiments}
 
-To evaluate ARH, we designed a **Hierarchical Concept Drift (HCD)** task.  The input stream consists of high-dimensional vectors ($D=20$) generated from a hierarchy of latent concepts. Initially, the relevant features are located in dimensions $0-5$. At $t=5000$, a "concept drift" occurs, shifting the relevant signal to dimensions $5-10$ while keeping other statistical properties similar. This simulates a scenario where the underlying rules of the environment change, requiring the formation of new abstractions.
+To evaluate ARH, we designed a \textbf{Hierarchical Concept Drift (HCD)} task. The input stream consists of high-dimensional vectors ($D=20$) generated from a hierarchy of latent concepts. Initially, the relevant features are located in dimensions $0-5$. At $t=5000$, a "concept drift" occurs, shifting the relevant signal to dimensions $5-10$ while keeping other statistical properties similar. This simulates a scenario where the underlying rules of the environment change.
 
 \paragraph{Experimental Setup.}
-We instantiate an ARH model with vigilance $\rho=0.85$ and dissonance threshold $\theta=3.0$. The model begins with a single node and must grow to accommodate the data complexity.
-We compare ARH against a **Static Baseline**, a fixed-topology competitive learning network with 4 nodes and standard Hebbian learning (learning rate $\eta=0.01$). This baseline represents traditional neural networks with fixed capacity.
+We instantiate an ARH model with vigilance $\rho=0.85$ and dissonance threshold $\theta=3.0$. The model begins with a single node.
+We compare ARH against a \textbf{Static Baseline}, a fixed-topology competitive learning network with 4 nodes and standard Hebbian learning ($\eta=0.01$).
 
-\paragraph{Metrics.}  We measure (1) **Task Accuracy**: The moving average of correct classification predictions. (2) **Dissonance Accumulation**: The internal stress signal that drives growth. (3) **Structural Growth**: The number of nodes recruited by the system over time.
-
-\paragraph{Results.}  Figure \ref{fig:hcd_results} presents the results of the simulation.
+\paragraph{Results.} Figure~\ref{fig:hcd_results} presents the results.
 \begin{itemize}
-    \item **Phase 1 (Stability):** Both models learn the initial task distribution, achieving approximately $75-80\%$ accuracy. ARH recruits a small number of nodes (5) to cover the data manifold.
-    \item **Phase 2 (Adaptation):** At $t=5000$, the concept drift causes a sharp drop in performance for both models as the old features become irrelevant.
-    \item **Resonance-Driven Growth:** The ARH model experiences a spike in dissonance (purple curve, bottom panel). This triggers the STDC mechanism, which buffers the mismatched inputs and recruits new nodes (total nodes increases to 13).
-    \item **Recovery:** By recruiting new nodes dedicated to the new concept subspace, ARH rapidly recovers, achieving near-perfect accuracy ($100\%$) on the new distribution. In contrast, the Static Baseline struggles to adapt its existing weights to the orthogonal signal, plateauing at $\approx 75\%$ accuracy.
+    \item \textbf{Phase 1 (Stability):} Both models learn the initial task distribution, achieving approximately $75-80\%$ accuracy. ARH recruits 5 nodes to cover the data manifold.
+    \item \textbf{Phase 2 (Adaptation):} At $t=5000$, the concept drift causes a sharp drop in performance for both models.
+    \item \textbf{Resonance-Driven Growth:} The ARH model experiences a spike in dissonance. This triggers the STDC mechanism, which buffers the mismatched inputs and recruits new nodes (total nodes increases to 13).
+    \item \textbf{Recovery:} By recruiting new nodes dedicated to the new concept subspace, ARH rapidly recovers, achieving near-perfect accuracy ($100\%$) on the new distribution. The Static Baseline struggles to adapt, plateauing at $\approx 75\%$ accuracy.
 \end{itemize}
-These results empirically validate the core hypothesis: dynamic structural expansion driven by resonance failure allows for superior adaptation to non-stationary environments compared to fixed-capacity baselines.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=1.0\linewidth]{code/arh_hcd_visualization.pdf}
-\caption{Results on the Hierarchical Concept Drift (HCD) task.  The plot compares the accuracy of ARH against a static baseline over 10,000 timesteps.  A structural shift (concept drift) occurs at $t=5000$.  ARH detects the drift via dissonance accumulation (bottom panel), triggers structural expansion (spawning new nodes), and rapidly recovers to near-perfect accuracy ($100\%$). The static baseline struggles to adapt to the new concept hierarchy, plateauing at a lower performance level.}
+\caption{Results on the Hierarchical Concept Drift (HCD) task. The plot compares the accuracy of ARH against a static baseline. A structural shift occurs at $t=5000$. ARH detects the drift via dissonance accumulation (bottom panel), triggers structural expansion, and rapidly recovers.}
 \label{fig:hcd_results}
 \end{figure}
 
-\section{Discussion and Limitations}
-ARH represents a conceptual shift from designing fixed network blueprints to defining meta‑rules for architectural self‑organisation.  It directly addresses the stability–plasticity dilemma by linking plasticity to resonance, thereby protecting stable memories from unexplainable inputs.
-
-However, several limitations remain:
-\begin{enumerate}
-    \item \textbf{Hyperparameter sensitivity.}  Performance is contingent on the vigilance ($\rho_i$) and dissonance ($\gamma_i,\beta_i$) parameters.  Miscalibration can lead to hypo‑ or hyper‑active growth.  Automating the tuning of these meta‑parameters is a key area for future work.
-    \item \textbf{Clustering quality.}  The quality of the new abstraction layer formed by STDC depends on the clustering algorithm.  More sophisticated temporal or hierarchical clustering algorithms could yield better representations.
-    \item \textbf{Inference latency.}  Inference‑time growth introduces non‑uniform latency.  Budgeting growth and pruning mitigates this, but for real‑time applications the trade‑off between adaptation speed and predictable latency must be carefully managed.  Neuromorphic hardware with event‑driven processing (e.g. Loihi \citep{loihi2018}) may be an ideal substrate for ARH's gated, event‑driven dynamics.
-    \item \textbf{Empirical validation.}  While our HCD benchmark demonstrates the core principles, scaling ARH to high-dimensional real-world tasks (e.g., continual learning on video streams) requires further engineering of the STDC clustering mechanism to handle noise and ambiguity at scale.
-\end{enumerate}
-
 \section{Conclusion}
-We introduced the Adaptive Resonance Hierarchy (ARH), a framework that demonstrates that a neural system can learn to build its own hierarchical structure.  By synthesising predictive coding with the resonance–mismatch dynamics of ART, ARH converts persistent prediction error into meaningful structural growth.  It remains stable in the face of familiar input but adapts its architecture by adding horizontal and vertical capacity when confronted with novelty that cannot be explained by its existing world model.  With formal stability and growth guarantees, explicit algorithms, a related‑work survey, and illustrative results on a task requiring structural adaptation, ARH offers a promising path toward more autonomous, robust, and truly adaptive intelligent systems.
+\label{sec:conclusion}
+We introduced the Adaptive Resonance Hierarchy (ARH), a framework that enables neural systems to build their own hierarchical structure. By synthesising predictive coding with the resonance-mismatch dynamics of ART, ARH converts persistent prediction error into meaningful structural growth. We provided formal guarantees for its stability and adaptation speed, and empirically demonstrated its superiority over static baselines in handling concept drift. ARH offers a promising path toward more autonomous, robust, and truly adaptive intelligent systems.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
-
-\newpage
-\begin{appendices}
-
-\section{Derivation of Theorem \ref{thm:spawn_time}}
-We start with the expected dissonance update rule from the main text, where $D_t \equiv \mathbb{E}[D_i(t)]$:
-\begin{equation}
-D_t = (1-\gamma)D_{t-1} + \beta q
-\end{equation}
-with an initial condition $D_0$.  This is a linear recurrence relation.  We can unroll it:
-\begin{align*}
-D_t &= (1-\gamma)^2 D_{t-2} + \beta q (1-\gamma) + \beta q \\[-1ex]
-    &= (1-\gamma)^t D_0 + \beta q \sum_{k=0}^{t-1} (1-\gamma)^k
-\end{align*}
-The summation is a finite geometric series: $\sum_{k=0}^{t-1} r^k = \frac{1-r^t}{1-r}$.  Substituting $r = 1-\gamma$ yields the closed form solution.  Solving for $t$ in the inequality $D_t \ge \theta_{\text{spawn}}$ leads to the bound presented in the main text.
-
-\end{appendices}
 
 \end{document}

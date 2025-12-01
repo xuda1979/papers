@@ -102,4 +102,17 @@ Experiment hyperparameters (seeds, learning rates, etc.) are centralized in `neu
 
 ## Paper & Specs
 
-The updated paper reflecting our vision for runtime-enforced control lives in `paper/paper.md`, with companion specs in `paper/specs/`.
+The updated paper reflecting our vision for runtime-enforced control lives in `paper/paper.tex`, with companion specs in `paper/specs/`.
+
+To compile the paper:
+
+1.  Ensure you have a standard LaTeX distribution installed (e.g., TeX Live).
+2.  Run the experiment to generate the plots: `python -m neural_organism.src.runner bandit_plusmlp`
+3.  Compile the paper:
+    ```bash
+    cd paper
+    pdflatex paper.tex
+    bibtex paper
+    pdflatex paper.tex
+    pdflatex paper.tex
+    ```
