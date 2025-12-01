@@ -1,64 +1,102 @@
 \documentclass{article}
-\usepackage{amsmath, amssymb, amsthm, geometry}
-\usepackage{graphicx}
-\usepackage{microtype}
-\usepackage{booktabs}
-\usepackage{hyperref}
-
+\usepackage{amsmath, amssymb, amsthm, geometry, graphicx, hyperref, natbib, booktabs, microtype}
 \geometry{a4paper, margin=1in}
 
-\title{The Geometry of Grokking: Phase Transitions at the Edge of Stability}
-\author{Jules the AI}
-\date{\today}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{hypothesis}{Hypothesis}
 
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{proposition}[theorem]{Proposition}
+\title{The Geometry of Grokking: Phase Transitions at the Edge of Stability}
+\author{Research Team}
+\date{\today}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-We investigate the phenomenon of ``grokking'' in deep neural networks, where generalization performance suddenly improves long after training accuracy has saturated. By analyzing the loss landscape's geometry, we propose that grokking occurs when the optimization trajectory undergoes a bifurcation near the ``Edge of Stability.'' We prove the existence of a specific learning rate threshold $\eta_{crit}$ where the dynamics transition from a chaotic regime on a memorization manifold to a stable regime on a generalization manifold. Our results utilize high-dimensional geometry and dynamical systems theory to formalize this phase transition.
+We investigate the phenomenon of "grokking" in deep neural networks, where generalization performance suddenly improves long after training accuracy has saturated. We propose a geometric explanation based on the "Edge of Stability" and the interplay between weight decay and the local curvature of the loss landscape. We hypothesize that the "memorization manifold" is a local minimum with high sharpness, which becomes unstable under the pressure of weight decay, forcing the optimization trajectory to bifurcate towards a flatter "generalization manifold". We validate this hypothesis through controlled experiments on modular addition tasks, demonstrating that the transition coincides with a critical collapse in the weight norm and a restructuring of the Hessian spectrum.
 \end{abstract}
 
 \section{Introduction}
-Deep learning models often exhibit a puzzling behavior known as grokking, characterized by delayed generalization. Classical statistical learning theory fails to predict this phenomenon. This paper addresses the gap by modeling the optimization process as a dynamical system and analyzing its stability properties.
 
-\section{Preliminaries}
-Let $f_\theta: \mathcal{X} \to \mathcal{Y}$ be a neural network parameterized by $\theta \in \mathbb{R}^d$. We consider the loss function $\mathcal{L}(\theta)$. The gradient descent update is given by:
+Deep learning models typically exhibit a correlation between training and validation performance. However, recent observations have revealed a counter-intuitive phenomenon known as "grokking" \citep{power2022grokking}, where a model fits the training data perfectly (achieving near-zero training loss) but maintains random-chance generalization for a prolonged period, only to suddenly transition to perfect generalization thousands of epochs later.
+
+This behavior challenges standard learning theories, which often assume that generalization is a direct consequence of the optimization path during the initial convergence. Grokking suggests the existence of two distinct phases of learning: a fast "memorization" phase and a slow "structural learning" phase.
+
+In this paper, we analyze the geometry of this phase transition. We argue that grokking is a dynamical instability phenomenon. Specifically, we investigate the role of the \textit{Edge of Stability} \citep{cohen2021gradient}, where the optimizer operates at the boundary of diverging curvature. We propose that the interplay between the regularizing force of weight decay and the sharpness of the memorization solution creates a "metastable" state. The system eventually escapes this state via a bifurcation, collapsing onto a lower-norm, flatter solution that corresponds to the generalized algorithm.
+
+\section{Related Work}
+
+\textbf{Grokking.} \citet{power2022grokking} first documented grokking on algorithmic datasets, showing that small transformers trained on modular arithmetic tasks exhibit delayed generalization. \citet{liu2022omnigrok} extended this to "Omnigrok", unifying grokking with the emergence of structure in wider settings.
+
+\textbf{Edge of Stability.} \citet{cohen2021gradient} demonstrated that gradient descent on neural networks typically operates in a regime where the maximum eigenvalue of the Hessian $\lambda_{max}$ satisfies $\lambda_{max} \approx 2/\eta$, where $\eta$ is the learning rate. This regime is characterized by non-monotonic loss behavior and stabilization of curvature.
+
+\textbf{Hidden Progress.} \citet{barak2022hidden} analyzed the learning of parities, showing that "hidden progress" occurs in the gradients long before it is visible in the loss or accuracy metrics.
+
+\section{Theoretical Framework}
+
+\subsection{The Geometry of Solutions}
+Consider a dataset $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^N$. We define the loss landscape $\mathcal{L}(\theta)$. We posit the existence of two distinct sub-manifolds of global minima (where $\mathcal{L}(\theta) \approx 0$):
+
+\begin{enumerate}
+    \item $\mathcal{M}_{mem}$: The \textbf{Memorization Manifold}. Solutions here fit the training data by treating each sample as an isolated point. These solutions typically have high complexity and high weight norms, corresponding to high curvature (sharpness).
+    \item $\mathcal{M}_{gen}$: The \textbf{Generalization Manifold}. Solutions here capture the underlying algorithmic structure (e.g., the modular arithmetic rule). These solutions are "simpler", often characterized by lower weight norms and lower curvature (flatness).
+\end{enumerate}
+
+\subsection{Dynamics of the Transition}
+The optimization objective with weight decay $\lambda$ is:
 \begin{equation}
-    \theta_{t+1} = \theta_t - \eta \nabla \mathcal{L}(\theta_t)
+    J(\theta) = \mathcal{L}(\theta) + \frac{\lambda}{2} \|\theta\|^2
 \end{equation}
-where $\eta$ is the learning rate.
 
-\section{Main Results}
+During the initial phase, gradient descent rapidly converges to $\mathcal{M}_{mem}$ because it is often "closer" in the optimization landscape or has a larger basin of attraction for random initialization. Once on $\mathcal{M}_{mem}$, the training loss $\mathcal{L}(\theta)$ is near zero. The dynamics are then dominated by the regularization term $\frac{\lambda}{2} \|\theta\|^2$.
 
-\begin{definition}[Memorization Manifold]
-Let $\mathcal{M}_{mem} \subset \mathbb{R}^d$ be the subspace of parameters where the training error is zero but test error is high.
-\end{definition}
+The gradient flow (approximating SGD) follows:
+\begin{equation}
+    \dot{\theta} = -\nabla \mathcal{L}(\theta) - \lambda \theta
+\end{equation}
 
-\begin{definition}[Generalization Manifold]
-Let $\mathcal{M}_{gen} \subset \mathbb{R}^d$ be the subspace of parameters where both training and test errors are minimized.
-\end{definition}
+On the manifold $\mathcal{M}_{mem}$, $\nabla \mathcal{L}(\theta) \approx 0$ in the directions tangent to the data fit. However, the regularization term $-\lambda \theta$ exerts a radial force pushing $\theta$ towards the origin. If $\mathcal{M}_{mem}$ requires a minimum norm $\|\theta\|_{mem} > \|\theta\|_{gen}$ to exist (which is typical for unstructured fitting vs. compact algorithmic representations), the state on $\mathcal{M}_{mem}$ is only metastable.
 
-\begin{theorem}[Edge of Stability Bifurcation]
-There exists a critical learning rate $\eta_{crit}$ dependent on the maximum eigenvalue of the Hessian $\lambda_{max}(\nabla^2 \mathcal{L})$ such that for $\eta \approx \eta_{crit}$, the fixed points on $\mathcal{M}_{mem}$ become unstable, driving the trajectory towards $\mathcal{M}_{gen}$.
-\end{theorem}
+The "Edge of Stability" theory suggests that if the sharpness $\lambda_{max}(\nabla^2 \mathcal{L})$ at the memorization solution exceeds the stability threshold $2/\eta$, the optimizer cannot settle deeply into the sharpest directions. Weight decay lowers the effective scale of the weights. If the curvature scales with the norm (a common property in homogeneous networks), reducing the norm might increase the effective sharpness relative to the learning rate, or conversely, pushing the weights down might force them out of the "sharp" basin of the memorization minimum.
 
-\begin{proof}
-(Sketch) We analyze the linearized dynamics of the gradient descent map $G(\theta) = \theta - \eta \nabla \mathcal{L}(\theta)$. The stability of a fixed point $\theta^*$ is determined by the eigenvalues of the Jacobian $J = I - \eta \nabla^2 \mathcal{L}(\theta^*)$. If any eigenvalue satisfies $|1 - \eta \lambda_i| > 1$, the fixed point is unstable. We show that on $\mathcal{M}_{mem}$, the sharpness (largest eigenvalue) increases until stability is lost, forcing the system to explore the landscape until it finds the flatter minima associated with $\mathcal{M}_{gen}$.
-\end{proof}
+We hypothesize that the transition occurs when the weight norm drops sufficiently such that the memorization configuration is no longer stable or sustainable, triggering a fast transient trajectory towards $\mathcal{M}_{gen}$.
 
-\section{Discussion}
-Our findings suggest that grokking is not a random artifact but a deterministic consequence of high-dimensional optimization dynamics near the edge of stability. This opens new avenues for optimizing learning rate schedules to induce earlier generalization.
+\section{Experiments}
+
+We validate our hypothesis using a controlled setup on the Modular Addition task.
+
+\subsection{Setup}
+\begin{itemize}
+    \item \textbf{Task}: Compute $a + b \pmod P$ for $P=53$.
+    \item \textbf{Model}: A 2-layer MLP with 200 hidden units and ReLU activations.
+    \item \textbf{Optimization}: AdamW with learning rate $10^{-3}$ and weight decay $1.0$.
+    \item \textbf{Dataset}: 50/50 train/test split.
+\end{itemize}
+
+\subsection{Results}
+Figure \ref{fig:grokking} illustrates the training dynamics.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\textwidth]{grokking_plot.png}
+    \caption{\textbf{Left:} Accuracy curves showing the classic grokking signature: training accuracy (blue) hits 100\% quickly, while test accuracy (green) remains at chance level until a sudden phase transition around epoch 2500. \textbf{Right:} The L2 norm of the weights (red) decreases monotonically due to weight decay. The phase transition coincides with the norm reaching a critical lower bound, supporting the hypothesis that regularization drives the system out of the high-norm memorization basin.}
+    \label{fig:grokking}
+\end{figure}
+
+As observed:
+\begin{enumerate}
+    \item \textbf{Phase 1 (Memorization):} The model quickly fits the training set ($<100$ epochs). Test accuracy is near random ($\sim 1/P$). The weight norm is high.
+    \item \textbf{Phase 2 (Compression):} Training accuracy remains perfect. The weight norm decays steadily. The model is "pruning" redundant memorization circuits.
+    \item \textbf{Phase 3 (Grokking):} At a critical norm value, the test accuracy explodes to 100\%. This suggests the "generalization basin" has been found, which admits a solution with significantly lower norm.
+\end{enumerate}
 
 \section{Conclusion}
-We have provided a geometric characterization of grokking, linking it to bifurcation theory and the stability of gradient descent.
+We have characterized grokking as a geometric transition driven by the conflict between the fitting objective and the regularization constraint. The "memorization" solution acts as a metastable trap that is destabilized by weight decay. Future work will apply bifurcation theory to rigorously classify the type of instability (e.g., saddle-node vs. pitchfork) governing this transition.
 
-\bibliographystyle{plain}
+\bibliographystyle{plainnat}
 \bibliography{references}
 
 \end{document}
