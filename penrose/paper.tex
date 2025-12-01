@@ -13,6 +13,8 @@
 \usepackage{hyperref}
 \usepackage{cleveref}
 \usepackage{microtype}
+\usepackage{lineno} % Essential for peer review
+\usepackage{fancyhdr} % Professional headers
 
 % Geometry Settings
 \geometry{
@@ -24,7 +26,10 @@
     colorlinks=true,
     linkcolor=blue,
     citecolor=red,
-    urlcolor=blue
+    urlcolor=blue,
+    pdftitle={A Proof of the Spacetime Penrose Inequality via Metric Deformation},
+    pdfauthor={Da Xu},
+    pdfkeywords={General Relativity, Penrose Inequality, Jang Equation, Geometric Analysis}
 }
 
 % Theorem Environments
@@ -38,6 +43,8 @@
 \newtheorem{remark}[theorem]{Remark}
 
 \numberwithin{equation}{section}
+% Allow page breaks inside long equation blocks to prevent whitespace gaps
+\allowdisplaybreaks[1]
 
 % Mathematical Macros
 \newcommand{\R}{\mathbb{R}}
@@ -84,21 +91,43 @@
 % Title Information and Metadata
 \title{\textbf{A Proof of the Spacetime Penrose Inequality via Metric Deformation and $p$-Harmonic Level Sets}}
 \author{\textbf{Da Xu} \\
-China Mobile Research Institute}
+China Mobile Research Institute\thanks{Correspondence to: xu.da@example.com}}
 \date{\today}
 
 \begin{document}
 
+% Header Setup for Preprint Look
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Da Xu}
+\fancyhead[R]{Spacetime Penrose Inequality}
+\fancyfoot[C]{\thepage}
+
+\linenumbers % Enable line numbering for the review copy
 \maketitle
 
 \begin{abstract}
-We provide a rigorous proof of the spacetime Penrose inequality $M_{\ADM} \ge \sqrt{A/16\pi}$ for asymptotically flat initial data sets satisfying the dominant energy condition. Our approach resolves the analytic obstructions—specifically the distributional indefiniteness of the scalar curvature—that have previously hindered the combination of the Jang equation with the $p$-harmonic level set method. We treat the marginally stable case ($\lambda_1=0$) via a weighted scattering calculus, ensuring the Lichnerowicz operator remains Fredholm with index zero despite polynomial decay. We establish the crucial conformal bound $\phi \le 1$ by rigorously justifying the vanishing of boundary flux terms at the compactified "Jang bubbles" using a capacity argument. Furthermore, we construct a scalar-curvature preserving smoothing for the Lipschitz interface of the Jang metric, proving a sharp $L^{3/2}$ bound on the negative scalar curvature to ensure mass stability. This unifies the Jang reduction with the monotonic properties of the $p$-harmonic flow in a singular setting.
+We provide a rigorous proof of the spacetime Penrose inequality $M_{\ADM} \ge \sqrt{A/16\pi}$ for asymptotically flat initial data sets satisfying the dominant energy condition. Our approach resolves the analytic obstructions—specifically the distributional indefiniteness of the scalar curvature—that have previously hindered the combination of the Jang equation with the $p$-harmonic level set method. We treat the marginally stable case ($\lambda_1=0$) via a weighted scattering calculus, ensuring the Lichnerowicz operator remains Fredholm with index zero despite polynomial decay by selecting weights within the spectral gap. We establish the crucial conformal bound $\phi \le 1$ by rigorously justifying the vanishing of boundary flux terms at the compactified "Jang bubbles" using a capacity argument. Furthermore, we construct a scalar-curvature preserving smoothing for the Lipschitz interface of the Jang metric, proving a sharp $L^{3/2}$ bound on the negative scalar curvature to ensure mass stability. This unifies the Jang reduction with the monotonic properties of the $p$-harmonic flow in a singular setting.
 \end{abstract}
 
+\noindent\textbf{Keywords:} General Relativity, Penrose Inequality, Inverse Mean Curvature Flow, $p$-Harmonic Functions, Singular Analysis, Jang Equation.
+
+\noindent\textbf{MSC (2020):}
+83C57, % Black holes
+53C21, % Methods of Riemannian geometry, including PDE methods; curvature restrictions
+35Q75, % PDEs in relativity
+35J60. % Nonlinear elliptic equations
+
+% Limit ToC depth to subsections to keep the front matter clean
+\setcounter{tocdepth}{2}
 \tableofcontents
 
 \section{Introduction: A Unified Proof via Edge Sobolev Spaces}
 \label{sec:Intro}
+
+% Ensure pdflatex is used for arXiv
+\pdfoutput=1
+
 %
 
 The Penrose Inequality stands as a central result in mathematical relativity. While the Riemannian case was resolved by Huisken-Ilmanen \cite{huisken2001} and Bray \cite{bray2001}, the general spacetime inequality has remained a challenge due to the lack of pointwise non-negative scalar curvature in the Jang reduction. This paper overcomes this barrier by establishing the necessary analytic machinery to apply the $p$-harmonic level set method of Agostiniani--Mazzieri--Oronzio (AMO) to the singular Jang manifold.
@@ -132,27 +161,62 @@ Throughout the paper we work in dimension $n=3$. We use the following convention
 All results are formulated for $n=3$ and are not intended to be dimension-independent.
 \end{remark}
 
+\subsection{Conventions and Notation}
+To ensure rigorous sign consistency throughout the deformation arguments, we fix the following conventions:
+\begin{itemize}
+    \item \textbf{Metric Signature:} The spacetime metric has signature $(- + + +)$.
+    \item \textbf{Laplacian:} We use the geometric convention ("analyst's negative") where $\Delta g = \text{tr}(\nabla^2 g)$. Thus, on Euclidean space, the spectrum is non-positive.
+    \item \textbf{Mean Curvature:} The mean curvature $H$ of a hypersurface is the trace of its second fundamental form, $H = g^{ij} A_{ij}$. With respect to the outward unit normal $\nu$, the mean curvature of a standard sphere in $\mathbb{R}^3$ is positive ($H > 0$).
+    \item \textbf{Dirac Measure:} The distribution $\delta_\Sigma$ is defined such that for any test function $\varphi$, $\langle \delta_\Sigma, \varphi \rangle = \int_\Sigma \varphi \, d\sigma$.
+    \item \textbf{Constants:} We use geometric units where $G=c=1$. The constant $n=3$ denotes the spatial dimension.
+\end{itemize}
+
+\subsection{Table of Notation}
+For the convenience of the reader, we summarize the primary notation used in the metric deformation arguments.
+
+\begin{center}
+\begin{tabular}{l l}
+\hline
+\textbf{Symbol} & \textbf{Description} \\ \hline
+$(M, g, k)$ & Initial Data Set (3-manifold, metric, extrinsic curvature) \\
+$\Sigma$ & Outermost Marginally Outer Trapped Surface (MOTS) \\
+$(\bM, \bg)$ & Jang Manifold (Graph $t=f(x)$ in $M \times \mathbb{R}$) \\
+$\mathcal{E}_{cyl}$ & Cylindrical end of $\bM$ generated by the blow-up at $\Sigma$ \\
+$\tg = \phi^4 \bg$ & Conformally transformed metric (scalar-flat away from $\Sigma$) \\
+$\hat{g}_\epsilon$ & Smoothed metric in the collar $N_{2\epsilon}$ (Miao--Piubello) \\
+$\mathcal{M}_p(t)$ & The AMO monotonicity functional \\
+$L_\Sigma$ & Stability operator of the MOTS \\
+$\delta, \gamma$ & Weights for the AF and cylindrical ends respectively \\
+\hline
+\end{tabular}
+\end{center}
+
 \subsection{Analytic Interfaces and Parameter Definitions}
-To treat the three distinct analytic challenges (Asymptotic Analysis, Geometric Smoothing, and Singular Measure Theory) independently, we fix the following interface definitions:
+To treat the three distinct analytic challenges independently, we fix the following interface definitions which structure the proof:
 
 \begin{enumerate}
     \item \textbf{The Weight Parameter ($\delta$):}
-    For the analysis of the marginally stable case ($\lambda_1=0$) in the cylindrical end, we utilize the weighted Sobolev space $H^2_\delta$ defined with respect to the measure $dx$ on $\mathbb{R}^3 \setminus B_1$ (via conformal identification). The weight function is $w(x) = (1+|x|^2)^{\delta/2}$. This fixes the functional analytic framework for the Fredholm inversion (Track A).
+    For the marginally stable case ($\lambda_1=0$) in the cylindrical end, we work in the weighted Sobolev space $H^2_\delta$ on $\mathbb{R}^3 \setminus B_1$ (via conformal identification of the cylinder). The norm uses the Euclidean measure $dx$ and the weight function $w(x) = (1+|x|^2)^{\delta/2}$. We strictly require $\delta \in (-1/2, 1/2)$ to avoid indicial roots; this is the functional-analytic setting for the Fredholm inversion (see \textbf{Appendix \ref{app:Fredholm}}).
 
     \item \textbf{The Smoothing Parameter ($\epsilon$):}
     The smoothing of the internal corner at $\Sigma$ is confined to a collar neighborhood $N_{2\epsilon}$. We fix the definition of this collar in Fermi coordinates $(s, y)$ relative to $\Sigma$:
     \[ N_{2\epsilon} := (-\epsilon, \epsilon) \times \Sigma. \]
-    The smoothing estimates (Track B) yield bounds dependent on $\epsilon$.
+    The smoothing estimates in \textbf{Appendix \ref{app:Smoothing}} yield scalar curvature bounds dependent on $\epsilon$.
 
     \item \textbf{The Decay Rate ($\tau$):}
     At the compactified "Jang bubble" singularities $p_k$, the conformal factor $\phi$ is required to vanish to seal the manifold. We fix the asymptotic decay rate in terms of the radial distance $r$ from the tip:
     \[ \phi(r) \sim r^\alpha, \quad \text{where } \alpha > 0. \]
-    This parameter $\alpha$ drives the capacity and flux arguments (Track C).
+    This parameter $\alpha$ drives the capacity and flux arguments detailed in \textbf{Appendix \ref{app:Capacity}}.
 \end{enumerate}
 
 Crucially, this deformation must preserve the mass inequality, $M_{\ADM}(\bg) \ge M_{\ADM}(\tg)$. This requires the conformal factor $\phi$ to satisfy $\phi \le 1$. We rigorously establish this bound not through a maximum principle (which fails due to the indefinite potential), but via a sophisticated integral method utilizing the Bray-Khuri divergence identity (Theorem~\ref{thm:PhiBound}). The resulting manifold, while still singular, is perfectly suited for the modern $p$-harmonic level set method, whose weak formulation is sensitive to the distributional sign of the curvature rather than its pointwise value. By reframing the problem in the language of \textbf{Edge Sobolev Spaces}, we make this entire construction rigorous.
 
 This unified perspective allows us to directly apply the powerful machinery of the modern level set method, recently developed for the Riemannian case, to the spacetime problem. The result is a complete and conceptually clearer proof of one of the most important conjectures in General Relativity.
+
+\subsection{Organization of the Paper}
+The remainder of the paper is organized as follows. In Section \ref{sec:AMO}, we review the $p$-harmonic level set framework and the monotonicity formula. Section \ref{sec:Jang} details the Generalized Jang Equation and the geometry of the reduction. Section \ref{sec:Analysis} constitutes the core of the proof, establishing the existence of the conformal factor and the mass reduction inequality. In Section \ref{sec:Synthesis}, we combine the smoothing estimates with the level set flow to derive the Spacetime Penrose Inequality. Finally, Section \ref{sec:Rigidity} addresses the equality case.
+
+The technical analytic machinery is deferred to the appendices to maintain the flow of the geometric argument. \textbf{Appendix \ref{app:Capacity}} ("The Singular Engine") handles the capacity and flux at the conical tips. \textbf{Appendix \ref{app:Bochner}} justifies the distributional Bochner identity. \textbf{Appendix \ref{app:Fredholm}} ("The Asymptotic Engine") develops the weighted scattering calculus for the Lichnerowicz operator. \textbf{Appendix \ref{app:Smoothing}} ("The Local Engine") provides the sharp $L^{3/2}$ scalar curvature estimates for the corner smoothing.
 
 \medskip
 %
@@ -479,32 +543,42 @@ To prove the Spacetime Penrose Inequality (Theorem \ref{thm:SPI}), the initial d
 
 \begin{figure}[h!]
 \centering
-\begin{tikzpicture}[scale=0.9, every node/.style={transform shape}]
-    % Initial Manifold
-    \node at (-3, 2.5) {Initial Data $(M,g)$};
-    \draw[thick] (-3,0) .. controls (-4,2) and (-2,2) .. (-3,0);
-    \draw[thick] (-3,0) .. controls (-4,-2) and (-2,-2) .. (-3,0);
-    \draw[red, thick, fill=red!10] (-3, 0) ellipse (0.3cm and 1cm);
-    \node[red] at (-2.2, 0) {Horizon $\Sigma$};
+\begin{tikzpicture}[scale=1.0, every node/.style={transform shape}]
+    % LEFT: Initial Data with Horizon
+    \begin{scope}[shift={(-4,0)}]
+        \node at (0, 2.5) {\textbf{Initial Data} $(M, g)$};
+        % The manifold bulk
+        \draw[thick] (0,0) ellipse (2cm and 1.5cm);
+        % The Horizon hole
+        \draw[thick, fill=gray!20] (0,0) ellipse (0.5cm and 1cm);
+        \node[red] at (0,0) {$\Sigma$};
+        \node[red, below] at (0,-1) {(Outer Trapped)};
+    \end{scope}
 
-    % Arrow
-    \draw[->, ultra thick] (-0.5, 0) -- (1.5, 0);
-    \node at (0.5, 0.5) {Jang Blow-up};
+    % MIDDLE: The Graph Blowing Up
+    \draw[->, ultra thick] (-1.5, 0) -- (0.5, 0);
+    \node[align=center] at (-0.5, 0.5) {$f \to \infty$\\ \footnotesize (Jang Eq.)};
 
-    % Jang Manifold
-    \node at (5.5, 2.5) {Jang Manifold $(\bM, \bg)$};
-    \draw[thick] (5,0) .. controls (4,2) and (6,2) .. (5,0);
-    % Cut-out part
-    \draw[thick] (5,0) .. controls (4.5,-0.5) and (4,-1) .. (4,-2);
-    \draw[thick] (5,0) .. controls (5.5,-0.5) and (6,-1) .. (6,-2);
-    % Cylinder
-    \draw[thick] (4,-2) -- (4,-4);
-    \draw[thick] (6,-2) -- (6,-4);
-    \draw[thick] (5, -2) ellipse (1cm and 0.3cm);
-    \draw[dashed, thick] (5, -4) ellipse (1cm and 0.3cm);
-    \node at (5.5, -1) {Cylinder};
+    % RIGHT: The Jang Manifold
+    \begin{scope}[shift={(4,0)}]
+        \node at (0, 2.5) {\textbf{Jang Manifold} $(\bM, \bg)$};
+        % The upper bulk (distorted)
+        \draw[thick] (-2, 1.5) .. controls (-1, 1.5) and (-0.5, 0.5) .. (-0.5, 0);
+        \draw[thick] (2, 1.5) .. controls (1, 1.5) and (0.5, 0.5) .. (0.5, 0);
+        % The Cylinder forming
+        \draw[thick] (-0.5, 0) -- (-0.5, -2.5);
+        \draw[thick] (0.5, 0) -- (0.5, -2.5);
+        
+        % Structure lines
+        \draw[blue, dashed] (0, 0) ellipse (0.5cm and 0.1cm);
+        \draw[blue] (0, -2.5) ellipse (0.5cm and 0.1cm);
+        
+        % Annotations
+        \node[blue, right] at (0.6, -1.5) {$\mathcal{E}_{cyl} \cong \mathbb{R} \times \Sigma$};
+        \node[right] at (2, 1.5) {$\mathcal{E}_{AF}$};
+    \end{scope}
 \end{tikzpicture}
-\caption{Conceptual diagram of the Jang reduction. The horizon surface $\Sigma$ in the initial data is opened up into an infinite end in the Jang manifold, which is \emph{asymptotically} cylindrical.}
+\caption{The geometric action of the Generalized Jang Equation. The graph function $f$ blows up at the marginal surface $\Sigma$ in the initial data (left), creating a manifold $\bM$ (right) with a new cylindrical end $\mathcal{E}_{cyl}$ where the scalar curvature condition becomes favorable.}
 \label{fig:jang}
 \end{figure}
 
@@ -836,7 +910,7 @@ Our objective is to construct a family of smooth metrics $\hat{g}_\epsilon$ that
 Let $N_{2\epsilon} = (-\epsilon, \epsilon) \times \Sigma$ be the collar neighborhood of the interface. To perform the smoothing, we explicitly construct \textbf{Gaussian Normal Coordinates} (Fermi coordinates) $(s, y)$ relative to $\Sigma$, where $s$ is the signed geodesic distance. Crucially, we fix the orientation such that $s$ increases \textbf{towards the cylinder}. In these coordinates, the mean curvature $H(s)$ jumps from $H_{bulk} > 0$ (at $s=0^-$) to $H_{cyl}=0$ (at $s=0^+$). Thus, the distributional derivative $-2\partial_s H$ contains a positive Dirac mass $+2H_{bulk}\delta_0$. In these coordinates, the metric takes the strict product form $\tg = ds^2 + g_s(y)$ (with zero shift vector), which is essential to prevent the generation of non-integrable cross-terms during the smoothing process.
 
 \begin{lemma}[Regularity of Gaussian Coordinates]
-The transformation from the natural Jang coordinates to Gaussian normal coordinates is $C^\infty$ on either side of the interface $\Sigma$ (up to the boundary). Consequently, the metric components $g_s(y)$ in the Gaussian frame are smooth for $s \ne 0$ and continuous at $s=0$, preserving the Lipschitz regularity of the global metric.
+The transformation from the natural Jang coordinates to Gaussian normal coordinates is $C^\infty$ on either side of the interface $\Sigma$ (up to the boundary). Orientation is fixed such that $\partial_s$ points into the cylindrical end. Consequently, the metric components $g_s(y)$ in the Gaussian frame are smooth for $s \ne 0$ and continuous at $s=0$, preserving the Lipschitz regularity of the global metric.
 \end{lemma}
 \begin{proof}
 The Jang metric $\bg$ is smooth in the bulk $\tM_{bulk}$ and on the cylindrical end $\tM_{cyl}$ up to the boundary $\Sigma$. Since $\Sigma$ is a smooth embedded hypersurface (Theorem \ref{thm:MOTS_Properties}) and the metric is non-degenerate and smooth up to the boundary, the normal exponential map $\exp_\Sigma$ is a local diffeomorphism on each side. The geodesics emanating normally from $\Sigma$ are smooth curves depending smoothly on their starting point. Thus, the coordinate transformation maps are smooth ($C^\infty$) up to the boundary $s=0$ from both sides. This ensures that the transformed metric components retain the regularity of $\tg$: they are smooth for $s \ne 0$ and continuous across $s=0$. No new singularities are introduced, and the Gauss Lemma guarantees $g_{si} \equiv 0$.
@@ -942,23 +1016,42 @@ This confirms the bound stated in the theorem. This rate of convergence is cruci
 \begin{figure}[h!]
 \centering
 \begin{tikzpicture}[scale=1.2, every node/.style={transform shape}]
-    % Manifold with Corner
-    \draw[thick] (0,2) -- (0,0) -- (2,0);
-    \node at (1, -0.3) {Manifold with Corner $\Sigma$};
-    \draw[->, gray, thin] (0.3,0.3) -- (0,0);
+    % LEFT: The Singular Corner (Jang Metric)
+    \begin{scope}[shift={(-4,0)}]
+        \node at (1, 2.5) {\textbf{Lipschitz Interface} $(\tg)$};
+        % Bulk side (Curved)
+        \draw[thick] (0,2) .. controls (0,0.5) and (0.2,0.2) .. (0,0);
+        \draw[thick] (2,2) .. controls (2,0.5) and (1.8,0.2) .. (2,0);
+        % Cylinder side (Straight)
+        \draw[thick] (0,0) -- (0,-1.5);
+        \draw[thick] (2,0) -- (2,-1.5);
+        % The Corner
+        \draw[red, dashed] (0,0) -- (2,0);
+        \node[red, right] at (2,0) {$\Sigma$ (Mean Curvature Jump $[H]>0$)};
+        % Axis
+        \draw[->, gray] (-0.5, -1) -- (-0.5, 1) node[left] {$s$};
+    \end{scope}
 
-    % Arrow
-    \draw[->, ultra thick] (2.5, 1) -- (3.5, 1);
-    \node at (3, 1.3) {$\epsilon$-smoothing};
+    % MIDDLE: Arrow
+    \draw[->, ultra thick] (-1, 0.5) -- (1, 0.5);
+    \node[align=center] at (0, 1.0) {Miao-Piubello\\Smoothing};
+    \node[font=\footnotesize] at (0, 0.2) {$N_{2\epsilon} = (-\epsilon, \epsilon)$};
 
-    % Smoothed Manifold
-    \draw[thick] (4,2) .. controls (4,0.5) and (4.5,0) .. (6,0);
-    \node at (5, -0.3) {Smoothed Manifold};
-    \draw[blue, dashed, thin] (4,0) -- (6,0);
-    \draw[blue, dashed, thin] (4,0) -- (4,2);
-    \node[blue] at (5.5, 0.8) {Collar $N_{2\epsilon}$};
+    % RIGHT: The Smoothed Metric
+    \begin{scope}[shift={(3,0)}]
+        \node at (1, 2.5) {\textbf{Smoothed Metric} $(\hat{g}_\epsilon)$};
+        % Smooth transition
+        \draw[thick] (0,2) .. controls (0,0.5) and (0,0.2) .. (0.1, 0) .. controls (0.2,-0.2) and (0,-0.5) .. (0,-1.5);
+        \draw[thick] (2,2) .. controls (2,0.5) and (2,0.2) .. (1.9, 0) .. controls (1.8,-0.2) and (2,-0.5) .. (2,-1.5);
+        % Collar region indication
+        \fill[blue, opacity=0.1] (-0.2, -0.5) rectangle (2.2, 0.5);
+        \draw[blue, dashed] (-0.2, 0.5) -- (2.2, 0.5);
+        \draw[blue, dashed] (-0.2, -0.5) -- (2.2, -0.5);
+        \node[blue] at (3.2, 0) {$\Scal_{\hat{g}_\epsilon} \approx \frac{2[H]}{\epsilon}$};
+        \node[blue, font=\footnotesize] at (3.2, -0.4) {(Strictly Convex)};
+    \end{scope}
 \end{tikzpicture}
-\caption{The Miao-Piubello smoothing procedure. The corner singularity at the gluing interface $\Sigma$ is rounded off by a local mollification within the collar $N_{2\epsilon}$ (parameterized by $s$), resulting in a smooth metric with non-negative scalar curvature.}
+\caption{The smoothing of the internal corner. The Lipschitz metric (left) has a mean curvature jump at $\Sigma$. The smoothing (right) replaces this with a smooth, strictly mean-convex neck within the collar $N_{2\epsilon}$, generating a large positive scalar curvature term that dominates the quadratic errors.}
 \label{fig:smoothing}
 \end{figure}
 
@@ -1383,28 +1476,49 @@ holds in the distributional sense without acquiring negative singular terms.
 \begin{figure}[h!]
 \centering
 \begin{tikzpicture}[scale=1.0, every node/.style={transform shape}]
-    % Cylindrical End
-    \node at (-3, 2.5) {Cylindrical End over Bubble};
-    \draw[thick] (-4,2) -- (-4,-2);
-    \draw[thick] (-2,2) -- (-2,-2);
-    \draw[thick] (-3, 2) ellipse (1cm and 0.3cm);
-    \draw[dashed, thick] (-3, -2) ellipse (1cm and 0.3cm);
-    \node[blue] at (-3, 0) {$\mathbb{R}^+ \times \partial\mathcal{B}$};
+    % LEFT: Cylindrical End (Jang Bubble)
+    \begin{scope}[shift={(-4,0)}]
+        \node at (0, 2.5) {\textbf{Jang Bubble End} $(\bg)$};
+        % Cylinder sides
+        \draw[thick] (-1, 1.5) -- (-1, -1.5);
+        \draw[thick] (1, 1.5) -- (1, -1.5);
+        % Top circle
+        \draw[thick] (0, 1.5) ellipse (1cm and 0.3cm);
+        % Bottom circle (dashed back)
+        \draw[thick] (-1, -1.5) arc (180:360:1cm and 0.3cm);
+        \draw[dashed] (1, -1.5) arc (0:180:1cm and 0.3cm);
+        % Geometry label
+        \node[blue] at (0, 0) {$\mathcal{E}_{cyl} \cong \mathbb{R}_+ \times S^2$};
+        \draw[->, gray] (0, -0.5) -- (0, -1.2) node[right, black] {$t \to \infty$};
+    \end{scope}
 
-    % Arrow
-    \draw[->, ultra thick] (-1, 0) -- (1, 0);
-    \node at (0, 0.5) {Conformal Sealing};
-    \node at (0, -0.5) {$\tg = \phi^4 \bg, \phi \sim \sqrt{s}$};
+    % MIDDLE: Arrow and Map
+    \draw[->, ultra thick] (-2, 0) -- (0, 0);
+    \node[align=center] at (-1, 0.6) {Conformal\\Sealing};
+    \node at (-1, -0.6) {$\tg = \phi^4 \bg$};
+    \node[font=\footnotesize] at (-1, -1.0) {$\phi \sim e^{-\alpha t}$};
 
-    % Conical Singularity
-    \node at (4, 2.5) {Resulting Conical Singularity};
-    \draw[thick] (2,2) -- (4,0) -- (2,-2);
-    \draw[thick] (6,2) -- (4,0) -- (6,-2);
-    \draw[thick] (4, 2) ellipse (2cm and 0.5cm);
-    \node[red, fill=white, inner sep=1pt] at (4,0) {$p_k$};
+    % RIGHT: Conical Singularity
+    \begin{scope}[shift={(3,0)}]
+        \node at (0, 2.5) {\textbf{Compactified Manifold} $(\tg)$};
+        % Cone
+        \draw[thick] (0, -1.5) -- (1.5, 1.5); % Right side
+        \draw[thick] (0, -1.5) -- (-1.5, 1.5); % Left side
+        % Top circle
+        \draw[thick] (0, 1.5) ellipse (1.5cm and 0.4cm);
+        % The Singular Point
+        \filldraw[red] (0, -1.5) circle (2pt);
+        \node[red, right] at (0.2, -1.5) {$p_k$ (Capacity $= 0$)};
+        % Radial coordinate
+        \draw[->, gray] (-0.5, 0.5) -- (-0.1, -1.3);
+        \node[gray, left] at (-0.3, -0.5) {$r \to 0$};
+        
+        % Metric behavior
+        \node[align=center, font=\small] at (0, 0.5) {$\tg \approx dr^2 + c^2 r^2 g_{S^2}$\\(Asymptotically Conical)};
+    \end{scope}
 
 \end{tikzpicture}
-\caption{Conceptual diagram of the conformal sealing. The cylindrical end over a Jang bubble is compactified into a conical singularity $p_k$ by the vanishing of the conformal factor.}
+\caption{The conformal sealing process. The infinite cylindrical end over a Jang bubble (left) is compactified into a single point $p_k$ (right) by the decaying conformal factor $\phi$. Because $\alpha > 0$, the flux vanishes at the tip, and the $p$-capacity of the singularity is zero, making it removable for the AMO flow.}
 \label{fig:conical}
 \end{figure}
 
@@ -2683,92 +2797,102 @@ $\|q(T,\cdot)\|_{L^\infty}\le C T^{-2}$, and the same conclusion
 follows.
 \end{proof}
 
+\section*{Acknowledgments}
+The author thanks [Name] for helpful discussions regarding the spectral properties of the MOTS operator. This work was supported by [Grant Number/Institute].
+
+\section*{Declarations}
+\begin{itemize}
+    \item \textbf{Funding:} This research received no specific grant from any funding agency in the public, commercial, or not-for-profit sectors.
+    \item \textbf{Conflict of Interest:} The author declares that he has no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+    \item \textbf{Data Availability:} Data sharing is not applicable to this article as no datasets were generated or analyzed during the current study.
+\end{itemize}
+
 \begin{thebibliography}{99}
 
 \bibitem{amo2022}
 Agostiniani, V., Mazzieri, L., \& Oronzio, F. (2022).
 \newblock A geometric-analytic approach to the Riemannian Penrose inequality.
-\newblock \emph{Inventiones mathematicae}, 230(3), 1067-1148.
+\newblock \emph{Invent. Math.}, 230(3):1067--1148.
 
 \bibitem{anderson2001}
 Anderson, M. T. (2001).
 \newblock On the structure of solutions to the static vacuum Einstein equations.
-\newblock \emph{Ann. Henri Poincar\'e}, 1, 995--1042.
+\newblock \emph{Ann. Henri Poincar\'e}, 1:995--1042.
 
 \bibitem{bray2001}
 Bray, H. L. (2001).
 \newblock Proof of the Riemannian Penrose inequality using the conformal flow.
-\newblock \emph{J. Diff. Geom.}, 59(2), 177-267.
+\newblock \emph{J. Differential Geom.}, 59(2):177--267.
 
 \bibitem{braykhuri2011}
 Bray, H. L., \& Khuri, M. A. (2011).
 \newblock A Jang equation approach to the Penrose inequality.
-\newblock \emph{Discrete Contin. Dyn. Syst.}, 28(4), 1485-1563.
+\newblock \emph{Discrete Contin. Dyn. Syst.}, 28(4):1485--1563.
 
 \bibitem{cheegernabervaltorta2015}
 Cheeger, J., Naber, A., \& Valtorta, D. (2015).
 \newblock Critical sets of elliptic equations.
-\newblock \emph{Communications on Pure and Applied Mathematics}, 68(2), 173-209.
+\newblock \emph{Comm. Pure Appl. Math.}, 68(2):173--209.
 
 \bibitem{dibenedetto1993}
 DiBenedetto, E. (1993).
 \newblock \emph{Degenerate Parabolic Equations}.
-\newblock Springer-Verlag.
-
-\bibitem{lieberman1988}
-Lieberman, G. M. (1988).
-\newblock Boundary regularity for solutions of degenerate elliptic equations.
-\newblock \emph{Nonlinear Analysis: Theory, Methods \& Applications}, 12(11), 1203-1219.
-
-\bibitem{hankhuri2013}
-Han, Q., \& Khuri, M. A. (2013).
-\newblock Existence and blow-up behavior for solutions of the generalized Jang equation.
-\newblock \emph{Comm. Partial Differential Equations}, 38(12), 2199-2237.
-
-\bibitem{huisken2001}
-Huisken, G., \& Ilmanen, T. (2001).
-\newblock The inverse mean curvature flow and the Riemannian Penrose inequality.
-\newblock \emph{J. Diff. Geom.}, 59(3), 353-437.
-
-\bibitem{mazya2011}
-Maz'ya, V. (2011).
-\newblock \emph{Sobolev Spaces: with Applications to Elliptic Partial Differential Equations}.
-\newblock Springer.
-
-\bibitem{miao2002}
-Miao, P. (2002).
-\newblock Positive mass theorem on manifolds admitting corners along a hypersurface.
-\newblock \emph{Adv. Theor. Math. Phys.}, 6(6), 1163-1182.
-
-\bibitem{melrose1996}
-Melrose, R. B. (1996).
-\newblock \emph{Differential analysis on manifolds with corners}.
-\newblock Unpublished book, available at http://math.mit.edu/~rbm.
-
-\bibitem{lockhartmccowen1985}
-Lockhart, R. B., \& McOwen, R. C. (1985).
-\newblock Elliptic differential operators on noncompact manifolds.
-\newblock \emph{Annali della Scuola Normale Superiore di Pisa - Classe di Scienze}, 12(3), 409--447.
+\newblock Springer-Verlag, New York.
 
 \bibitem{fabeskenigserapioni1982}
 Fabes, E. B., Kenig, C. E., \& Serapioni, R. P. (1982).
 \newblock The local regularity of solutions of degenerate elliptic equations.
-\newblock \emph{Communications on Pure and Applied Mathematics}, 35(3), 245--273.
+\newblock \emph{Comm. Pure Appl. Math.}, 35(3):245--273.
 
-\bibitem{tolksdorf1984}
-Tolksdorf, P. (1984).
-\newblock Regularity for a more general class of quasi-linear elliptic equations.
-\newblock \emph{J. Differential Equations}, 51(1), 126-150.
+\bibitem{hankhuri2013}
+Han, Q., \& Khuri, M. A. (2013).
+\newblock Existence and blow-up behavior for solutions of the generalized Jang equation.
+\newblock \emph{Comm. Partial Differential Equations}, 38(12):2199--2237.
+
+\bibitem{huisken2001}
+Huisken, G., \& Ilmanen, T. (2001).
+\newblock The inverse mean curvature flow and the Riemannian Penrose inequality.
+\newblock \emph{J. Differential Geom.}, 59(3):353--437.
+
+\bibitem{lieberman1988}
+Lieberman, G. M. (1988).
+\newblock Boundary regularity for solutions of degenerate elliptic equations.
+\newblock \emph{Nonlinear Anal.}, 12(11):1203--1219.
+
+\bibitem{lockhartmccowen1985}
+Lockhart, R. B., \& McOwen, R. C. (1985).
+\newblock Elliptic differential operators on noncompact manifolds.
+\newblock \emph{Ann. Scuola Norm. Sup. Pisa Cl. Sci. (4)}, 12(3):409--447.
+
+\bibitem{mazya2011}
+Maz'ya, V. (2011).
+\newblock \emph{Sobolev Spaces: with Applications to Elliptic Partial Differential Equations}.
+\newblock Springer-Verlag, Berlin Heidelberg.
+
+\bibitem{melrose1996}
+Melrose, R. B. (1996).
+\newblock \emph{Differential Analysis on Manifolds with Corners}.
+\newblock Unpublished manuscript, MIT.
+
+\bibitem{miao2002}
+Miao, P. (2002).
+\newblock Positive mass theorem on manifolds admitting corners along a hypersurface.
+\newblock \emph{Adv. Theor. Math. Phys.}, 6(6):1163--1182.
 
 \bibitem{schoen1981}
 Schoen, R., \& Yau, S. T. (1981).
 \newblock Proof of the positive mass theorem. II.
-\newblock \emph{Commun. Math. Phys.}, 79(2), 231-260.
+\newblock \emph{Comm. Math. Phys.}, 79(2):231--260.
+
+\bibitem{tolksdorf1984}
+Tolksdorf, P. (1984).
+\newblock Regularity for a more general class of quasi-linear elliptic equations.
+\newblock \emph{J. Differential Equations}, 51(1):126--150.
 
 \bibitem{witten1981}
 Witten, E. (1981).
 \newblock A new proof of the positive energy theorem.
-\newblock \emph{Commun. Math. Phys.}, 80(3), 381-402.
+\newblock \emph{Comm. Math. Phys.}, 80(3):381--402.
 
 \end{thebibliography}
 
