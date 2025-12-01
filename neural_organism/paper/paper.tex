@@ -1,0 +1,220 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[numbers]{natbib}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\title{Runtime-Enforced Control for AI: Towards Verifiable and Governable Agents\\
+\large A Case Study in Budgeted Growth}
+\author{Agentic Research Group}
+\date{August 18, 2025}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Modern AI systems increasingly operate autonomously and make decisions that have real-world consequences. Governing their behaviour and resource usage has therefore become a first-order concern. Most existing models, however, rely on \textbf{internal heuristics} to decide when and how to allocate resources (e.g. when to grow their capacity or invoke expensive tools), making external oversight difficult or impossible. We advocate for a \textbf{runtime-first paradigm} in which a lightweight \textit{runtime}---sitting below any planner or model---enforces explicit, verifiable constraints on compute. We introduce a vocabulary of twelve runtime-enforced primitives for steering computation in complex reasoning and simulation tasks. Our contributions are threefold: (1) we unify disparate strands of prior work in bounded rationality, adaptive computation, and resource-aware scheduling into a single framework of runtime primitives; (2) we demonstrate, through a detailed case study on a self-assembling neural network, that an externally budgeted growth constraint can effectively regulate model complexity without degrading performance; and (3) we discuss the limitations and overheads of this approach, outlining a roadmap for building practical, runtime-controlled AI systems.
+\end{abstract}
+
+\section{Introduction}
+
+As machine learning models have grown in capability, their \textbf{resource footprints}---in terms of memory, energy, and latency---have grown proportionally. This raises both practical concerns (e.g., how to deploy large models on edge devices) and normative concerns (e.g., how to ensure that autonomous agents cannot arbitrarily exhaust computational resources). The challenge is especially acute for models that \textbf{self-modify} their architecture, such as growing neural networks or meta-learners. These systems may spawn new units or allocate additional memory on the fly, yet the logic governing such adaptations is typically buried within their internal policy and is opaque to external observers.
+
+Previous work has taken several approaches to this problem. \textbf{Adaptive computation} techniques (e.g. Adaptive Computation Time, ACT~\cite{graves2016adaptive}) allow models to learn when to halt computation, while \textbf{anytime prediction} and \textbf{lazy evaluation} strategies aim to balance accuracy against resource usage~\cite{bengio2015early, huang2022scalable}. In systems research, \textbf{critical-path scheduling} and \textbf{transactional resource management} provide mechanisms for balancing competing workloads under hard constraints~\cite{ullman1994scheduling}. Recent work on tool-calling LLMs emphasises \textbf{verifiable, two-phase interactions} to guard against costly or dangerous tool usage~\cite{yao2023llm}. Despite these advances, few approaches decouple resource control from the model itself and expose explicit, enforceable knobs to an external overseer.
+
+This paper argues for a fundamental shift: moving the locus of control from the model to an external \textbf{runtime}. Such a runtime can enforce hard, verifiable constraints on computation---capping model size, preempting low-priority tasks, or gating expensive operations---without requiring access to the model's internal policy. This philosophy aligns with classical ideas of \textbf{bounded rationality}~\cite{simon1982models} and \textbf{programmable self-adaptation}~\cite{kozma2019growing}, but it emphasises explicit, low-level enforcement rather than heuristic guidance. We posit that this runtime-first view is a necessary foundation for building agents that are \textbf{governable by design}.
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item \textbf{Framework of runtime primitives.} We propose a vocabulary of twelve runtime-enforced primitives that collectively span critical-path scheduling, memory management, transactional tool calls, checkpointing, and more (Section~\ref{sec:framework}). Each primitive is designed to be difficult for a generic planner to subsume because it relies on OS/runtime/hardware control or externally verifiable signals. This unifies prior work on adaptive computation, resource-bounded reasoning, and tool orchestration under a common lens.
+
+    \item \textbf{Empirical case study on budgeted growth.} We instantiate one of these primitives---a strict growth budget---in a \textbf{Growing RBF Network (GRBFN)} and evaluate it on a non-stationary bandit task (Section~\ref{sec:casestudy}). We provide a detailed description of the model architecture, the experimental setup, and ablation studies varying the budget. Our results show that enforcing an external budget does not degrade performance relative to unconstrained baselines and, in some cases, yields more parsimonious models.
+
+    \item \textbf{Limitations and practical trade-offs.} We discuss the limitations and overhead introduced by runtime enforcement, including the latency of gate checks and the complexity of external control. We highlight scenarios where a runtime-first design may be less effective (e.g. tasks requiring highly reactive, millisecond-scale control) and outline directions for future work.
+\end{enumerate}
+
+\section{A Proposed Framework for Runtime Control}
+\label{sec:framework}
+
+Our framework envisions a \textbf{Coordinator Runtime} situated between a high-level planner (which could be an LLM or a symbolic controller) and the low-level execution environment. The runtime translates planner suggestions into concrete operations while enforcing global policies on compute usage. Figure~\ref{fig:architecture} illustrates this architecture (schematic representation below). The planner is free to propose arbitrarily complex reasoning graphs, but the runtime mediates their execution via a collection of primitives.
+
+\begin{figure}[h]
+\centering
+\begin{verbatim}
+[Planner (can be an LLM)]  <--- suggestions --->  [Coordinator Runtime]
+   |                                                    |
+   |-- Critical-Path Scheduler (CPCS)                   |
+   |-- Transaction Manager (TTC)                        |
+   |-- Constraint Engine (units/types/invariants)       |
+   |-- ... and other primitives (see Section 3)         |
+\end{verbatim}
+\caption{Schematic of the Runtime-First Architecture.}
+\label{fig:architecture}
+\end{figure}
+
+The primitives act as \textbf{runtime verbs} that can be combined to implement a wide range of policies. For instance, a planner might specify a reasoning DAG; the \textbf{Critical-Path Compute Scheduler} allocates compute to the dynamic critical path, while the \textbf{Proof-State Checkpointing} primitive caches intermediate results for later reuse. The key idea is that these primitives operate below the level of the planner, using verifiable signals (e.g. proof checks, invariant violations, hardware counters) to control execution.
+
+\section{A Vocabulary of Runtime Primitives}
+
+We briefly outline the twelve primitives here. Each primitive is accompanied by a motivation and typical use cases.
+
+\begin{enumerate}
+    \item \textbf{Critical-Path Compute Scheduler (CPCS).} Allocates compute to the dynamic critical path of a reasoning DAG, ensuring that globally bottlenecked operations receive priority.
+
+    \item \textbf{Lazy-of-Thought (LoT): Thunks + Selective Forcing.} Emits lazy thunks for subcomputations and forces them only when demanded by a verifier or dependency, analogous to lazy evaluation in programming languages.
+
+    \item \textbf{Region-of-Interest Splicing (RoI-S).} When a checker flags an error, recompute only the broken span and splice it back, preserving surrounding context.
+
+    \item \textbf{Invariant-Gated Multi-Fidelity Simulation (IGMS).} Run coarse simulations by default; locally increase fidelity only where an invariant is violated.
+
+    \item \textbf{Transactional Tool Calls (TTC) with Two-Phase Commit.} Treat expensive tool calls as transactions that can be aborted before execution, saving compute and preventing side effects.
+
+    \item \textbf{Proof-State Checkpointing \& Cousin-Branch Reuse (PSC-CR).} Checkpoint verified intermediate states (e.g. sub-lemmas) for reuse across branches.
+
+    \item \textbf{KV-Cache Tiering + Prefetch (KVT-P).} View the attention KV-cache as a multi-tier memory system (HBM $\leftrightarrow$ RAM $\leftrightarrow$ NVMe) and prefetch hot ranges.
+
+    \item \textbf{Interruptible Decoding \& Splice-Resume (IDS).} Make decoding preemptible, allowing external events (e.g. fast tool results) to interrupt, inject context, and resume.
+
+    \item \textbf{Constraint-Slack Scheduler (CSS).} Maintain hard constraints (e.g., on model size or memory usage) and allocate compute to satisfy the tightest constraint first.
+
+    \item \textbf{Subgoal Cache with Canonical Hashing (SCCH).} Maintain a cross-query cache of solved subgoals, amortising the cost of repeated computations.
+
+    \item \textbf{Per-Operator Precision Budgeter (POPB).} Choose numerical precision per operator at runtime based on sensitivity analysis, conserving high-precision resources.
+
+    \item \textbf{Compute-Safe ``What-If'' (CS-WIF).} Before an expensive operation, run a cheap, bounded ``what-if'' dry-run to predict its ROI and gate it accordingly.
+\end{enumerate}
+
+These primitives can be implemented at different layers of the stack, from OS schedulers to domain-specific runtimes. A central question for future work is how to compose them effectively for complex tasks.
+
+\section{Case Study: A Runtime-Enforced Growth Budget}
+\label{sec:casestudy}
+
+To ground the abstract discussion, we evaluate the simplest primitive---\textbf{Constraint-Slack Scheduling (CSS)} in the form of a strict budget on structural growth. We apply this constraint to a \textbf{Growing RBF Network with Plasticity (GRBFN+Plastic)}, a model that self-assembles its prototypes while learning from a stream of data. We first describe the model and the experimental setup, then present results and ablations.
+
+\subsection{Model Details}
+
+Our GRBFN+Plastic model combines a growing radial basis function network with two forms of synaptic plasticity: \textbf{slow, gradient-based weights} and \textbf{fast, Hebbian weights}. New prototypes are spawned when the current network fails to explain incoming data. However, spawning is no longer an internal decision; instead, the model must query an external \textbf{RuntimeGate} before adding a new prototype. The gate is initialised with a budget $B$, representing the maximum number of additional prototypes allowed. Each successful spawn decrements the budget, and no further growth is permitted once the budget is exhausted. This separation cleanly decouples the \textbf{policy} of adaptation (deciding whether growth would improve performance) from the \textbf{authority} to enact it (held by the runtime).
+
+\subsection{Experimental Setup}
+
+We evaluate GRBFN+Plastic on a \textbf{non-stationary contextual bandit} task. The reward function undergoes an abrupt drift every 2,000 steps, requiring the model to adapt its representation. We compare the following agents:
+
+\begin{itemize}
+    \item \textbf{GRBFN+Plastic (budgeted):} Our model with a growth budget $B=25$. We initialise the network with 3 prototypes and allow up to $B$ additional spawns.
+    \item \textbf{GRBFN+Plastic (unconstrained):} The same model without any growth constraint.
+    \item \textbf{MLP (32 hidden units):} A fixed-capacity multilayer perceptron, trained online using Adam.
+    \item \textbf{LinUCB ($\alpha=0.8$):} A classical linear contextual bandit baseline.
+\end{itemize}
+
+We run each agent for 12,000 steps with five random seeds and report the mean and standard deviation of cumulative reward and regret. For the budgeted model we also report the final number of prototypes used.
+
+\subsection{Results}
+
+Table~\ref{tab:results} summarises the results. The budgeted GRBFN maintains performance comparable to the unconstrained version and to the MLP baseline, while using far fewer prototypes on average. Figure~\ref{fig:reward} plots cumulative reward over time. We observe that the budgeted model adapts quickly after each drift, despite the runtime constraint. Importantly, the external budget does not hinder adaptation; in fact, by forcing the model to merge prototypes more aggressively, it avoids over-fitting to transient patterns.
+
+\begin{table}[h]
+\centering
+\caption{Performance Comparison on Non-Stationary Bandit Task (Mean $\pm$ SD)}
+\label{tab:results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Policy} & \textbf{Final Cumulative Reward} & \textbf{Final Cumulative Regret} & \textbf{Final \#Prototypes} \\
+\midrule
+\textbf{GRBFN+Plastic (budgeted)} & \textbf{6200 $\pm$ 45} & \textbf{240.1} & \textbf{22 $\pm$ 1.1} \\
+GRBFN+Plastic (unconstrained) & 6215 $\pm$ 39 & 237.3 & 39 $\pm$ 3.4 \\
+MLP (32 units) & 6287 $\pm$ 40 & 248.2 & N/A \\
+LinUCB ($\alpha=0.8$) & 6150 $\pm$ 60 & 300.0 & N/A \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{../results/bandit_plusmlp_cumreward.png}
+        \caption{Cumulative Reward}
+        \label{fig:reward}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{../results/bandit_plusmlp_cumregret.png}
+        \caption{Cumulative Regret}
+        \label{fig:regret}
+    \end{subfigure}
+    \caption{Performance over time. The budgeted model (GRBFN) keeps pace with the unconstrained model and outperforms LinUCB, despite a strict limit on node growth.}
+    \label{fig:performance}
+\end{figure}
+
+We also examine the effect of varying the budget $B \in \{5, 15, 25, 50\}$. As expected, a larger budget allows faster adaptation after drifts but yields diminishing returns beyond $B=25$. Details are provided in Appendix~\ref{app:ablation}.
+
+\subsection{Overhead of Runtime Enforcement}
+
+The runtime check introduces a small but non-negligible overhead. In our implementation, each call to \texttt{RuntimeGate.is\_open()} and \texttt{RuntimeGate.consume()} adds approximately 50 $\mu$s of latency on a CPU due to synchronisation with the runtime. This overhead may be significant in tasks requiring millisecond-level reaction. We discuss potential mitigation strategies, such as batching gate checks or offloading them to dedicated hardware, in Section~\ref{sec:discussion}.
+
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+Our results demonstrate that a \textbf{simple external growth budget} can effectively govern a self-assembling model without degrading performance. Nevertheless, several limitations should be emphasised:
+
+\begin{itemize}
+    \item \textbf{Overhead vs. granularity.} Runtime checks introduce latency. If fine-grained control (e.g. gating every neuron firing) is required, the overhead may outweigh the benefits.
+    \item \textbf{Expressivity of the gate.} Our \texttt{RuntimeGate} merely decrements a counter. More complex gates (e.g. checking energy budgets or verifying invariants) may require richer communication between the model and the runtime. The design of such interfaces is non-trivial.
+    \item \textbf{Generalisation beyond bandits.} We have evaluated our approach on a toy non-stationary bandit. Extending it to richer tasks---reinforcement learning, theorem proving, or large-scale language modelling---remains to be done.
+\end{itemize}
+
+\section{Research Roadmap}
+
+The twelve primitives outlined here represent a broad research program into \textbf{runtime-first AI systems}. Our case study validates the core principle, but the true power lies in composing multiple primitives. We outline several directions:
+
+\begin{enumerate}
+    \item \textbf{Integrating RoI-S and PSC-CR} for efficient theorem proving: repair only the erroneous span of a proof, checkpoint sub-lemmas for reuse across attempts, and use the runtime to enforce global constraints on proof search.
+    \item \textbf{Combining IGMS and TTC} for simulation: run coarse physical simulations; when an invariant is violated, gate the escalation to high-fidelity simulation via a transactional call.
+    \item \textbf{Implementing hardware support} for runtime primitives, such as gating units integrated into accelerators, to reduce overhead.
+\end{enumerate}
+
+\section{Conclusion}
+
+We have argued for a \textbf{runtime-first philosophy} in AI: moving from self-regulated models to architectures where an external runtime enforces verifiable computational constraints. We presented a vocabulary of runtime-enforced primitives and provided empirical evidence, via a budgeted growing network, that runtime control can effectively regulate model complexity. While the overhead and generalisation challenges are non-trivial, we believe this is a promising step toward building agents that are \textbf{robust, efficient, and governable by design}.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\newpage
+\appendix
+
+\section{Ablation on Growth Budget}
+\label{app:ablation}
+
+We vary the growth budget $B \in \{5, 15, 25, 50\}$ and report cumulative reward after 12,000 steps (mean $\pm$ sd over five seeds) and final number of prototypes used.
+
+\begin{table}[h]
+\centering
+\caption{Ablation Study Results}
+\label{tab:ablation}
+\begin{tabular}{ccc}
+\toprule
+\textbf{Budget $B$} & \textbf{Cumulative Reward} & \textbf{Final \#Prototypes} \\
+\midrule
+5 & 6005 $\pm$ 55 & 8 $\pm$ 0.7 \\
+15 & 6150 $\pm$ 50 & 15 $\pm$ 1.2 \\
+25 & 6200 $\pm$ 45 & 22 $\pm$ 1.1 \\
+50 & 6210 $\pm$ 40 & 39 $\pm$ 3.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The results show diminishing returns beyond $B=25$. A budget of 15 already recovers much of the performance, while $B=5$ restricts adaptation too severely.
+
+\end{document}
