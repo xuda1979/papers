@@ -1,9 +1,22 @@
-\documentclass{article}
+\documentclass[a4paper,11pt]{article}
 \usepackage[utf8]{inputenc}
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath, amssymb, amsthm}
 \usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{algorithm}
+\usepackage{algorithmic}
 
-\title{Linear-Time Decoders for "Good" qLDPC Codes}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+
+\title{Linear-Time Decoders for "Good" qLDPC Codes: Mathematical Foundations and Recent Progress}
 \author{Research Overview}
 \date{\today}
 
@@ -12,19 +25,56 @@
 \maketitle
 
 \begin{abstract}
-This paper reviews the current state of "good" quantum Low-Density Parity-Check (qLDPC) codes and the ongoing challenge of constructing efficient linear-time decoders for them.
+The recent discovery of "asymptotically good" Quantum Low-Density Parity-Check (qLDPC) codes—families of codes with linear rate and linear distance—marks a paradigm shift in Quantum Error Correction. A critical remaining hurdle for their practical deployment is the construction of efficient, fault-tolerant decoders. This paper provides a rigorous overview of the mathematical structure of these codes, focusing on the Quantum Tanner Codes constructed by Leverrier and Z\'emor. We analyze the proposed linear-time decoding algorithms, which leverage the expansion properties of the underlying Cayley graphs and the "small-set expansion" of the local classical codes. We discuss the single-shot decoding property and its necessity for fault tolerance with constant overhead.
 \end{abstract}
 
-\section{Domain}
-Quantum Error Correction (QEC) \& Codes
+\section{Introduction}
 
-\section{Context}
-A "good" quantum code is one where the number of logical qubits ($k$) and the code distance ($d$) both scale linearly with the number of physical qubits ($n$). For years, it was open if these even \emph{existed}.
+Quantum error correction (QEC) is essential for large-scale quantum computing. The standard approach uses the Surface Code, which has a distance $d \propto \sqrt{n}$ and a vanishing rate $k/n \to 0$. In contrast, "good" quantum codes satisfy $k = \Theta(n)$ and $d = \Theta(n)$. The existence of such codes with low-density parity checks was a major open problem until the breakthroughs by \cite{panteleev2021asymptotically} and \cite{leverrier2022quantum}.
 
-\section{Recent Breakthrough}
-In 2022/2023, "asymptotically good" quantum Low-Density Parity-Check (qLDPC) codes were finally constructed (the "quantum Tanner codes").
+While existence is proven, decoding these codes efficiently is non-trivial. The standard belief propagation algorithms used for classical LDPC codes fail due to the degeneracy of quantum errors (stabilizer equivalence). This paper reviews the state-of-the-art in decoding good qLDPC codes.
 
-\section{Current Open Challenge}
-While we now know they \emph{exist}, the race is on to construct practical, \textbf{linear-time decoders} for them. Recent work (2024) has proposed some, but optimizing their fault-tolerance thresholds remains a major mathematical engineering challenge.
+\section{Quantum Tanner Codes}
+
+We focus on the construction by Leverrier and Z\'emor, which simplifies the Panteleev-Kalachev construction using the framework of Tanner codes on Cayley graphs.
+
+\subsection{Construction}
+Let $G = (V, E)$ be a $\Delta$-regular bipartite expander graph. A classical Tanner code $C_{Tan}(G, C_0)$ is defined by placing bits on edges $E$ and enforcing that for every vertex $v$, the bits incident to $v$ form a codeword in a small local code $C_0 \subset \{0,1\}^\Delta$.
+
+Quantum Tanner codes generalize this. We define two Cayley graphs $G_A$ and $G_B$ over a group $\Gamma$. The qubits are placed on the faces of a square complex associated with the product of these graphs.
+The stabilizers are defined via the "robust" classical codes associated with the local views.
+
+\section{Decoding Algorithms}
+
+The challenge is to correct errors of weight up to $O(n)$ in time $O(n)$.
+
+\subsection{Small-Set Flip Decoder}
+Leverrier and Z\'emor \citep{leverrier2022quantum} proposed a linear-time decoder based on the "Small-Set Flip" algorithm.
+The core idea is to iteratively flip qubits to reduce the syndrome weight.
+Crucially, because the code has good expansion properties, any error of weight $w < c n$ produces a syndrome of weight proportional to $w$. This "soundness" property ensures that a greedy local search converges to the codeword.
+
+\begin{algorithm}
+\caption{Small-Set Flip Decoder}
+\begin{algorithmic}
+\STATE \textbf{Input:} Syndrome $s$.
+\STATE \textbf{Output:} Correction $E$.
+\WHILE{syndrome weight $> 0$}
+    \STATE Identify a "small set" of qubits (generators of the local code view) whose flip reduces the syndrome weight significantly.
+    \STATE If no such set exists, terminate (fail).
+    \STATE Flip the qubits and update syndrome.
+\ENDWHILE
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Single-Shot Decoding}
+A decoder is "single-shot" if it can correct errors even when the syndrome measurements are noisy, without repeating measurements \citep{gu2023single}. This is vital for fault tolerance.
+Good qLDPC codes are proven to support single-shot decoding because of their "confinement" property: the syndrome of a measurement error is confined to the neighborhood of the error, allowing the decoder to distinguish data errors from measurement errors.
+
+\section{Conclusion}
+
+The field of qLDPC codes has moved from existence proofs to algorithmic engineering. The linear-time decoders described here exploit the deep link between spectral expansion and error correction. Future work focuses on optimizing constant factors and demonstrating thresholds under realistic noise models.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}
