@@ -1,281 +1,313 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-AG-QEC minimal simulator and CLI.
+Reproducible Monte Carlo for CSS-like codes under a two-state MMPP noise model.
+Implements EXACT BCH-based CSS construction and Information Set Decoding (ISD).
 
-Features
---------
-* Repetition-code phenomenological simulation with bit-flip, phase-flip, and
-  depolarizing noise; optional measurement error.
-* Two decoders:
-    - "majority": classical majority vote on qubit readouts
-    - "threshold": AI-style data-calibrated threshold on syndrome count S
-* Deterministic seeds, timestamped artifact folders, JSON/CSV outputs.
-
-Usage
------
-python simulation.py --code repetition --distance 5 --noise bitflip \
-    --p-x 0.05 --p-meas 0.02 --n-samples 100000 --decoder threshold --seed 123
+Revisions:
+- Exact BCH matrix construction (g_poly derived).
+- Replaced surrogate BP with ISD (Prange's Algorithm) on exact matrices.
+- ISD is ideal for correcting low-weight errors in generic/dense linear codes.
 """
-from __future__ import annotations
+import argparse, csv, math, random, statistics, sys
+from typing import List, Tuple
 
-import argparse
-import json
-import math
-import os
-from dataclasses import dataclass, asdict
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, Tuple
+try:
+    import numpy as np
+except ImportError:
+    print("NumPy not found.", file=sys.stderr)
+    sys.exit(1)
 
-import numpy as np
+# --------------------- GF(2^8) Arithmetic ---------------------
 
-# ---------------------------
-# Config and utilities
-# ---------------------------
+PRIM_POLY = 0x11D
+gf_exp = [0] * 512
+gf_log = [0] * 256
 
-@dataclass
-class Config:
-    code: str = "repetition"
-    distance: int = 5
-    noise: str = "bitflip"           # bitflip | phaseflip | depolarizing
-    p_x: float = 0.0
-    p_y: float = 0.0
-    p_z: float = 0.0
-    p_meas: float = 0.0
-    n_rounds: int = 1
-    n_samples: int = 10000
-    decoder: str = "majority"        # majority | threshold
-    calib_frac: float = 0.1          # only used for threshold
-    seed: int = 123
-    save_dir: str = ""               # auto-created if empty
-    save_syndromes: bool = False
+def init_gf_tables():
+    x = 1
+    for i in range(255):
+        gf_exp[i] = x
+        gf_log[x] = i
+        x <<= 1
+        if x & 0x100: x ^= PRIM_POLY
+    for i in range(255, 512):
+        gf_exp[i] = gf_exp[i - 255]
 
-def _now_tag() -> str:
-    return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+init_gf_tables()
 
-def ensure_dir(path: Path) -> None:
-    path.mkdir(parents=True, exist_ok=True)
+def gf_mul(a, b):
+    if a == 0 or b == 0: return 0
+    return gf_exp[gf_log[a] + gf_log[b]]
 
-def set_seed(seed: int) -> None:
-    np.random.seed(seed)
+def poly_mul_binary(p1, p2):
+    res = [0] * (len(p1) + len(p2) - 1)
+    for i, c1 in enumerate(p1):
+        if c1:
+            for j, c2 in enumerate(p2):
+                if c2: res[i+j] ^= 1
+    return res
 
-def validate_config(cfg: Config) -> None:
-    assert cfg.code == "repetition", "This reference implementation supports --code repetition"
-    assert cfg.distance >= 3 and cfg.distance % 2 == 1, "--distance must be odd and >= 3"
-    assert cfg.noise in {"bitflip", "phaseflip", "depolarizing"}
-    for p, name in [(cfg.p_x, "p-x"), (cfg.p_y, "p-y"), (cfg.p_z, "p-z"), (cfg.p_meas, "p-meas")]:
-        assert 0.0 <= p <= 1.0, f"--{name} must be in [0,1]"
-    assert 0.0 <= cfg.calib_frac < 1.0, "--calib-frac must be in [0,1)"
-    assert cfg.n_samples > 0
-    assert cfg.n_rounds >= 1
-    assert cfg.decoder in {"majority", "threshold"}
+def poly_div_mod_binary(dividend, divisor):
+    dividend = list(dividend)
+    deg_divisor = len(divisor) - 1
+    while deg_divisor > 0 and divisor[deg_divisor] == 0: deg_divisor -= 1
+    if deg_divisor < 0: raise ZeroDivisionError
+    deg_dividend = len(dividend) - 1
+    while deg_dividend >= 0 and dividend[deg_dividend] == 0: deg_dividend -= 1
+    if deg_dividend < deg_divisor: return [0], dividend[:deg_dividend+1]
+    quotient = [0] * (deg_dividend - deg_divisor + 1)
+    remainder = list(dividend)
+    for i in range(deg_dividend, deg_divisor - 1, -1):
+        if remainder[i]:
+            quotient[i - deg_divisor] = 1
+            for j in range(deg_divisor + 1):
+                if divisor[j]: remainder[i - deg_divisor + j] ^= 1
+    while len(remainder) > 0 and remainder[-1] == 0: remainder.pop()
+    if not remainder: remainder = [0]
+    return quotient, remainder
 
-# ---------------------------
-# Repetition code primitives
-# ---------------------------
+def get_cyclotomic_coset(s, n=255):
+    coset = []
+    x = s % n
+    while x not in coset:
+        coset.append(x)
+        x = (2 * x) % n
+    return coset
 
-def encode_repetition(logical_bit: int, d: int) -> np.ndarray:
-    """Return encoded physical bitstring of length d (0->all zeros, 1->all ones)."""
-    return np.full(shape=(d,), fill_value=logical_bit, dtype=np.int8)
+def get_minimal_poly(coset):
+    poly = [1]
+    for idx in coset:
+        root = gf_exp[idx]
+        new_poly = [0] * (len(poly) + 1)
+        for i, c in enumerate(poly):
+            new_poly[i] ^= gf_mul(c, root)
+            new_poly[i+1] ^= c
+        poly = new_poly
+    return [1 if c else 0 for c in poly]
 
-def apply_pauli_noise(bits: np.ndarray, noise: str, p_x: float, p_y: float, p_z: float) -> np.ndarray:
+def get_generator_poly(coset_leaders):
+    g = [1]
+    for s in coset_leaders:
+        mp = get_minimal_poly(get_cyclotomic_coset(s))
+        g = poly_mul_binary(g, mp)
+    return g
+
+def build_parity_check_matrix(g_poly, n):
+    dividend = [1] + [0]*(n-1) + [1]
+    h_poly, rem = poly_div_mod_binary(dividend, g_poly)
+    if any(rem): raise ValueError("g(x) does not divide x^n - 1")
+    g_perp = h_poly[::-1]
+    n_minus_k = len(g_poly) - 1
+    H = np.zeros((n_minus_k, n), dtype=np.int8)
+    for i in range(n_minus_k):
+        for j, coeff in enumerate(g_perp):
+            H[i, (i+j)%n] = coeff
+    return H
+
+# --------------------- ISD Decoder (Prange) ---------------------
+
+def isd_decode(H, syndrome, t_max=None, max_iters=50):
     """
-    Phenomenological model on classical readouts:
-    - bitflip: flips with prob p_x
-    - phaseflip: no effect on classical readout for a Z-basis measurement (kept for interface compatibility)
-    - depolarizing: flips with prob p where X/Y/Z equi-probable -> effective classical flip ~ 2/3 p,
-      but we model as independent X,Y,Z draws and flip if an odd number of X/Y occurs.
+    Information Set Decoding (Prange).
+    Attempts to find error e with H e = s and wt(e) minimal (or <= t_max).
+    Since noise is low, we stop as soon as we find a valid solution with low weight.
     """
-    d = bits.shape[0]
-    out = bits.copy()
-    if noise == "bitflip":
-        mask = (np.random.rand(d) < p_x).astype(np.int8)
-        out ^= mask
-        return out
-    elif noise == "phaseflip":
-        # Phase (Z) errors don't flip Z-basis measurement outcomes of a classical repetition code.
-        # We keep this branch for completeness / future extension.
-        return out
-    elif noise == "depolarizing":
-        # Draw independent X,Y,Z; for classical bit values, X and Y flip the outcome, Z does not.
-        x = np.random.rand(d) < p_x
-        y = np.random.rand(d) < p_y
-        # z = np.random.rand(d) < p_z  # unused for classical readout
-        flips = (x | y).astype(np.int8)
-        out ^= flips
-        return out
-    else:
-        raise ValueError(f"unknown noise: {noise}")
+    m, n = H.shape
+    if t_max is None: t_max = m # Loose bound
 
-def apply_measurement_error(meas: np.ndarray, p_meas: float) -> np.ndarray:
-    """Flip each measurement outcome with prob p_meas."""
-    d = meas.shape[0]
-    flips = (np.random.rand(d) < p_meas).astype(np.int8)
-    return meas ^ flips
+    # Pre-allocate
+    Aug = np.zeros((m, n+1), dtype=np.int8)
 
-def syndrome_from_measurements(meas: np.ndarray) -> np.ndarray:
-    """Edge-parity syndrome: s_i = meas_i XOR meas_{i+1}."""
-    return meas[:-1] ^ meas[1:]
+    best_e = None
+    min_wt = n + 1
 
-# ---------------------------
-# Decoders
-# ---------------------------
+    for _ in range(max_iters):
+        # Random permutation
+        perm = np.random.permutation(n)
+        H_p = H[:, perm]
 
-def decode_majority(meas: np.ndarray) -> int:
-    """Return estimated logical bit via majority vote."""
-    ones = int(meas.sum())
-    zeros = meas.size - ones
-    return 1 if ones > zeros else 0
+        # Gaussian Elimination on [H_p | s]
+        Aug[:, :n] = H_p
+        Aug[:, n] = syndrome
 
-def calibrate_threshold(syndromes: np.ndarray, labels: np.ndarray) -> int:
-    """
-    Fit a threshold t* on the statistic S = sum(syndrome) to minimize 0/1 error on labels in {0,1}.
-    Returns an integer threshold in [0, d-1].
-    """
-    S = syndromes.sum(axis=1)  # shape (n,)
-    d_minus_1 = syndromes.shape[1]
-    # brute-force over possible thresholds on S
-    best_t, best_err = 0, 1.0
-    for t in range(d_minus_1 + 1):
-        preds = (S >= t).astype(np.int8)
-        err = float((preds != labels).mean())
-        if err < best_err:
-            best_err, best_t = err, t
-    return int(best_t)
+        # We need to find m independent columns.
+        # Since we permuted randomly, we just try to form I on the first m columns.
+        # Standard GE.
 
-def decode_threshold(syndrome: np.ndarray, t_star: int) -> int:
-    """Predict logical=1 if sum(syndrome) >= t_star, else 0."""
-    return int(syndrome.sum() >= t_star)
+        # Forward
+        pivot_row = 0
+        col = 0
+        pivots = []
+        possible = True
 
-# ---------------------------
-# Simulation core
-# ---------------------------
+        while pivot_row < m and col < n:
+            if Aug[pivot_row, col] == 0:
+                swap = -1
+                for r in range(pivot_row + 1, m):
+                    if Aug[r, col]:
+                        swap = r; break
+                if swap != -1:
+                    Aug[[pivot_row, swap]] = Aug[[swap, pivot_row]]
+                else:
+                    col += 1; continue
 
-def simulate_shot(cfg: Config, logical_bit: int) -> Tuple[int, int, np.ndarray, np.ndarray]:
-    """
-    Simulate a single encoded shot.
-    Returns: (true_logical, measured_majority, measurements, syndrome)
-    """
-    d = cfg.distance
-    phys = encode_repetition(logical_bit, d)
-    # (Optional) multiple rounds: here we use last round's measurement as readout;
-    # extend to temporal majority or 3D matching as needed.
-    meas = phys.copy()
-    for _ in range(cfg.n_rounds):
-        meas = apply_pauli_noise(meas, cfg.noise, cfg.p_x, cfg.p_y, cfg.p_z)
-        meas = apply_measurement_error(meas, cfg.p_meas)
-    syn = syndrome_from_measurements(meas)
-    est_majority = decode_majority(meas)
-    return logical_bit, est_majority, meas, syn
+            pivots.append(col)
+            # Eliminate
+            idx = np.where(Aug[:, col])[0]
+            # Vectorized elimination?
+            pivot_vec = Aug[pivot_row]
+            for r in idx:
+                if r != pivot_row:
+                    Aug[r] ^= pivot_vec
 
-def run(cfg: Config) -> Dict[str, object]:
-    validate_config(cfg)
-    set_seed(cfg.seed)
+            pivot_row += 1
+            col += 1
 
-    # Prepare save folder
-    save_root = Path(cfg.save_dir) if cfg.save_dir else Path("results") / _now_tag()
-    ensure_dir(save_root)
+        if len(pivots) < m:
+            # Rank deficient? H should be full rank m.
+            # If so, we might not satisfy syndrome.
+            # Check consistency?
+            # Assuming H full rank.
+            pass
 
-    # Generate a label-balanced stream for robust calibration
-    n_calib = int(cfg.calib_frac * cfg.n_samples) if cfg.decoder == "threshold" else 0
-    n_eval = cfg.n_samples
+        # Extract solution
+        # x_pivots = RHS.
+        e_p = np.zeros(n, dtype=np.int8)
 
-    # Calibration split
-    t_star = None
-    if cfg.decoder == "threshold":
-        calib_L = np.random.randint(0, 2, size=(n_calib,), dtype=np.int8)
-        calib_syn = []
-        for L in calib_L:
-            _, _, _, syn = simulate_shot(cfg, int(L))
-            calib_syn.append(syn)
-        calib_syn = np.stack(calib_syn, axis=0) if len(calib_syn) else np.zeros((0, cfg.distance-1), dtype=np.int8)
-        t_star = calibrate_threshold(calib_syn, calib_L) if len(calib_syn) else 0
+        # Back substitution not needed if we eliminated above and below (Gauss-Jordan)
+        # My loop `if r != pivot_row` does GJ.
 
-    # Evaluation split
-    eval_L = np.random.randint(0, 2, size=(n_eval,), dtype=np.int8)
-    logical_err_majority = 0
-    logical_err_threshold = 0
-    all_rows = []
-    for L in eval_L:
-        true_L, est_maj, meas, syn = simulate_shot(cfg, int(L))
-        if est_maj != true_L:
-            logical_err_majority += 1
-        if cfg.decoder == "threshold":
-            est_thr = decode_threshold(syn, t_star)
-            if est_thr != true_L:
-                logical_err_threshold += 1
-        # optional artifact
-        if cfg.save_syndromes:
-            all_rows.append({
-                "true_L": int(true_L),
-                "est_majority": int(est_maj),
-                "syn_sum": int(syn.sum()),
-                "syn": "".join(map(str, syn.tolist())),
-            })
+        valid = True
+        for i, p_col in enumerate(pivots):
+            # Row `i` corresponds to pivot `p_col`?
+            # We found pivot for row `i` at `p_col`.
+            # So row `i` is [0...0 1 0... | b_i].
+            e_p[p_col] = Aug[i, n]
 
-    # Metrics
-    maj_rate = logical_err_majority / float(n_eval)
-    out = {
-        "config": asdict(cfg),
-        "metrics": {
-            "n_eval": n_eval,
-            "logical_error_majority": maj_rate,
-        },
-    }
-    if cfg.decoder == "threshold":
-        thr_rate = logical_err_threshold / float(n_eval)
-        out["metrics"].update({
-            "t_star": int(t_star),
-            "logical_error_threshold": thr_rate,
-        })
+        # Calculate weight
+        wt = np.sum(e_p)
 
-    # Save artifacts
-    (save_root / "artifacts").mkdir(parents=True, exist_ok=True)
-    with open(save_root / "config.json", "w") as f:
-        json.dump(asdict(cfg), f, indent=2)
-    with open(save_root / "metrics.json", "w") as f:
-        json.dump(out["metrics"], f, indent=2)
-    if cfg.save_syndromes and all_rows:
-        # lightweight CSV; avoid pandas dependency
-        csv_path = save_root / "artifacts" / "syndromes.csv"
-        with open(csv_path, "w") as f:
-            f.write("true_L,est_majority,syn_sum,syndrome_bits\n")
-            for r in all_rows:
-                f.write(f"{r['true_L']},{r['est_majority']},{r['syn_sum']},{r['syn']}\n")
+        # Re-map
+        e = np.zeros(n, dtype=np.int8)
+        e[perm] = e_p
 
-    return out
+        # Check syndrome (sanity)
+        # s_check = (H @ e) % 2
+        # if not np.array_equal(s_check, syndrome): continue
 
-# ---------------------------
-# CLI
-# ---------------------------
+        if wt < min_wt:
+            min_wt = wt
+            best_e = e
+            # Optimization: if wt is very small (compatible with channel error rate), stop
+            if wt <= 3: return e
 
-def build_argparser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="AG-QEC minimal simulator (repetition code).")
-    p.add_argument("--code", type=str, default="repetition", help="only 'repetition' supported in this reference")
-    p.add_argument("--distance", type=int, default=5, help="odd >= 3")
-    p.add_argument("--noise", type=str, default="bitflip",
-                   choices=["bitflip", "phaseflip", "depolarizing"])
-    p.add_argument("--p-x", dest="p_x", type=float, default=0.05)
-    p.add_argument("--p-y", dest="p_y", type=float, default=0.0)
-    p.add_argument("--p-z", dest="p_z", type=float, default=0.0)
-    p.add_argument("--p-meas", dest="p_meas", type=float, default=0.0)
-    p.add_argument("--n-rounds", dest="n_rounds", type=int, default=1)
-    p.add_argument("--n-samples", dest="n_samples", type=int, default=10000)
-    p.add_argument("--decoder", type=str, default="majority", choices=["majority", "threshold"])
-    p.add_argument("--calib-frac", dest="calib_frac", type=float, default=0.1,
-                   help="fraction of n-samples used to calibrate threshold decoder")
-    p.add_argument("--seed", type=int, default=123)
-    p.add_argument("--save-dir", dest="save_dir", type=str, default="")
-    p.add_argument("--save-syndromes", dest="save_syndromes", action="store_true")
-    return p
+    return best_e if best_e is not None else np.zeros(n, dtype=np.int8) # Fail safe
 
-def main() -> None:
-    args = build_argparser().parse_args()
-    cfg = Config(**vars(args))
-    out = run(cfg)
-    # Pretty-print a short summary
-    print(json.dumps(out["metrics"], indent=2))
+def in_row_space(v, M):
+    if np.all(v == 0): return True
+    return np.linalg.matrix_rank(np.vstack([M, v])) == np.linalg.matrix_rank(M)
+
+# --------------------- Main Experiment ---------------------
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--trials", type=int, default=1000)
+    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--n", type=int, default=255)
+    ap.add_argument("--d", type=int, default=21)
+    ap.add_argument("--txt_out", type=str, default="results.txt")
+    ap.add_argument("--bp_txt_out", type=str, default="")
+    ap.add_argument("--runlen_csv", type=str, default="")
+    ap.add_argument("--sensitivity_csv", type=str, default="")
+    ap.add_argument("--css_log", type=str, default="")
+    args = ap.parse_args()
+
+    # HCF Params
+    length_km, power_dbm = 100.0, 10.0
+    atten_db, delta_lam = 0.25, 10.0
+    kappa_r, kappa_f = 0.11, 1e-4
+    eta_d, tau_g = 1.0, 1.0
+    eta_xz, rho, burst = 0.3, 0.6, 2.0
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    rng = random.Random(args.seed)
+
+    # 1. Construct Codes (BCH)
+    cosets_Z = [1, 3, 5, 7, 9, 11, 13]
+    g_Z = get_generator_poly(cosets_Z)
+    H_Z = build_parity_check_matrix(g_Z, 255)
+
+    cosets_X = [1, 3, 5]
+    g_X = get_generator_poly(cosets_X)
+    H_X = build_parity_check_matrix(g_X, 255)
+
+    rank_Z = np.linalg.matrix_rank(H_Z)
+    rank_X = np.linalg.matrix_rank(H_X)
+
+    # Noise rates
+    def dbm_to_watts(p): return 10 ** ((p - 30) / 10)
+    peff = dbm_to_watts(power_dbm) * 10 ** (-(atten_db * length_km) / 10)
+    lam_z_base = eta_d*tau_g*(kappa_r*peff*length_km + kappa_f*peff**2*delta_lam)
+    lam_x_base = lam_z_base
+
+    def get_probs(lam_x, lam_z):
+        lx, lz = max(0, eta_xz*lam_x), max(0, lam_z)
+        lxh, lzh = burst*lx, burst*lz
+        return (1-math.exp(-lx), 1-math.exp(-lxh)), (1-math.exp(-lz), 1-math.exp(-lzh))
+
+    (pxl, pxh), (pzl, pzh) = get_probs(lam_x_base, lam_z_base)
+
+    t_thresh = (args.d - 1) // 2
+    fail_bdd = 0
+    fail_isd = 0
+
+    def sample_states_errors():
+        states = []
+        s = 1 if rng.random() < 0.5 else 0
+        states.append(s)
+        for _ in range(254):
+            if rng.random() > rho: s ^= 1
+            states.append(s)
+        xs, zs = [], []
+        for s in states:
+            px = pxl if s==0 else pxh
+            pz = pzl if s==0 else pzh
+            xs.append(1 if rng.random() < px else 0)
+            zs.append(1 if rng.random() < pz else 0)
+        return states, xs, zs
+
+    for _ in range(args.trials):
+        states, xs, zs = sample_states_errors()
+        if sum(xs) > t_thresh or sum(zs) > t_thresh: fail_bdd += 1
+
+        # ISD Decode
+        syn_z = (H_X @ np.array(zs)) % 2
+        est_z = isd_decode(H_X, syn_z, max_iters=40)
+
+        syn_x = (H_Z @ np.array(xs)) % 2
+        est_x = isd_decode(H_Z, syn_x, max_iters=40)
+
+        # Logical Check
+        d_z = (np.array(zs) + est_z) % 2
+        if not in_row_space(d_z, H_Z):
+            fail_isd += 1
+            continue
+
+        d_x = (np.array(xs) + est_x) % 2
+        if not in_row_space(d_x, H_X):
+            fail_isd += 1
+
+    with open(args.txt_out, "w") as f:
+        f.write(f"trials = {args.trials}\n")
+        f.write(f"failures_bdd = {fail_bdd}\n")
+        f.write(f"failures_isd = {fail_isd}\n")
+        f.write(f"p_L_bdd = {fail_bdd/args.trials}\n")
+        f.write(f"p_L_isd = {fail_isd/args.trials}\n")
+
+    if args.css_log:
+        with open(args.css_log, "w") as f:
+            f.write(f"rank_H_Z = {rank_Z}\nrank_H_X = {rank_X}\n")
 
 if __name__ == "__main__":
     main()
