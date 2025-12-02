@@ -56,50 +56,33 @@ def simple_kmeans(X, k, max_iters=20):
     K-means implementation with K-means++ style initialization for stability.
     """
     N, d = X.shape
-
-    # K-means++ initialization
     centroids = np.empty((k, d))
-    # 1. Choose first center uniformly at random
     centroids[0] = X[np.random.choice(N)]
-
-    # 2. Choose remaining k-1 centers with probability proportional to D(x)^2
     for i in range(1, k):
         dist_sq = np.min(np.sum((X[:, None, :] - centroids[:i])**2, axis=2), axis=1)
         probs = dist_sq / np.sum(dist_sq)
         cumprobs = np.cumsum(probs)
         r = np.random.rand()
-
-        # Find index where r falls
         idx = np.searchsorted(cumprobs, r)
         centroids[i] = X[idx]
 
     labels = np.zeros(N)
-
     for _ in range(max_iters):
-        # Compute distances
-        # dist[i, j] = ||X[i] - centroids[j]||^2
         X_sq = np.sum(X**2, axis=1, keepdims=True)
         C_sq = np.sum(centroids**2, axis=1)
         dist = X_sq + C_sq - 2 * np.dot(X, centroids.T)
-
         new_labels = np.argmin(dist, axis=1)
-
         if np.array_equal(labels, new_labels):
             break
-
         labels = new_labels
-
-        # Update centroids
         new_centroids = np.zeros_like(centroids)
         for i in range(k):
             mask = (labels == i)
             if np.any(mask):
                 new_centroids[i] = X[mask].mean(axis=0)
             else:
-                # Handle empty cluster: re-initialize to a random point
                 new_centroids[i] = X[np.random.choice(N)]
         centroids = new_centroids
-
     return labels, centroids
 
 def softmax(x, axis=-1):
@@ -127,8 +110,6 @@ def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return
     labels, _ = simple_kmeans(Q_proj, k_clusters, max_iters=10)
 
     output = np.zeros_like(V)
-
-    # For spectral analysis, we might want the full sparse weight matrix
     full_weights = None
     if return_sparse_weights:
         full_weights = np.zeros((N, N))
@@ -161,7 +142,6 @@ def spectral_sparse_attention(Q, K, V, k_clusters=None, global_ratio=1.0, return
         w = softmax(scores, axis=-1)
 
         if return_sparse_weights:
-            # Place the weights back into the full matrix
             for local_idx, q_idx in enumerate(query_indices):
                 full_weights[q_idx, combined_key_indices] = w[local_idx]
 
@@ -182,32 +162,16 @@ def cosine_similarity(A, B):
     return np.mean(sim)
 
 def compute_spectrum(W):
-    """
-    Computes the eigenvalues of the normalized Laplacian L = I - D^{-1/2} W D^{-1/2}.
-    Assumes W is non-negative (attention weights).
-    """
     N = W.shape[0]
-    # Symmetrize roughly for spectral analysis if not symmetric (Attention is not symmetric usually)
-    # However, for Laplacian analysis of directed graphs, we often look at singular values or
-    # symmetrize W = (W + W^T)/2 or use L = I - W_norm.
-    # Standard spectral graph theory usually deals with symmetric adjacency.
-    # Let's use the singular values of the Attention Matrix itself,
-    # or the eigenvalues of the symmetrized version to represent "connectivity".
-    # A common proxy for graph structural similarity is the spectrum of the Laplacian of the symmetrized graph.
-
     W_sym = 0.5 * (W + W.T)
     degrees = np.sum(W_sym, axis=1)
-    # Avoid division by zero
     degrees[degrees < 1e-10] = 1e-10
     D_inv_sqrt = np.diag(1.0 / np.sqrt(degrees))
-
     L_norm = np.eye(N) - D_inv_sqrt @ W_sym @ D_inv_sqrt
-
-    eigenvalues = np.linalg.eigvalsh(L_norm) # eigvalsh for symmetric matrices
+    eigenvalues = np.linalg.eigvalsh(L_norm)
     return np.sort(eigenvalues)
 
 def run_experiments():
-    # Use relative path assuming running from repo root
     output_dir = 'energy_efficient_ai'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -228,7 +192,6 @@ def run_experiments():
     for N in seq_lengths:
         Q, K, V, _ = generate_structured_data(N, d_model, num_clusters=max(2, int(np.sqrt(N))))
 
-        # Warmup for small N
         if N == 128:
              spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N)))
 
@@ -270,47 +233,44 @@ def run_experiments():
     axes[0].set_ylabel('Inference Time (s)')
     axes[0].set_title('Runtime Comparison')
     axes[0].legend()
-    axes[0].set_yscale('log') # Log scale helps differentiate at lower N
+    axes[0].set_yscale('log')
 
-    # Plot 2: Spectral Analysis (Replacing Complexity Plot)
+    # Plot 2: Spectral Analysis
     N_spec = 512
     Q_s, K_s, V_s, _ = generate_structured_data(N_spec, d_model, num_clusters=8)
-
-    # Get Full Weights
     _, W_naive = naive_attention(Q_s, K_s, V_s, return_weights=True)
-    # Get Sparse Weights
     _, W_ssa = spectral_sparse_attention(Q_s, K_s, V_s, k_clusters=8, global_ratio=2.0, return_sparse_weights=True)
 
     eig_naive = compute_spectrum(W_naive)
     eig_ssa = compute_spectrum(W_ssa)
 
-    # Plot Eigenvalue distribution
     x_axis = np.arange(len(eig_naive))
     axes[1].plot(x_axis, eig_naive, label='Full Attention Spectrum', color='#333333', linewidth=1.5, alpha=0.8)
     axes[1].plot(x_axis, eig_ssa, label='SSA Approximation', color='#d62728', linestyle='--', linewidth=2.0)
 
+    # Highlight spectral gap
+    gap_naive = eig_naive[1] - eig_naive[0]
+    gap_ssa = eig_ssa[1] - eig_ssa[0]
+    axes[1].text(0.6, 0.2, f"$\delta_{{dense}} \\approx {gap_naive:.1e}$\n$\delta_{{ssa}} \\approx {gap_ssa:.1e}$",
+                 transform=axes[1].transAxes, ha='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.9, edgecolor='gray'))
+
     axes[1].set_xlabel('Eigenvalue Index $k$')
     axes[1].set_ylabel('Eigenvalue $\lambda_k(\mathcal{L})$')
-    axes[1].set_title('Spectral Approximation (Laplacian)')
+    axes[1].set_title('Spectral Approximation')
     axes[1].legend()
-    axes[1].text(0.5, 0.5, f"High overlap implies\nstructural preservation", transform=axes[1].transAxes,
-                 ha='center', va='center', bbox=dict(facecolor='white', alpha=0.8))
 
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'combined_performance.png'), bbox_inches='tight')
 
-    # Save Spectral Plot separately
     extent2 = axes[1].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     fig.savefig(os.path.join(output_dir, 'spectral_approximation.png'), bbox_inches=extent2.expanded(1.1, 1.2))
 
-    # Save Runtime plot separately
     extent1 = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     fig.savefig(os.path.join(output_dir, 'runtime_comparison.png'), bbox_inches=extent1.expanded(1.1, 1.2))
 
-
     # --- Pareto Frontier ---
     N_pareto = 1024
-    ratios = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+    ratios = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
     p_speedups = []
     p_cosines = []
     Q, K, V, _ = generate_structured_data(N_pareto, d_model)
@@ -323,13 +283,12 @@ def run_experiments():
         start = time.time()
         out_s = spectral_sparse_attention(Q, K, V, k_clusters=int(np.sqrt(N_pareto)), global_ratio=r)
         t_s = time.time() - start
-
         sim = cosine_similarity(out_n, out_s)
         p_speedups.append(t_base/t_s)
         p_cosines.append(sim)
 
     plt.figure(figsize=(7, 5))
-    scatter = plt.scatter(p_speedups, p_cosines, c=np.log2(ratios), cmap='viridis', s=100, zorder=5)
+    scatter = plt.scatter(p_speedups, p_cosines, c=np.log2(ratios), cmap='viridis', s=150, zorder=5, edgecolors='black')
     plt.plot(p_speedups, p_cosines, color='gray', linestyle='--', alpha=0.5, zorder=1)
 
     cbar = plt.colorbar(scatter)
@@ -339,10 +298,8 @@ def run_experiments():
     plt.ylabel('Cosine Similarity (Accuracy)')
     plt.title(f'Efficiency vs. Accuracy Frontier ($N={N_pareto}$)')
 
-    # Annotate points
     for i, r in enumerate(ratios):
-        if i % 2 == 0: # Annotate every other point to avoid clutter
-            plt.annotate(f"r={r}", (p_speedups[i], p_cosines[i]), xytext=(5, 5), textcoords='offset points', fontsize=9)
+        plt.annotate(f"r={r}", (p_speedups[i], p_cosines[i]), xytext=(5, 5), textcoords='offset points', fontsize=9)
 
     plt.grid(True, linestyle=':', alpha=0.6)
     plt.savefig(os.path.join(output_dir, 'pareto_frontier.png'), bbox_inches='tight')
@@ -353,10 +310,10 @@ def run_experiments():
     _, mask = spectral_sparse_attention(Q, K, V, k_clusters=4, global_ratio=1.0, return_mask=True)
 
     plt.figure(figsize=(6, 6))
-    sns.heatmap(mask, cmap="Blues", cbar=False, square=True, xticklabels=False, yticklabels=False)
+    sns.heatmap(mask, cmap="Blues", cbar=False, square=True, xticklabels=False, yticklabels=False, linewidths=0)
     plt.xlabel('Key Index $j$')
     plt.ylabel('Query Index $i$')
-    plt.title(f'Attention Mask Pattern ($N={N_vis}$)\nBlock-Diagonal + Vertical Stripes')
+    plt.title(f'Attention Mask Pattern ($N={N_vis}$)\nBlock-Diagonal Structure + Global Sampling')
     plt.savefig(os.path.join(output_dir, 'sparsity_pattern.png'), bbox_inches='tight')
 
 if __name__ == "__main__":
