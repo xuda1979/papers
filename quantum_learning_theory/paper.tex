@@ -55,6 +55,28 @@ A VQC learns a function $f: \mathcal{X} \to \mathcal{Y}$ by preparing a paramete
 \end{equation}
 where $V(\mathbf{x})$ is the data encoding unitary and $U(\boldsymbol{\theta})$ is the variational ansatz.
 
+\subsection{Effective Hamiltonian Formulation}
+
+To understand the phase structure of the VQC, we map the discrete circuit evolution to a continuous-time quantum many-body system. The variational ansatz consists of repeating layers $L$ of the form $U_L(\boldsymbol{\theta}) = U_{ent}(\phi) U_{rot}(\boldsymbol{\theta})$. Specifically, our ansatz utilizes $R_y(\theta)$ rotations and $CR_z(\phi)$ entangling gates.
+
+In the Trotterized limit where parameters are small, we can approximate one layer as the time-evolution operator $e^{-i H_{\text{eff}} \Delta t}$. The $CR_z(\phi)$ gate, acting on qubits $j$ and $j+1$, is equivalent (up to local phases) to an interaction term $\exp(-i \frac{\phi}{2} Z_j Z_{j+1})$. The $R_y(\theta)$ gates contribute a transverse field term $\exp(-i \frac{\theta}{2} Y_j)$.
+
+Consequently, the effective Hamiltonian governing the ansatz is the Transverse Field Ising Model (TFIM) with an additional longitudinal field component:
+\begin{equation}
+    H_{\text{eff}} \approx - J \sum_j Z_j Z_{j+1} - h_y \sum_j Y_j - h_z \sum_j Z_j
+\end{equation}
+where the interaction strength $J \propto \phi$ and the transverse field $h_y \propto \bar{\theta}$ (the average rotation angle). The ratio $\lambda = J/h_y$ serves as the control parameter. For $\lambda \ll 1$, the system is in a paramagnetic (separable) phase, where the ground state is a product state aligned with the field. For $\lambda \gg 1$, the system enters a ferromagnetic (entangled) phase. The critical point $\lambda_c \approx 1$ marks a second-order quantum phase transition, characterized by long-range correlations and a logarithmic scaling of entanglement entropy $S \sim \log N$.
+
+\subsection{RG Flow of Variational Parameters}
+
+We can interpret the gradient descent optimization of the VQC as a renormalization group (RG) flow in the parameter manifold. Let $\tau$ denote the training time. The dynamics of the parameters $\boldsymbol{\theta}$ follow the gradient flow equation:
+\begin{equation}
+    \frac{d\boldsymbol{\theta}}{d\tau} = - \eta \nabla_{\boldsymbol{\theta}} \mathcal{L}(\boldsymbol{\theta})
+\end{equation}
+Near the critical point of the effective Hamiltonian, the optimization landscape exhibits self-similar properties. We propose that the relevant "coupling constant" for the flow is the dimensionless entanglement density $g = S(\boldsymbol{\theta}) / N$. The flow of $g$ can be described by a beta function $\beta(g) = \frac{dg}{d\log \tau}$.
+
+In the "Goldilocks" zone, we conjecture that $\beta(g)$ approaches a stable fixed point that balances information compression (irrelevant operators decaying) with feature retention (relevant operators growing), maximizing the model's generalization capability.
+
 \subsection{Entanglement Entropy}
 
 The complexity of correlations in the quantum state is quantified by the Von Neumann entropy of the reduced density matrix $\rho_A = \Tr_B(|\psi\rangle\langle\psi|)$ for a bipartition $A \cup B$:
