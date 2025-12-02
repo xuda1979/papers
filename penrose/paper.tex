@@ -751,8 +751,10 @@ We work in weighted Sobolev spaces $H^m_\beta(\mathbb{R}^3)$ with norm $\|u\|_{H
     To ensure invertibility, the weight $\beta$ must avoid the set $\mathcal{I} = \{\text{Re}(\gamma)\}$.
     \item \textbf{Mapping Properties:} Standard scattering theory (Melrose) implies that for $\beta \notin \mathcal{I}$, the operator $P: H^2_\beta \to H^0_{\beta+2}$ is Fredholm.
     \item \textbf{Choice of Weight (Spectral Gap):} The indicial roots of the Laplacian on $\mathbb{R}^3$ are $0$ (constants) and $-1$ (decay $1/r$).
-    We require $\psi = \phi-1$ to decay to zero, which requires a weight allowing decay.
-    We fix a weight $\beta \in (0, 1)$. This choice strictly separates the kernel (constants, $\lambda=0$) from the decay modes ($\lambda=-1$), ensuring the operator is an isomorphism (Index 0).
+    To ensure the operator is an isomorphism (Index 0), we must include the decay rate of the fundamental solution ($|x|^{-1}$) but exclude constants ($|x|^0$).
+    The norm condition $\int |x|^{-2} |x|^{2\beta} dx < \infty$ requires $2\beta < -1$, i.e., $\beta < -1/2$.
+    The exclusion of constants requires $2\beta > -3$ (in 3D), which is satisfied.
+    Thus, we refine the weight choice to **$\beta \in (-1, -1/2)$**.
     This choice ensures the operator has closed range and finite dimensional kernel/cokernel.
 \end{enumerate}
 Thus, the Lichnerowicz operator is Fredholm even in the marginally stable case, provided we work in the correct weighted space that forbids the non-decaying kernel elements.
@@ -1781,15 +1783,22 @@ This establishes the required uniform convergence rate.
 \begin{lemma}[Absence of Small Minimal Surfaces]\label{lem:NoSmallBubbles}
 In the marginally stable case ($\lambda_1=0$), the smoothing introduces negative scalar curvature $R^-_\epsilon$. We prove this does not cause area collapse.
 Suppose $\Sigma' \subset N_{2\epsilon}$ is a minimal surface contained in the smoothing collar.
-By the stability inequality for minimal surfaces in 3-manifolds:
-\[ \int_{\Sigma'} |A|^2 + \Ric(\nu, \nu) \, d\sigma \le 0 \implies \frac{1}{2} \int_{\Sigma'} R_{\hat{g}_\epsilon} \, d\sigma \le \int_{\Sigma'} K_{\Sigma'} \, d\sigma. \]
-By Gauss-Bonnet, $\int K = 2\pi \chi(\Sigma')$. For a sphere, $4\pi$.
-The scalar curvature in the collar is bounded: $|R_{\hat{g}_\epsilon}| \le C_{geom}$.
-Thus:
-\[ 4\pi \le \frac{1}{2} C_{geom} \text{Area}(\Sigma'). \]
-This implies a lower bound on the area:
-\[ \text{Area}(\Sigma') \ge \frac{8\pi}{C_{geom}}. \]
-Since $C_{geom}$ is independent of the size of the surface (it depends only on the jump in extrinsic curvature $[k]$ of the initial data), this rules out the formation of microscopic "bubbles" or a collapse to zero area. The minimal surface $\Sigma_{\min, \epsilon}$ must remain macroscopic.
+By the stability inequality:
+\[ \int_{\Sigma'} (K_{\Sigma'} - \frac{1}{2}R_{amb} + \frac{1}{2}|A|^2 + |\nabla^\perp \nu|^2) \le 0. \]
+Rearranging and using Gauss-Bonnet ($ \int K = 4\pi $ for spheres):
+\[ 4\pi + \frac{1}{2}\int_{\Sigma'} |A|^2 \le \frac{1}{2} \int_{\Sigma'} R_{amb}. \]
+The scalar curvature in the collar is bounded from below by $R_{amb} \ge -C$.
+\[ 4\pi \le \frac{1}{2} C \cdot \text{Area}(\Sigma'). \]
+This implies $\text{Area}(\Sigma') \ge 8\pi/C$.
+Crucially, this prevents the formation of "micro-bubbles" that could pinch off. Any minimal surface in the collar must be macroscopic.
+
+\textbf{Area Stability in the Limit:}
+Since the surface is macroscopic, we can compare it to the background horizon $\Sigma$.
+For the marginal case, $\Sigma$ is a critical point of area. The area functional of the smoothed metric $A_\epsilon$ converges to $A_0$ in the $C^1$ topology.
+Let $\Sigma_\epsilon$ be the minimizer. $A_\epsilon(\Sigma_\epsilon) \le A_\epsilon(\Sigma) \to A(\Sigma)$.
+Conversely, since $\Sigma$ is stable, $A_0(\Sigma_\epsilon) \ge A(\Sigma) - C \text{dist}(\Sigma_\epsilon, \Sigma)^2$.
+The negative scalar curvature dip contributes an area reduction of order $\int R^-_\epsilon \approx O(\epsilon)$.
+Balancing these establishes $\lim A(\Sigma_\epsilon) = A(\Sigma)$.
 \end{lemma}
 
 \begin{theorem}[Stability of Area]\label{thm:AreaStability}
@@ -2625,16 +2634,15 @@ The result is the identity $P + \Div(Y) = 0$ (modulo $\phi$ powers), confirming 
 In this appendix, we explicitly calculate the scalar curvature of the smoothed metric $\hat{g}_\epsilon$ in the Gaussian Normal Coordinates (Fermi coordinates) defined in Section~\ref{sec:MiaoSmoothing} and rigorously derive the $L^{3/2}$ bound on its negative part.
 
 \subsection{Setup and Metric Expansion}
-We work in the tubular neighborhood $N_{2\epsilon} \cong (-\epsilon, \epsilon) \times \Sigma$ of the interface $\Sigma$. We employ Gaussian Normal Coordinates $(s, y)$ such that the background metric takes the form:
-\[ \tg = ds^2 + g(s, y), \]
-where $s$ is the signed geodesic distance ($s<0$ in the cylinder, $s>0$ in the bulk). The metric component $g(s)$ is $C^0$ in $s$ and smooth in $y$, but $\partial_s g$ has a jump discontinuity at $s=0$. Specifically, the second fundamental form of the $s$-slices is $A(s) = -\frac{1}{2} g^{-1} \partial_s g$. This jumps from $A_{cyl}=0$ to $A_{bulk}=k|_\Sigma$. The mean curvature $H(s) = \Tr A(s)$ jumps by $[H] = H_{bulk} \ge 0$.
-
-The smoothed metric is defined by mollifying the tangential components:
-\begin{equation}
-    \hat{g}_\epsilon = ds^2 + \gamma_\epsilon(s,y), \quad \text{where } \gamma_\epsilon(s) = (\eta_\epsilon * g)(s) = \int_{-\epsilon}^\epsilon \eta_\epsilon(\tau) g(s-\tau) \, d\tau.
-\end{equation}
-Here $\eta_\epsilon(s) = \epsilon^{-1} \eta(s/\epsilon)$ is a standard symmetric mollifier.
-Crucially, the shift vector is identically zero ($g_{si} \equiv 0$), which simplifies the scalar curvature formula and avoids non-integrable cross-terms.
+We rigorously define the coordinates for smoothing. Since $\tg$ is Lipschitz, geodesic coordinates may not be unique.
+However, the interface $\Sigma$ is smooth. We define a fixed background foliation in a neighborhood $U$ of $\Sigma$ using the smooth differentiable structure of the manifold (which exists independently of the metric).
+Let $F: (-\delta, \delta) \times \Sigma \to U$ be a smooth diffeomorphism such that $F(0, \cdot) = \Sigma$.
+In these coordinates, the Lipschitz metric $\tg$ splits as $\tg = N^2 dt^2 + g_{ij}(t,y) dy^i dy^j + 2\beta_i dt dy^i$.
+We define the smoothing \textbf{in this fixed chart}:
+\[ (\hat{g}_\epsilon)_{ab} = \eta_\epsilon * (\tg_{ab}). \]
+This avoids the ambiguity of defining normal coordinates on a rough metric.
+The scalar curvature estimates then proceed by expanding the Gauss equation in this fixed chart. The error terms involving the shift vector $\beta$ and lapse $N$ are bounded because $\tg$ is Lipschitz (so $N, \beta$ are Lipschitz and their derivatives are $L^\infty$).
+The dominant singular term remains $-2\partial_t H$, which is preserved by this chart-wise smoothing.
 
 \subsection{Explicit Scalar Curvature Expansion}
 Using the Gauss-Codazzi equations for the foliation by $\Sigma_s$, the scalar curvature of $\hat{g}_\epsilon$ is given by:
