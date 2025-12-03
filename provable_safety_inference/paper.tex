@@ -1,0 +1,72 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+\title{Provable Safety Inference: Certifying Black-Box Generative Models via Distribution-Free Risk Control}
+\author{Research Group on Theoretical AI}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+As Large Language Models (LLMs) are integrated into critical infrastructure, the reliance on heuristic safety filters is becoming untenable. "Jailbreak" attacks demonstrate that keyword blocking and reinforcement learning from human feedback (RLHF) provide no formal guarantees against harmful outputs. This paper introduces a framework for "Provable Safety Inference" utilizing Distribution-Free Risk Control (DFRC). We propose the "Safety Certificate Architecture," a wrapper method that uses a calibration dataset to rigorously bound the probability of unsafe generation. By implementing the "Provably Safe Certification" (PROSAC) protocol, we derive statistical guarantees of the form "this model is $(1-\alpha)$ safe with probability $\zeta$," offering a mathematically sound alternative to current best-effort safety measures.
+\end{abstract}
+
+\section{Introduction}
+The current state of AI safety is akin to "security by obscurity." Defenses are patched only after attacks are discovered \citep{zou2023universal}. For high-stakes deployments (medical, legal, financial), users require \textit{guarantees}, not just high empirical success rates.
+
+Conformal Prediction and DFRC \citep{angelopoulos2021gentle} provide a statistical toolkit to bound the error rates of black-box predictors without making assumptions about the underlying data distribution. The challenge lies in adapting these tools—originally designed for regression or classification—to the open-ended, high-dimensional output space of generative text.
+
+\section{Theoretical Framework}
+
+\subsection{Risk Definition in Generative Spaces}
+Let $M(x)$ be the output of the model for input $x$. We define a semantic risk function $L(M(x), y_{safe})$ that measures the "harmfulness" of the output. This can be quantified using:
+\begin{itemize}
+    \item \textbf{Embedding Distance}: Cosine distance from a centroid of "refusal" or "safe" responses.
+    \item \textbf{Toxic Classifier Score}: Output probability of a toxicity detector.
+\end{itemize}
+The goal is to find a control parameter $\lambda$ (e.g., a threshold on the toxicity score) such that:
+\begin{equation}
+    \mathbb{E}[L(M_\lambda(x))] \leq \alpha
+\end{equation}
+where $\alpha$ is the user-specified tolerance.
+
+\subsection{Provably Safe Certification (PROSAC)}
+PROSAC \citep{bates2024distribution} uses a held-out calibration set $\{(x_i)\}_{i=1}^n$ to estimate the empirical risk. By applying the Hoeffding-Bentkus inequality or other concentration bounds, we can choose $\lambda$ such that the true risk is bounded with high probability.
+Specifically, we seek a $\hat{\lambda}$ such that:
+\begin{equation}
+    P(\mathbb{E}[L(M_{\hat{\lambda}}(X))] > \alpha) \leq \delta
+\end{equation}
+where $\delta$ is the failure probability (e.g., $10^{-5}$).
+
+\section{Methodology: The Safety Certificate Architecture}
+
+\subsection{Calibration Set Construction}
+We construct a "Red Teaming Calibration Set" containing diverse adversarial prompts. The "ground truth" labels are not the target text, but the binary "safe/unsafe" judgment of the model's response.
+
+\subsection{Contextual Integrity Verification (CIV)}
+We explore a theoretical extension for "Contextual Integrity" \citep{nissenbaum2004privacy}. This involves "taint tracking" for information flow.
+\begin{itemize}
+    \item \textbf{Idea}: Tag input tokens as "Trusted" (System Prompt) or "Untrusted" (User Prompt).
+    \item \textbf{Mechanism}: In the attention mechanism, untrusted tokens should not be able to "attend to" and override the instructions of trusted tokens. We propose a "Trust Mask" $M_{trust}$ applied to the attention logits $A$:
+    \begin{equation}
+        A'_{ij} = A_{ij} - \infty \cdot \mathbb{I}(Trust(i) < Trust(j))
+    \end{equation}
+    This theoretically prevents prompt injection by enforcing an information flow hierarchy.
+\end{itemize}
+
+\section{Implications}
+The Safety Certificate Architecture allows for "Safe Harbor" deployments. An organization can prove due diligence by showing their model operates within a certified risk bound. This shifts the safety paradigm from "patching holes" to "proving walls," essential for the regulatory compliance of future AI systems.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
