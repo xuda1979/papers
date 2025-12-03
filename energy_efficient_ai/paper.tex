@@ -175,6 +175,85 @@ where the Rademacher complexity satisfies $\mathfrak{R}_S(\Hcal_{SSA}) \le \rho 
 \end{theorem}
 Since $\rho \approx N^{-0.5}$, the generalization gap tightens as sequence length increases, suggesting that SSA is less prone to overfitting spurious long-range correlations than dense attention.
 
+\section{Energy Consumption Modeling}
+\label{sec:energy_model}
+
+To rigorously quantify the efficiency gains from spectral sparsification and quantization, we develop a mathematical model of energy consumption for Large Language Models. We analyze the energy dissipation of a single Transformer layer as a function of sequence length $N$, embedding dimension $d$, and bit-width $b$.
+
+\subsection{Energy Functional}
+The total energy $E_{total}$ consumed by a forward pass is the sum of computational energy $E_{ops}$ and memory access energy $E_{mem}$.
+
+\begin{definition}[Energy Functional]
+Let $\Phi$ be the set of operations (MACs) and $\mathcal{M}$ be the set of memory transactions. The total energy is:
+\[
+E_{total}(N, d, b) = \sum_{op \in \Phi} N_{op} \cdot e_{op}(b) + \sum_{mem \in \mathcal{M}} V_{mem} \cdot e_{mem}
+\]
+where $e_{op}(b)$ is the energy per operation at bit-width $b$, and $e_{mem}$ is the energy per bit of memory access (DRAM or SRAM).
+\end{definition}
+
+\subsection{Quantization and Bit-Width Scaling}
+We model the energy cost of arithmetic operations scaling with bit-width. For integer quantization (e.g., INT8, INT4), the energy of a Multiply-Accumulate (MAC) operation scales quadratically or linearly depending on the hardware implementation. We assume a general power law:
+
+\begin{assumption}[Bit-Energy Scaling]
+The energy per MAC operation scales as:
+\[
+e_{MAC}(b) = \alpha \cdot b^\gamma + \beta
+\]
+where $\gamma \approx 2$ for standard digital multipliers, and $\beta$ represents fixed overheads.
+\end{assumption}
+
+For memory, the cost is strictly linear in $b$:
+\[
+E_{mem}(b) = V_{data} \cdot b \cdot e_{DRAM}
+\]
+where $V_{data}$ is the total volume of data moved (weights + activations).
+
+\subsection{Standard Attention Energy}
+For a standard dense attention layer with $N$ tokens and dimension $d$:
+\begin{itemize}
+    \item \textbf{Compute:} The QKV projections require $3Nd^2$ MACs. The attention score calculation $QK^T$ requires $N^2 d$ MACs. The weighted sum $PV$ requires $N^2 d$ MACs. The output projection requires $Nd^2$ MACs.
+    \item \textbf{Memory:} Weights $4d^2$ must be loaded. Activations $O(N d)$ and the attention matrix $O(N^2)$ must be stored/loaded.
+\end{itemize}
+
+Total Energy for Standard Attention ($E_{SA}$):
+\[
+E_{SA} \approx \underbrace{(4Nd^2 + 2N^2 d) \cdot e_{MAC}(b)}_{\text{Compute}} + \underbrace{(4d^2 + 2Nd + N^2) \cdot b \cdot e_{DRAM}}_{\text{Memory}}
+\]
+
+\subsection{Spectral Sparse Attention Energy}
+SSA reduces the complexity of the attention mechanism.
+\begin{itemize}
+    \item \textbf{Sparsity:} The number of non-zero entries in the attention matrix is reduced from $N^2$ to $N_{nz} \approx O(N^{1.5})$ (or $O(N \log N)$ depending on parameters).
+    \item \textbf{Overhead:} We introduce overhead for projection and clustering, $O(N k d)$ where $k \ll N$.
+\end{itemize}
+
+Total Energy for SSA ($E_{SSA}$):
+\[
+E_{SSA} \approx \underbrace{(4Nd^2 + C_{sparse} N^{1.5} d) \cdot e_{MAC}(b)}_{\text{Compute}} + \underbrace{(4d^2 + 2Nd + C_{sparse} N^{1.5}) \cdot b \cdot e_{DRAM}}_{\text{Memory}}
+\]
+
+\begin{theorem}[Energy Savings Bound]
+Let $\eta = E_{SA} / E_{SSA}$ be the efficiency ratio. As $N \to \infty$:
+\[
+\lim_{N \to \infty} \eta = \lim_{N \to \infty} \frac{2N^2 d \cdot e_{MAC} + N^2 b \cdot e_{DRAM}}{C N^{1.5} d \cdot e_{MAC} + C N^{1.5} b \cdot e_{DRAM}} = \infty
+\]
+However, for finite $N$, quantization ($b_{low} < b_{high}$) provides a multiplicative constant gain:
+\[
+\frac{E(b_{high})}{E(b_{low})} \approx \frac{b_{high}^2}{b_{low}^2} \quad (\text{if compute dominated})
+\]
+\end{theorem}
+
+\subsection{Theoretical Energy Limit}
+We can derive a theoretical lower bound for the energy required to process a sequence of length $N$.
+
+\begin{theorem}[Landauer Limit for Attention]
+The minimum energy required to process information is bounded by $k_B T \ln 2$ per bit erasure. If the attention mechanism reduces the entropy of the input sequence by $\Delta H$, the minimum energy is:
+\[
+E_{min} \ge N \cdot \Delta H \cdot k_B T \ln 2
+\]
+SSA approaches this limit more closely than dense attention by avoiding the redundant computation of negligible attention scores (information that is effectively erased/ignored).
+\end{theorem}
+
 \section{Experimental Results}
 We evaluate SSA on a suite of structured synthetic tasks designed to test spectral fidelity.
 
