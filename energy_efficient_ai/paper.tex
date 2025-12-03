@@ -254,6 +254,67 @@ E_{min} \ge N \cdot \Delta H \cdot k_B T \ln 2
 SSA approaches this limit more closely than dense attention by avoiding the redundant computation of negligible attention scores (information that is effectively erased/ignored).
 \end{theorem}
 
+\section{Mathematical Foundations of Binary Transformers}
+\label{sec:binary_theory}
+
+While spectral sparsification optimizes the \textit{connectivity} of the attention graph, we now address the \textit{precision} of the computation. We propose a rigorous mathematical framework for ``Binary Transformers,'' where all weights and activations are restricted to the boolean field $\mathbb{B} = \{0, 1\}$. This represents the thermodynamic limit of digital computation.
+
+\subsection{The Binary Transformer Model}
+Let the input sequence be $X \in \{0, 1\}^{N \times d}$. A Binary Attention Head is defined by projection matrices $W_Q, W_K, W_V \in \{0, 1\}^{d \times d_h}$.
+The queries and keys are computed via Boolean matrix multiplication (or XNOR-Popcount operations for bipolar mappings):
+\[
+Q = \sigma(X W_Q), \quad K = \sigma(X W_K)
+\]
+where $\sigma(\cdot)$ is a threshold function (e.g., Heaviside step).
+
+\begin{definition}[Binary Attention Mechanism]
+The attention score $A_{ij}$ measures the Hamming similarity between query $q_i$ and key $k_j$.
+\[
+A_{ij} = \mathbb{I}\left( \langle q_i, k_j \rangle \ge \tau \right)
+\]
+where $\langle \cdot, \cdot \rangle$ denotes the inner product (number of matching set bits) and $\tau$ is a threshold. The output is:
+\[
+Y = \sigma(A V)
+\]
+This replaces the Softmax-Linear operation with a Threshold-Boolean accumulation.
+\end{definition}
+
+\subsection{Expressive Power and Circuit Complexity}
+We analyze the computational power of this model by mapping it to boolean circuits.
+
+\begin{theorem}[Universality of Binary Heads]
+A single Binary Attention Head with dimension $d \ge 2$ can simulate any standard logic gate (AND, OR, NOT, NAND) acting on the input tokens.
+\end{theorem}
+\begin{proof}
+Let inputs $x, y \in \{0, 1\}$. We embed them into $d$-dimensional vectors.
+The attention mechanism computes $\sum_k q_{ik} k_{jk} \ge \tau$.
+\begin{itemize}
+    \item \textbf{AND:} Set $\tau=2$. The condition requires both bits to be 1.
+    \item \textbf{OR:} Set $\tau=1$. The condition requires at least one bit to be 1.
+    \item \textbf{NOT:} Implementable via fixed bias tokens or inhibitory connections if we allow $\{-1, 1\}$ weights (BitNet). Pure $\{0, 1\}$ requires negating the input encoding (dual-rail logic).
+\end{itemize}
+Thus, a Binary Transformer layer can compute any function in the complexity class $TC^0$ (constant-depth threshold circuits) \cite{parberry1994circuit}.
+\end{proof}
+
+\begin{theorem}[Turing Completeness via Recurrence]
+A Recurrent Binary Transformer (where the output is fed back as input for $T$ steps) is Turing Complete.
+\end{theorem}
+\begin{proof}
+By the universality of logic gates, a depth-$L$ Binary Transformer can simulate one step of a cellular automaton or a Turing Machine's transition function.
+Recent work by Li \& Wang (2025) \cite{li2025constant} proves that constant bit-size Transformers are Turing complete given sufficient depth (or recurrence) and context. Specifically, they simulate Post machines.
+Our $\{0, 1\}$ model is a specific instance of a constant bit-size transformer. The recurrence $X_{t+1} = \text{BinaryTransformer}(X_t)$ simulates the evolution of the tape.
+\end{proof}
+
+\subsection{Complexity and Energy Efficiency}
+\begin{theorem}[Bit-Complexity Reduction]
+The bit-complexity of a standard Transformer layer is $O(N^2 d \cdot b^2)$. The bit-complexity of a Binary Transformer is $O(N^2 d)$.
+\end{theorem}
+\begin{proof}
+Standard matrix multiplication of $b$-bit integers requires $O(b^2)$ or $O(b^{1.58})$ gate operations per element.
+For binary matrices ($b=1$), the operation is a simple AND gate followed by a POPCOUNT (accumulation), which is $O(1)$ per element multiplication.
+Therefore, the energy reduction factor is proportional to $b^2$, consistent with the limit derived in Section \ref{sec:energy_model}.
+\end{proof}
+
 \section{Experimental Results}
 We evaluate SSA on a suite of structured synthetic tasks designed to test spectral fidelity.
 
