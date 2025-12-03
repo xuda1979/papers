@@ -1,0 +1,59 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+\title{The Physics of 1-Bit Intelligence: Spectral Analysis of Post-Training Quantization Noise}
+\author{Research Group on Theoretical AI}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+The quest to deploy Large Language Models on edge devices has spurred interest in ultra-low bit quantization (e.g., 1-bit or 2-bit weights). While methods like GPTQ and BitNet have shown empirical success, the theoretical conditions under which a neural network can survive such drastic compression remain obscure. This paper investigates the "Entropic Dynamics" of quantization. We propose that the resilience of a layer to quantization is determined by the spectral properties of its Hessian matrix. We derive theoretical error bounds for "Stochastic Quantization" and analyze the "Model Expansion" hypothesis—the idea that slightly increasing parameter count can orthogonalize quantization noise, effectively moving it into the null space of the activation function.
+\end{abstract}
+
+\section{Introduction}
+Quantization is typically viewed as a noisy approximation: $W_q = W + \Delta$. The standard assumption is that if $||\Delta||$ is small, performance is preserved. However, at 1-bit precision (weights $\in \{-1, 1\}$), the noise $\Delta$ is massive. Yet, models like BitNet \citep{wang2023bitnet} still function. How?
+
+We argue that the magnitude of the noise matters less than its \textit{direction}. If the quantization noise vector aligns with the "flat" directions of the loss landscape (corresponding to small eigenvalues of the Hessian), the functional impact is minimal. This paper aims to formalize the geometry of "1-Bit Intelligence."
+
+\section{Theoretical Framework}
+
+\subsection{Hessian Spectral Analysis}
+Let $H$ be the Hessian of the loss w.r.t. weights. The increase in loss due to quantization is approximately:
+\begin{equation}
+    \delta \mathcal{L} \approx \frac{1}{2} \Delta^T H \Delta
+\end{equation}
+To minimize $\delta \mathcal{L}$, we need $\Delta$ to lie in the subspace spanned by the eigenvectors of $H$ with near-zero eigenvalues.
+Current methods like GPTQ \citep{dettmers2022gptq} implicitly optimize this by using second-order information to shape the noise. We extend this to prove explicit bounds.
+
+\subsection{The Model Expansion Hypothesis}
+Recent work suggests that expanding a model (e.g., adding a low-rank residual adapter) before quantizing the base weights can recover performance \citep{huang2024billm}. We model this as increasing the dimensionality of the parameter space $\mathbb{R}^d \to \mathbb{R}^{d+k}$.
+\textbf{Theorem (Proposed)}: In high dimensions, there exists a decomposition $W = W_q + R$ where $W_q$ is 1-bit and $R$ is a low-rank correction, such that the projection of the error onto the activation gradient is minimized.
+
+\section{Methodology}
+
+\subsection{Spectral noise Profiling}
+We compute the Hessian spectra of small transformer blocks (BERT-tiny, Llama-tiny). We compare the eigenvalue distributions of "quantization-friendly" layers vs. "quantization-sensitive" layers (outliers).
+\begin{itemize}
+    \item \textbf{Hypothesis}: Sensitive layers have a "stiff" spectrum (slow eigenvalue decay), meaning there are few safe directions for noise.
+\end{itemize}
+
+\subsection{BiLLM Validation}
+We replicate the "Binary Residual" strategy on small matrices. We test whether the addition of a 2-bit residual term provides a "super-additive" gain in effective capacity compared to simply using 3-bit weights, validating the noise-orthogonalization theory.
+
+\section{Implications}
+Understanding the physics of quantization moves us beyond trial-and-error. It suggests we can design "natively quantizable" architectures—networks whose Hessians are explicitly regularized during pre-training to have flat spectra, enabling lossless compression to 1-bit for deployment on smartphones and IoT devices.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
