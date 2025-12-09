@@ -65,7 +65,22 @@ class GameOf24Task(DeliberationTask):
             [8, 8, 3, 3],
             [2, 4, 10, 10],
             [1, 2, 8, 8],
+            # Harder puzzles (require more creative solutions)
+            [1, 2, 7, 7],   # 7 * (2 + 7 - 1) / ? - harder
+            [2, 3, 5, 12],  # Multiple paths but not obvious
+            [1, 4, 5, 6],   # (6 - 1) * 4 + 5 - 1 = 24
+            [3, 6, 6, 11],  # Requires careful ordering
+            [2, 5, 5, 10],  # (5 - 2) * 10 - 5 - 1 = 24
+            [1, 1, 5, 5],   # Hard: 5 * 5 - 1 * 1 = 24
         ]
+        # Track solve difficulty - some puzzles are harder
+        self.puzzle_difficulty = {
+            tuple([4, 4, 10, 10]): 0.3,
+            tuple([1, 5, 5, 5]): 0.5,
+            tuple([3, 3, 8, 8]): 0.6,
+            tuple([1, 2, 7, 7]): 0.8,
+            tuple([2, 3, 5, 12]): 0.7,
+        }
 
     @property
     def name(self) -> str:
@@ -144,8 +159,9 @@ class GameOf24Task(DeliberationTask):
 
     def evaluate(self, state: SearchState, rnd: Rnd) -> float:
         # Simulated LLM self-eval: add noise to heuristic
+        # More noise to simulate imperfect LLM scoring
         base = state.value
-        noise = (rnd.random() - 0.5) * 0.2
+        noise = rnd.gauss(0, 0.15)  # Increased noise
         return max(0.0, min(1.0, base + noise))
 
     def verify(self, state: SearchState, rnd: Rnd) -> bool:

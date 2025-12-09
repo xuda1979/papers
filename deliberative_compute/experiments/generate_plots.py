@@ -10,17 +10,18 @@ def generate_tex_plot(json_path, output_path):
 \begin{tikzpicture}
 \begin{axis}[
     title={\textbf{Budget--Performance Frontiers}},
-    xlabel={Compute Budget (arbitrary units)},
+    xlabel={Compute Budget (tokens)},
     ylabel={Solution Quality (\%)},
-    xmin=10, xmax=50,
-    ymin=0, ymax=100,
-    xtick={10, 20, 30, 40, 50},
+    xmin=0, xmax=260,
+    ymin=0, ymax=105,
+    xtick={0, 40, 80, 120, 160, 200, 240},
     ytick={0, 20, 40, 60, 80, 100},
     legend pos=south east,
     grid=major,
     width=0.9\textwidth,
-    height=0.5\textwidth,
-    legend style={font=\tiny},
+    height=0.55\textwidth,
+    legend style={font=\scriptsize},
+    legend columns=2,
 ]
 """
 

@@ -5,21 +5,32 @@ import os
 from typing import List, Tuple, Dict
 
 from simulators import GameOf24Task, BitstringTask, SearchState, DeliberationTask
-from algorithms import igd_step, ucb_igd_step, rs_mctt_budget, csc_vote, adr_loop
+from algorithms import (
+    igd_step, ucb_igd_step, rs_mctt_budget, csc_vote, adr_loop,
+    best_of_n_budget, DEFAULT_ESTIMATION_NOISE, DEFAULT_SELECTION_ERROR_PROB
+)
 from metrics import trapezoid_area
 
 def make_threads(n: int, rnd: random.Random, task: DeliberationTask) -> List[SearchState]:
     return [task.initial_state(rnd) for _ in range(n)]
 
-def eval_igd(rnd: random.Random, budgets: List[int], task: DeliberationTask, lam: float = 0.0):
+def eval_igd(rnd: random.Random, budgets: List[int], task: DeliberationTask, 
+             lam: float = 0.0, estimation_noise: float = DEFAULT_ESTIMATION_NOISE,
+             selection_error_prob: float = DEFAULT_SELECTION_ERROR_PROB):
+    """Evaluate IGD with realistic noise in value estimation."""
     vals = []
     for B in budgets:
         ep_vals = []
-        for _ in range(20): # Reduced eps for speed
+        for _ in range(10): # Reduced eps for speed
             threads = make_threads(6, rnd, task)
             spent = 0.0
-            while spent < B:
-                c = igd_step(threads, rnd, task, lam=lam)
+            max_steps = int(B * 3)
+            step = 0
+            while spent < B and step < max_steps:
+                step += 1
+                c = igd_step(threads, rnd, task, lam=lam, 
+                            estimation_noise=estimation_noise,
+                            selection_error_prob=selection_error_prob)
                 if c == 0.0: break
                 spent += c
             ep_vals.append(max(th.value for th in threads))
@@ -30,13 +41,14 @@ def eval_ucb_igd(rnd: random.Random, budgets: List[int], task: DeliberationTask,
     vals = []
     for B in budgets:
         ep_vals = []
-        for _ in range(20):
+        for _ in range(10):
             threads = make_threads(6, rnd, task)
             counts = [0] * 6
             means = [0.0] * 6
             spent = 0.0
             t = 1
-            while spent < B:
+            max_steps = int(B * 3)
+            while spent < B and t < max_steps:
                 c = ucb_igd_step(threads, rnd, t, counts, means, task, lam=lam)
                 if c == 0.0: break
                 spent += c
@@ -49,7 +61,7 @@ def eval_rs_mctt(rnd: random.Random, budgets: List[int], task: DeliberationTask)
     vals = []
     for B in budgets:
         ep_vals = []
-        for _ in range(20):
+        for _ in range(10):
             v, b = rs_mctt_budget(rnd, task, B)
             ep_vals.append(v)
         vals.append((B, sum(ep_vals)/len(ep_vals)))
@@ -59,7 +71,7 @@ def eval_csc(rnd: random.Random, budgets: List[int], task: DeliberationTask):
     vals = []
     for B in budgets:
         ep_vals = []
-        for _ in range(20):
+        for _ in range(10):
             k = max(1, int(B / 5)) # Approx cost per chain ~ 5
             u, cost = csc_vote(rnd, task, k=k)
             ep_vals.append(u)
@@ -70,8 +82,20 @@ def eval_adr(rnd: random.Random, budgets: List[int], task: DeliberationTask):
     vals = []
     for B in budgets:
         ep_vals = []
-        for _ in range(20):
+        for _ in range(10):
             u, cost = adr_loop(rnd, task, B)
+            ep_vals.append(u)
+        vals.append((B, sum(ep_vals)/len(ep_vals)))
+    return vals
+
+
+def eval_best_of_n(rnd: random.Random, budgets: List[int], task: DeliberationTask):
+    """Evaluate Best-of-N baseline."""
+    vals = []
+    for B in budgets:
+        ep_vals = []
+        for _ in range(10):
+            u, cost = best_of_n_budget(rnd, task, B)
             ep_vals.append(u)
         vals.append((B, sum(ep_vals)/len(ep_vals)))
     return vals
@@ -108,6 +132,7 @@ def main():
         mctt = eval_rs_mctt(rnd, args.budgets, task)
         csc = eval_csc(rnd, args.budgets, task)
         adr = eval_adr(rnd, args.budgets, task)
+        bon = eval_best_of_n(rnd, args.budgets, task)
 
         task_results = []
         for name, pts in [
@@ -115,7 +140,8 @@ def main():
             ("UCB-IGD", ucb),
             ("RS-MCTT", mctt),
             ("CSC", csc),
-            ("ADR", adr)
+            ("ADR", adr),
+            ("Best-of-N", bon)
         ]:
             res = summarize(name, pts, rnd)
             task_results.append(res)

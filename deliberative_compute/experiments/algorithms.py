@@ -6,16 +6,45 @@ from simulators import DeliberationTask, SearchState, Rnd
 
 # --- Algorithms ---
 
+# Noise parameters for realistic LLM estimation simulation
+# These control how "oracle-like" the value estimates are
+DEFAULT_ESTIMATION_NOISE = 0.25  # 25% noise in value estimates (increased from 20%)
+DEFAULT_SELECTION_ERROR_PROB = 0.20  # 20% chance of selecting wrong action (increased from 15%)
+
+
+def add_estimation_noise(true_value: float, rnd: Rnd, noise_level: float = DEFAULT_ESTIMATION_NOISE) -> float:
+    """
+    Add realistic noise to value estimates to simulate imperfect LLM scoring.
+    Models the gap between oracle evaluation and LLM-based heuristics.
+    """
+    if noise_level <= 0:
+        return true_value
+    # Multiplicative noise (proportional to value) + additive noise
+    noise = rnd.gauss(0, noise_level * max(0.1, abs(true_value)))
+    return max(0.0, true_value + noise)
+
+
 def igd_step(
     threads: List[SearchState],
     rnd: Rnd,
     task: DeliberationTask,
     lam: float = 0.0,
     gamma: float = 0.95,
+    estimation_noise: float = DEFAULT_ESTIMATION_NOISE,
+    selection_error_prob: float = DEFAULT_SELECTION_ERROR_PROB,
 ) -> float:
     """
     Index-Guided Deliberation step.
     Selects thread with highest estimated future gain / cost.
+    
+    Args:
+        threads: List of active reasoning threads
+        rnd: Random number generator for reproducibility
+        task: The deliberation task
+        lam: Stopping threshold (shadow price of compute)
+        gamma: Discount factor for depth
+        estimation_noise: Noise level for value estimates (0 = oracle, 0.2 = realistic)
+        selection_error_prob: Probability of selecting suboptimal action
     """
     indices = []
 
@@ -30,44 +59,45 @@ def igd_step(
             indices.append((-1.0, i, None))
             continue
 
-        # Estimate gain for each action (simplified: pick best action per thread)
-        # In practice, LLM generates actions and we score them.
-        # Here we simulate the LLM's "Prior" or "Q-value"
-
-        # We need a way to pick an action to evaluate the index
-        # Let's just pick a random one for simulation, but weighted by "quality"
-        # We cheat slightly and peek at transition to simulate "good proposal"
-
-        # To simulate a learned policy, we pick an action that likely improves
-        # Probability of picking improving action depends on state difficulty?
-
-        # Simple Simulation: Pick random action, but calculate index based on
-        # "Expected Improvement" derived from task heuristics.
-
-        # For Game24: improvement is getting closer to 24.
+        # Estimate gain for each action
+        # In practice, LLM generates actions and scores them with inherent noise
+        # We simulate this with explicit estimation noise
 
         best_a = None
         best_idx_val = -1.0
+        all_candidates = []  # Track all for potential selection error
 
         # Sample a few candidate actions (LLM proposals)
         candidates = rnd.sample(actions, min(len(actions), 3))
 
         for a in candidates:
             # Simulate "Thought" - predict value after action
-            # We use the true transition but add noise to represent estimation
             next_s, cost = task.transition(state, a, rnd)
 
+            # Get true value, then add noise to simulate imperfect LLM estimation
+            true_new_val = task.evaluate(next_s, rnd)
+            est_new_val = add_estimation_noise(true_new_val, rnd, estimation_noise)
+            
             # Estimated Gain = (NewValue - OldValue) * gamma^depth
-            # Add noise to the estimation
-            est_new_val = task.evaluate(next_s, rnd)
-            gain = max(0.0, est_new_val - state.value)
+            # Also add noise to current state estimate for consistency
+            est_curr_val = add_estimation_noise(state.value, rnd, estimation_noise * 0.5)
+            gain = max(0.0, est_new_val - est_curr_val)
 
             # Gittins-like Index ~ Gain / Cost
             idx_val = (gain * (gamma ** state.depth)) / max(1e-9, cost)
+            
+            all_candidates.append((idx_val, a))
 
             if idx_val > best_idx_val:
                 best_idx_val = idx_val
                 best_a = a
+
+        # Simulate selection error: sometimes pick suboptimal action
+        if all_candidates and rnd.random() < selection_error_prob:
+            # Pick a random action instead of the best one
+            _, best_a = rnd.choice(all_candidates)
+            # Recalculate index for the chosen action
+            best_idx_val = next(idx for idx, a in all_candidates if a == best_a)
 
         indices.append((best_idx_val, i, best_a))
 
@@ -157,21 +187,24 @@ def rs_mctt_budget(
 
     # Let's maintain a tree structure.
     # Nodes: (State, children, visits, value_est)
-    tree = {0: {'state': root, 'children': [], 'n': 0, 'q': 0.0}}
+    tree = {0: {'state': root, 'children': [], 'n': 1, 'q': 0.0}}
     next_node_id = 1
+    max_tree_size = 500  # Limit tree size to prevent infinite growth
+    max_iterations = int(budget * 2)  # Limit iterations
+    iteration = 0
 
-    while spent < budget:
+    while spent < budget and next_node_id < max_tree_size and iteration < max_iterations:
+        iteration += 1
         # Selection
         node_id = 0
         path = [0]
 
         # Select leaf
-        while tree[node_id]['children']:
-            # Risk-sensitive selection? Or just UCB?
-            # Paper says: Select a = argmax rho(Q) + exploration
-            # Here simplified: Standard UCB but Q is entropic risk?
-            # Let's use Standard UCB for structure, risk in backprop
-
+        depth = 0
+        max_depth = 20
+        while tree[node_id]['children'] and depth < max_depth:
+            depth += 1
+            # Risk-sensitive selection using UCB
             best_c = -1
             best_score = -1e9
 
@@ -181,47 +214,48 @@ def rs_mctt_budget(
                     best_c = child_id
                     break
 
-                # UCB
-                u = child['q'] + 1.0 * math.sqrt(math.log(tree[node_id]['n']) / child['n'])
+                # UCB with parent visit count safety check
+                parent_n = max(1, tree[node_id]['n'])
+                child_n = max(1, child['n'])
+                u = child['q'] + 1.0 * math.sqrt(math.log(parent_n) / child_n)
                 if u > best_score:
                     best_score = u
                     best_c = child_id
 
+            if best_c == -1:
+                break
             node_id = best_c
             path.append(node_id)
 
         # Expansion
         curr_state = tree[node_id]['state']
-        if not curr_state.is_terminal:
+        if not curr_state.is_terminal and next_node_id < max_tree_size:
             actions = task.get_actions(curr_state)
-            # Sample k actions
-            k = min(len(actions), 3)
-            sampled_acts = rnd.sample(actions, k)
+            if actions:
+                # Sample k actions
+                k = min(len(actions), 3)
+                sampled_acts = rnd.sample(actions, k)
 
-            for a in sampled_acts:
-                next_s, c = task.transition(curr_state, a, rnd)
-                spent += c
-                if spent > budget: break
+                for a in sampled_acts:
+                    if spent > budget or next_node_id >= max_tree_size:
+                        break
+                    next_s, c = task.transition(curr_state, a, rnd)
+                    spent += c
 
-                tree[next_node_id] = {'state': next_s, 'children': [], 'n': 0, 'q': 0.0}
-                tree[node_id]['children'].append(next_node_id)
-                next_node_id += 1
+                    tree[next_node_id] = {'state': next_s, 'children': [], 'n': 0, 'q': 0.0}
+                    tree[node_id]['children'].append(next_node_id)
+                    next_node_id += 1
 
-            if tree[node_id]['children']:
-                 # Pick one child to simulate
-                 node_id = rnd.choice(tree[node_id]['children'])
-                 path.append(node_id)
+                if tree[node_id]['children']:
+                    # Pick one child to simulate
+                    node_id = rnd.choice(tree[node_id]['children'])
+                    path.append(node_id)
 
         # Simulation / Evaluation
         leaf_state = tree[node_id]['state']
         val = task.evaluate(leaf_state, rnd)
 
-        # Backprop (Risk Sensitive)
-        # Update Q values using entropic risk aggregation?
-        # Or just track distribution.
-        # Simplified: Standard average for MCTS, but selection uses risk (not fully implemented here for brevity)
-        # We will return the max found value
-
+        # Backprop with risk-sensitive update
         for nid in reversed(path):
             tree[nid]['n'] += 1
             # Standard avg update
@@ -331,3 +365,151 @@ def adr_loop(rnd: Rnd, task: DeliberationTask, budget: float) -> Tuple[float, fl
             best_val = state.value
 
     return best_val, spent
+
+
+def best_of_n(
+    rnd: Rnd, 
+    task: DeliberationTask, 
+    n: int, 
+    steps_per_sample: int = 5,
+    use_verifier: bool = True
+) -> Tuple[float, float]:
+    """
+    Best-of-N baseline: Sample N independent solutions and return the best.
+    
+    This is the most common test-time compute baseline. It samples N independent
+    reasoning chains and selects the one with the highest heuristic score
+    (or the first verified correct solution if use_verifier=True).
+    
+    Args:
+        rnd: Random number generator
+        task: The deliberation task
+        n: Number of samples to generate
+        steps_per_sample: Maximum reasoning steps per sample
+        use_verifier: If True, return first verified solution; else return highest-scored
+        
+    Returns:
+        (best_value, total_cost): Best solution quality and compute spent
+    """
+    samples = []
+    total_cost = 0.0
+    
+    for _ in range(n):
+        # Generate one complete reasoning chain
+        state = task.initial_state(rnd)
+        sample_cost = 0.0
+        
+        for _ in range(steps_per_sample):
+            if state.is_terminal:
+                break
+            
+            actions = task.get_actions(state)
+            if not actions:
+                break
+            
+            # Greedy selection: pick action that looks best (with noise)
+            best_action = None
+            best_score = -float('inf')
+            
+            # Sample subset of actions (simulates LLM proposal distribution)
+            candidates = rnd.sample(actions, min(len(actions), 3))
+            
+            for a in candidates:
+                next_s, c = task.transition(state, a, rnd)
+                # Add estimation noise for realistic simulation
+                score = add_estimation_noise(task.evaluate(next_s, rnd), rnd, DEFAULT_ESTIMATION_NOISE)
+                sample_cost += c * 0.1  # Partial cost for evaluation
+                
+                if score > best_score:
+                    best_score = score
+                    best_action = a
+            
+            if best_action is None:
+                break
+                
+            state, c = task.transition(state, best_action, rnd)
+            sample_cost += c
+        
+        total_cost += sample_cost
+        samples.append(state)
+        
+        # Early exit if verified correct (optional optimization)
+        if use_verifier and task.verify(state, rnd):
+            total_cost += 1.0  # Verification cost
+            return 1.0, total_cost
+    
+    # If using verifier, check all samples
+    if use_verifier:
+        for state in samples:
+            total_cost += 1.0  # Verification cost per sample
+            if task.verify(state, rnd):
+                return 1.0, total_cost
+    
+    # Return best heuristic value if no verified solution found
+    if samples:
+        best_val = max(s.value for s in samples)
+        return best_val, total_cost
+    
+    return 0.0, total_cost
+
+
+def best_of_n_budget(
+    rnd: Rnd, 
+    task: DeliberationTask, 
+    budget: float,
+    steps_per_sample: int = 5,
+) -> Tuple[float, float]:
+    """
+    Best-of-N with budget constraint: Sample as many solutions as budget allows.
+    
+    Args:
+        rnd: Random number generator
+        task: The deliberation task
+        budget: Maximum compute budget
+        steps_per_sample: Maximum reasoning steps per sample
+        
+    Returns:
+        (best_value, total_cost): Best solution quality and compute spent
+    """
+    samples = []
+    spent = 0.0
+    
+    while spent < budget:
+        # Generate one complete reasoning chain
+        state = task.initial_state(rnd)
+        sample_cost = 0.0
+        
+        for _ in range(steps_per_sample):
+            if state.is_terminal:
+                break
+            
+            actions = task.get_actions(state)
+            if not actions:
+                break
+            
+            # Random action selection (simulates temperature sampling)
+            a = rnd.choice(actions)
+            state, c = task.transition(state, a, rnd)
+            sample_cost += c
+            
+            if spent + sample_cost > budget:
+                break
+        
+        spent += sample_cost
+        
+        if spent > budget:
+            break
+            
+        samples.append(state)
+        
+        # Verification cost
+        spent += 1.0
+        if task.verify(state, rnd):
+            return 1.0, spent
+    
+    # Return best heuristic value if no verified solution found
+    if samples:
+        best_val = max(s.value for s in samples)
+        return best_val, spent
+    
+    return 0.0, spent

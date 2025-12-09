@@ -1,0 +1,946 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{Madrid}
+\usecolortheme{whale}
+
+% 中文支持
+\usepackage{ctex}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,calc}
+% algorithm包需要特殊处理在beamer中
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\makeatletter
+\newcommand{\removelatexerror}{\let\@latex@error\@gobble}
+\makeatother
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+
+% 代码样式
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single
+}
+
+% 颜色定义
+\definecolor{deepblue}{RGB}{0,51,102}
+\definecolor{deepgreen}{RGB}{0,102,51}
+\definecolor{deepred}{RGB}{153,0,0}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\title[LLM强化学习训练]{大语言模型的强化学习训练\\提升推理、数学与代码能力}
+\subtitle{无需人类标注的自我学习方法}
+\author{许达}
+\date{\today}
+\institute{未来院三室}
+
+\begin{document}
+
+%=========================================
+\begin{frame}
+\titlepage
+\end{frame}
+
+%=========================================
+\begin{frame}{目录}
+\tableofcontents
+\end{frame}
+
+%=========================================
+\section{背景与动机}
+%=========================================
+
+\begin{frame}{为什么需要强化学习训练LLM？}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{传统方法的局限}
+\begin{itemize}
+    \item 监督微调(SFT)依赖大量人工标注数据
+    \item 人类标注成本高、难以扩展
+    \item 复杂推理任务的标注质量难以保证
+    \item 模型只能学习到人类已知的解法
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{强化学习的优势}
+\begin{itemize}
+    \item \textcolor{deepgreen}{自动探索}：模型自主发现解题策略
+    \item \textcolor{deepgreen}{可扩展}：无需人工标注
+    \item \textcolor{deepgreen}{突破上限}：可能发现人类未知的方法
+    \item \textcolor{deepgreen}{自我改进}：持续迭代优化
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.5cm}
+\begin{block}{核心思想}
+通过\textbf{奖励信号}（如答案正确性、代码执行结果）引导模型自主学习推理能力
+\end{block}
+\end{frame}
+
+%=========================================
+\begin{frame}{里程碑式进展}
+\begin{center}
+\begin{tikzpicture}[scale=0.9]
+    % 时间线
+    \draw[thick,->] (0,0) -- (14,0);
+    
+    % 节点
+    \node[fill=blue!20,rounded corners,text width=2cm,align=center] at (1,1.5) {\small 2022\\RLHF\\InstructGPT};
+    \draw[thick] (1,0) -- (1,0.8);
+    
+    \node[fill=green!20,rounded corners,text width=2cm,align=center] at (3.5,1.5) {\small 2022\\Constitutional AI\\RLAIF};
+    \draw[thick] (3.5,0) -- (3.5,0.8);
+    
+    \node[fill=orange!20,rounded corners,text width=2cm,align=center] at (6,-1.5) {\small 2023\\Let's Verify\\Step by Step};
+    \draw[thick] (6,0) -- (6,-0.8);
+    
+    \node[fill=purple!20,rounded corners,text width=2cm,align=center] at (8.5,1.5) {\small 2024\\DeepSeekMath\\GRPO};
+    \draw[thick] (8.5,0) -- (8.5,0.8);
+    
+    \node[fill=red!20,rounded corners,text width=2.2cm,align=center] at (11,-1.5) {\small 2025.1\\DeepSeek-R1\\纯RL推理};
+    \draw[thick] (11,0) -- (11,-0.8);
+    
+    \node[fill=yellow!30,rounded corners,text width=2cm,align=center] at (13,1.5) {\small 2024.9\\OpenAI o1\\推理模型};
+    \draw[thick] (13,0) -- (13,0.8);
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+%=========================================
+\begin{frame}{主要研究方向}
+\begin{columns}
+\begin{column}{0.33\textwidth}
+\begin{block}{数学推理}
+\begin{itemize}
+    \item GSM8K, MATH
+    \item 竞赛级问题
+    \item 证明生成
+\end{itemize}
+\end{block}
+\end{column}
+\begin{column}{0.33\textwidth}
+\begin{block}{代码生成}
+\begin{itemize}
+    \item HumanEval, MBPP
+    \item 竞赛编程
+    \item 代码调试
+\end{itemize}
+\end{block}
+\end{column}
+\begin{column}{0.33\textwidth}
+\begin{block}{逻辑推理}
+\begin{itemize}
+    \item 多步推理
+    \item 常识推理
+    \item 科学问答
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+
+\vspace{0.5cm}
+\textbf{关键论文}：
+\begin{itemize}
+    \item Constitutional AI (Anthropic, 2022)
+    \item Let's Verify Step by Step (OpenAI, 2023)
+    \item DeepSeekMath (DeepSeek, 2024)
+    \item DeepSeek-R1 (DeepSeek, 2025)
+\end{itemize}
+\end{frame}
+
+%=========================================
+\section{核心算法详解}
+%=========================================
+
+\begin{frame}{PPO算法回顾}
+\textbf{Proximal Policy Optimization (PPO)} 是RL训练LLM的主流算法
+
+\vspace{0.3cm}
+\textbf{目标函数}：
+$$L^{CLIP}(\theta) = \hat{\mathbb{E}}_t \left[ \min\left( r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]$$
+
+其中：
+\begin{itemize}
+    \item $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ 是策略比率
+    \item $\hat{A}_t$ 是优势函数估计
+    \item $\epsilon$ 是裁剪参数（通常0.1-0.2）
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{关键组件}：
+\begin{enumerate}
+    \item \textbf{Actor}：策略网络 $\pi_\theta$（生成回答的LLM）
+    \item \textbf{Critic}：价值网络 $V_\phi$（评估状态价值）
+    \item \textbf{Reward Model}：奖励模型 $R_\psi$（评分）
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\begin{frame}[fragile]{GRPO算法 - DeepSeek的创新}
+\textbf{Group Relative Policy Optimization}：去除Critic网络，简化训练
+
+\vspace{0.3cm}
+\removelatexerror
+\begin{algorithmic}[1]
+\FOR{每个问题 $q$}
+    \STATE 采样一组回答 $\{o_1, o_2, ..., o_G\}$ 从 $\pi_{\theta_{old}}$
+    \STATE 计算奖励 $\{r_1, r_2, ..., r_G\}$
+    \STATE 归一化优势: $\hat{A}_i = \frac{r_i - \text{mean}(\mathbf{r})}{\text{std}(\mathbf{r})}$
+    \STATE 更新策略最大化:
+\ENDFOR
+\end{algorithmic}
+
+$$\mathcal{J}_{GRPO}(\theta) = \mathbb{E}_{q, \{o_i\}} \left[ \frac{1}{G}\sum_{i=1}^{G} \min\left( \frac{\pi_\theta(o_i|q)}{\pi_{\theta_{old}}(o_i|q)} \hat{A}_i, \text{clip}(\cdot) \hat{A}_i \right) \right]$$
+
+\vspace{0.2cm}
+$$- \beta \cdot \mathbb{D}_{KL}[\pi_\theta || \pi_{ref}]$$
+\end{frame}
+
+%=========================================
+\begin{frame}{GRPO vs PPO 对比}
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{特性} & \textbf{PPO} & \textbf{GRPO} \\
+\midrule
+Critic网络 & 需要 & \textcolor{deepgreen}{不需要} \\
+内存占用 & 高 & \textcolor{deepgreen}{低} \\
+训练稳定性 & 依赖Critic质量 & \textcolor{deepgreen}{组内相对比较} \\
+采样数量 & 单个/少量 & 多个（组采样） \\
+优势估计 & GAE & \textcolor{deepgreen}{组内归一化} \\
+实现复杂度 & 高 & \textcolor{deepgreen}{低} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+\textbf{GRPO核心创新}：
+\begin{itemize}
+    \item 用\textbf{组内相对排名}代替绝对价值估计
+    \item 同一问题的多个回答互相比较
+    \item 显著降低计算成本，保持训练效果
+\end{itemize}
+\end{frame}
+
+%=========================================
+\begin{frame}{奖励函数设计}
+\textbf{可验证奖励}（无需人类标注）：
+
+\vspace{0.3cm}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{数学问题}
+\begin{itemize}
+    \item 答案匹配：$r = \mathbf{1}[\text{answer} = \text{ground\_truth}]$
+    \item 格式奖励：正确使用\texttt{\textbackslash boxed\{\}}
+    \item 中间步骤验证（可选）
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{代码问题}
+\begin{itemize}
+    \item 执行结果：$r = \frac{\#\text{passed tests}}{\#\text{total tests}}$
+    \item 编译成功：额外奖励
+    \item 效率奖励（可选）
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{复合奖励}
+$$R = \alpha \cdot R_{accuracy} + \beta \cdot R_{format} + \gamma \cdot R_{length}$$
+
+\vspace{0.3cm}
+\textbf{长度惩罚}（防止冗长）
+$$R_{length} = -\lambda \cdot \max(0, L - L_{threshold})$$
+
+\vspace{0.3cm}
+\textbf{格式奖励}
+$$R_{format} = \begin{cases} 
+r_+ & \text{格式正确} \\
+r_- & \text{格式错误}
+\end{cases}$$
+\end{column}
+\end{columns}
+\end{frame}
+
+%=========================================
+\section{DeepSeek-R1：纯RL推理模型}
+%=========================================
+
+\begin{frame}{DeepSeek-R1 概述}
+\textbf{2025年1月发布}，首个公开的纯RL训练推理模型
+
+\vspace{0.5cm}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{核心发现}
+\begin{itemize}
+    \item 纯RL可以\textbf{涌现}推理能力
+    \item 无需SFT冷启动
+    \item 自发学会Chain-of-Thought
+    \item 出现"Aha moment"顿悟现象
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{性能表现}
+\begin{itemize}
+    \item AIME 2024: \textbf{79.8\%}（接近o1）
+    \item MATH-500: \textbf{97.3\%}
+    \item Codeforces: \textbf{2029} rating
+    \item 超越多数闭源模型
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.5cm}
+\begin{alertblock}{重要突破}
+证明了\textbf{大规模RL训练}可以让模型自主学习复杂推理，而非仅仅模仿人类解法
+\end{alertblock}
+\end{frame}
+
+%=========================================
+\begin{frame}{DeepSeek-R1 训练流程}
+\textbf{四阶段训练流程}：
+
+\vspace{0.3cm}
+\begin{enumerate}
+    \item \textbf{Stage 1: 冷启动SFT} - 少量长CoT数据（数千条）
+    \item \textbf{Stage 2: 推理RL} - GRPO + 规则奖励
+    \item \textbf{Stage 3: 拒绝采样SFT} - 用RL检查点生成数据
+    \item \textbf{Stage 4: 全场景RL} - 扩展到更多任务
+\end{enumerate}
+
+\vspace{0.3cm}
+$$\text{Base Model} \rightarrow \text{冷启动SFT} \rightarrow \text{推理RL} \rightarrow \text{拒绝采样} \rightarrow \text{全场景RL}$$
+
+\vspace{0.3cm}
+\textbf{关键点}：
+\begin{itemize}
+    \item Stage 2使用\textbf{纯规则奖励}，无需奖励模型
+    \item 奖励 = 准确性 + 格式正确性
+    \item 模型自发产生长链推理
+\end{itemize}
+\end{frame}
+
+%=========================================
+\begin{frame}{DeepSeek-R1-Zero：纯RL实验}
+\textbf{无任何SFT}，直接从Base模型开始RL训练
+
+\vspace{0.5cm}
+\textbf{惊人发现}：
+\begin{enumerate}
+    \item \textbf{自我验证}：模型学会检查自己的答案
+    \item \textbf{反思}：发现错误后重新思考
+    \item \textbf{长链推理}：自动产生详细推导步骤
+    \item \textbf{探索多种方法}：尝试不同解题路径
+\end{enumerate}
+
+\vspace{0.3cm}
+\begin{exampleblock}{Aha Moment示例}
+\textit{"Wait, let me reconsider this problem..."}\\
+\textit{"Hmm, I made an error in step 3. Let me redo..."}\\
+模型自发产生的反思性语言！
+\end{exampleblock}
+
+\vspace{0.3cm}
+\textbf{局限}：可读性差、语言混杂，需要后续SFT改进
+\end{frame}
+
+%=========================================
+\begin{frame}{DeepSeek-R1 奖励设计}
+\textbf{极简奖励函数}（Stage 2 推理RL）：
+
+\vspace{0.3cm}
+$$R = R_{accuracy} + R_{format}$$
+
+\begin{itemize}
+    \item \textbf{准确性奖励}：
+    \begin{itemize}
+        \item 数学：答案与标准答案匹配
+        \item 代码：通过测试用例
+        \item 使用规则验证，无需神经网络
+    \end{itemize}
+    
+    \item \textbf{格式奖励}：
+    \begin{itemize}
+        \item 要求输出包含 \texttt{<think>...</think>} 推理过程
+        \item 最终答案在 \texttt{<answer>...</answer>} 中
+        \item 惩罚格式不正确的输出
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.3cm}
+\begin{alertblock}{为什么有效？}
+\begin{itemize}
+    \item 准确性奖励提供\textbf{稀疏但准确}的信号
+    \item 模型被迫学习正确的推理过程来提高准确率
+    \item 无需人类标注的推理链
+\end{itemize}
+\end{alertblock}
+\end{frame}
+
+%=========================================
+\begin{frame}{蒸馏到小模型}
+DeepSeek-R1的推理能力可以\textbf{蒸馏}到小模型
+
+\vspace{0.5cm}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{模型} & \textbf{参数量} & \textbf{AIME 2024} & \textbf{MATH-500} \\
+\midrule
+DeepSeek-R1 & 671B & 79.8\% & 97.3\% \\
+\midrule
+R1-Distill-Qwen-32B & 32B & 72.6\% & 94.3\% \\
+R1-Distill-Qwen-14B & 14B & 69.7\% & 93.9\% \\
+R1-Distill-Qwen-7B & 7B & 55.5\% & 92.8\% \\
+R1-Distill-Qwen-1.5B & 1.5B & 28.9\% & 83.9\% \\
+\midrule
+OpenAI o1-mini & - & 63.6\% & 90.0\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.3cm}
+\textbf{蒸馏方法}：用R1生成的长链推理数据对小模型进行SFT
+\end{frame}
+
+%=========================================
+\section{OpenAI o1 技术分析}
+%=========================================
+
+\begin{frame}{OpenAI o1 概述}
+\textbf{2024年9月发布}，开启"推理模型"新范式
+
+\vspace{0.5cm}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{官方披露}
+\begin{itemize}
+    \item 使用强化学习训练
+    \item 产生长链"思考"过程
+    \item 思考过程对用户隐藏
+    \item 性能随计算量scaling
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{性能亮点}
+\begin{itemize}
+    \item AIME 2024: \textbf{83.3\%}（13.4/15）
+    \item Codeforces: \textbf{89 percentile}
+    \item GPQA Diamond: \textbf{78\%}
+    \item PhD级科学问答
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.5cm}
+\begin{block}{核心理念}
+\textit{"Learning to reason with reinforcement learning"}\\
+通过RL学习如何进行有效的推理
+\end{block}
+\end{frame}
+
+%=========================================
+\begin{frame}{o1 技术推测}
+\textbf{基于公开信息和研究社区分析}
+
+\vspace{0.3cm}
+\textbf{可能的训练流程}：
+\begin{enumerate}
+    \item \textbf{过程奖励模型(PRM)}训练
+    \begin{itemize}
+        \item 参考"Let's Verify Step by Step"论文
+        \item 人工标注推理步骤的正确性
+        \item 训练模型评估每个步骤
+    \end{itemize}
+    
+    \item \textbf{大规模RL训练}
+    \begin{itemize}
+        \item 使用PRM作为奖励信号
+        \item 可能结合结果奖励(ORM)
+        \item 大量计算资源
+    \end{itemize}
+    
+    \item \textbf{搜索/采样策略}
+    \begin{itemize}
+        \item 推理时多次采样
+        \item 可能使用树搜索
+        \item Best-of-N或MCTS变体
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\begin{frame}{过程奖励模型 (PRM)}
+\textbf{Let's Verify Step by Step} (OpenAI, 2023)
+
+\vspace{0.3cm}
+\textbf{核心思想}：奖励每个推理步骤，而非只看最终答案
+
+\vspace{0.3cm}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{结果奖励 (ORM)}
+$$R = \begin{cases} 
++1 & \text{最终答案正确} \\
+0 & \text{最终答案错误}
+\end{cases}$$
+\begin{itemize}
+    \item 信号稀疏
+    \item 难以定位错误
+    \item Credit assignment问题
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{过程奖励 (PRM)}
+$$R = \sum_{t=1}^{T} r_t$$
+$$r_t = P(\text{step } t \text{ is correct})$$
+\begin{itemize}
+    \item 密集信号
+    \item 精确定位错误步骤
+    \item 需要人工标注
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.3cm}
+\textbf{实验结论}：PRM在数学推理上显著优于ORM
+\end{frame}
+
+%=========================================
+\begin{frame}{o1 Scaling特性}
+\textbf{推理时计算的scaling law}
+
+\vspace{0.3cm}
+\begin{columns}
+\begin{column}{0.6\textwidth}
+\textbf{关键发现}：
+\begin{itemize}
+    \item 性能随推理时间/token数量提升
+    \item "思考"越多，答案越准确
+    \item 存在新的scaling维度
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{两种scaling}：
+\begin{enumerate}
+    \item \textbf{训练时scaling}：更多数据、更大模型
+    \item \textbf{推理时scaling}：更多思考、更多搜索
+\end{enumerate}
+\end{column}
+\begin{column}{0.4\textwidth}
+\begin{center}
+\textit{(推理时间 vs 准确率)}
+
+\vspace{0.5cm}
+更多思考时间 $\rightarrow$ 更高准确率
+
+\vspace{0.5cm}
+类似人类：\\
+难题需要更多思考
+\end{center}
+\end{column}
+\end{columns}
+
+\vspace{0.3cm}
+\begin{alertblock}{范式转变}
+从"更大的模型"到"更多的思考"
+\end{alertblock}
+\end{frame}
+
+%=========================================
+\section{Google与Anthropic方法}
+%=========================================
+
+\begin{frame}{Constitutional AI (Anthropic)}
+\textbf{RLAIF}：用AI反馈代替人类反馈
+
+\vspace{0.5cm}
+\textbf{训练流程}：
+\begin{enumerate}
+    \item \textbf{Self-Critique}：模型评估自己的回答
+    \item \textbf{Revision}：根据"宪法"原则修改回答
+    \item \textbf{RL训练}：用AI评分作为奖励
+\end{enumerate}
+
+\vspace{0.3cm}
+\textbf{"宪法"示例}：
+\begin{itemize}
+    \item 选择最有帮助、诚实、无害的回答
+    \item 选择最不具有欺骗性的回答
+    \item 选择最尊重用户自主权的回答
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{优势}：
+\begin{itemize}
+    \item 大幅减少人类标注需求
+    \item 可扩展到更多场景
+    \item 原则可编程、可调整
+\end{itemize}
+\end{frame}
+
+%=========================================
+\begin{frame}{Google的推理研究}
+\textbf{主要工作}：
+
+\vspace{0.3cm}
+\begin{enumerate}
+    \item \textbf{Chain-of-Thought Prompting}
+    \begin{itemize}
+        \item 提示模型展示推理步骤
+        \item Zero-shot CoT: "Let's think step by step"
+        \item 显著提升数学推理能力
+    \end{itemize}
+    
+    \vspace{0.3cm}
+    \item \textbf{Self-Consistency}
+    \begin{itemize}
+        \item 采样多个推理路径
+        \item 投票选择最一致的答案
+        \item 简单有效的提升方法
+    \end{itemize}
+    
+    \vspace{0.3cm}
+    \item \textbf{Gemini系列}
+    \begin{itemize}
+        \item 多模态理解
+        \item 长上下文处理
+        \item 推理能力持续提升
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\section{技术细节与实现}
+%=========================================
+
+\begin{frame}{训练数据构造}
+\textbf{高质量问题来源}：
+
+\vspace{0.3cm}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{数学}
+\begin{itemize}
+    \item GSM8K (小学数学)
+    \item MATH (竞赛数学)
+    \item AIME/AMC历年真题
+    \item 合成数学问题
+    \item 网络爬取的数学问答
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{代码}
+\begin{itemize}
+    \item LeetCode题目
+    \item Codeforces竞赛题
+    \item HumanEval/MBPP
+    \item GitHub代码库
+    \item 合成编程问题
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.5cm}
+\textbf{数据增强}：
+\begin{itemize}
+    \item 问题改写/变体生成
+    \item 难度渐进
+    \item 多种解法生成
+\end{itemize}
+\end{frame}
+
+%=========================================
+\begin{frame}{采样与探索策略}
+\textbf{RL训练中的采样}：
+
+\vspace{0.3cm}
+\begin{enumerate}
+    \item \textbf{温度采样}
+    $$P(token) \propto \exp(\text{logit}/T)$$
+    \begin{itemize}
+        \item 训练时$T > 1$增加探索
+        \item 推理时$T < 1$提高质量
+    \end{itemize}
+    
+    \vspace{0.2cm}
+    \item \textbf{Top-p (Nucleus) 采样}
+    \begin{itemize}
+        \item 只考虑累积概率达到$p$的tokens
+        \item 平衡多样性和质量
+    \end{itemize}
+    
+    \vspace{0.2cm}
+    \item \textbf{Best-of-N}
+    \begin{itemize}
+        \item 生成N个候选
+        \item 用奖励模型选择最佳
+        \item 推理时常用策略
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\begin{frame}{KL散度约束}
+\textbf{防止策略偏离太远}：
+
+$$\mathcal{L} = \mathcal{L}_{RL} - \beta \cdot \mathbb{D}_{KL}[\pi_\theta || \pi_{ref}]$$
+
+\vspace{0.3cm}
+\textbf{为什么需要KL约束？}
+\begin{itemize}
+    \item 防止\textbf{奖励黑客}（reward hacking）
+    \item 保持模型的语言能力
+    \item 稳定训练过程
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{KL计算}（近似）：
+$$\mathbb{D}_{KL}[\pi_\theta || \pi_{ref}] \approx \mathbb{E}_{\pi_\theta} \left[ \log \frac{\pi_\theta(a|s)}{\pi_{ref}(a|s)} \right]$$
+
+\vspace{0.3cm}
+\textbf{$\beta$选择}：
+\begin{itemize}
+    \item 太大：限制学习
+    \item 太小：不稳定/奖励黑客
+    \item 典型值：0.01 - 0.1
+\end{itemize}
+\end{frame}
+
+%=========================================
+\begin{frame}{训练稳定性技巧}
+\textbf{大规模RL训练的挑战与解决}：
+
+\vspace{0.3cm}
+\begin{enumerate}
+    \item \textbf{梯度裁剪}
+    $$g \leftarrow \min\left(1, \frac{c}{||g||}\right) \cdot g$$
+    
+    \item \textbf{学习率调度}
+    \begin{itemize}
+        \item Warmup阶段
+        \item Cosine decay
+        \item 比SFT更小的学习率
+    \end{itemize}
+    
+    \item \textbf{奖励归一化}
+    $$r_{norm} = \frac{r - \mu_r}{\sigma_r}$$
+    
+    \item \textbf{多次PPO epochs}
+    \begin{itemize}
+        \item 每批数据更新多次
+        \item 但需要控制更新幅度
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\section{失败尝试与经验教训}
+%=========================================
+
+\begin{frame}{DeepSeek报告的失败尝试}
+\textbf{重要的负面结果}：
+
+\vspace{0.3cm}
+\begin{enumerate}
+    \item \textbf{过程奖励模型(PRM)效果不佳}
+    \begin{itemize}
+        \item 训练PRM本身很困难
+        \item 需要大量步骤级标注
+        \item 泛化能力有限
+        \item 最终放弃，使用结果奖励
+    \end{itemize}
+    
+    \vspace{0.2cm}
+    \item \textbf{Monte Carlo Tree Search (MCTS)未成功}
+    \begin{itemize}
+        \item 搜索空间太大
+        \item 价值估计不准确
+        \item 计算成本过高
+    \end{itemize}
+    
+    \vspace{0.2cm}
+    \item \textbf{直接从Base模型RL的问题}
+    \begin{itemize}
+        \item 可读性差
+        \item 语言混杂
+        \item 需要少量SFT冷启动
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\begin{frame}{常见问题与解决}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{奖励黑客}
+\begin{itemize}
+    \item 问题：找到漏洞获取高奖励
+    \item 解决：KL约束、多样化奖励
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{模式崩塌}
+\begin{itemize}
+    \item 问题：输出变得单一
+    \item 解决：熵正则化、温度控制
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{训练不稳定}
+\begin{itemize}
+    \item 问题：损失震荡、发散
+    \item 解决：小学习率、梯度裁剪
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{遗忘问题}
+\begin{itemize}
+    \item 问题：失去原有能力
+    \item 解决：混合训练数据
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{长度控制}
+\begin{itemize}
+    \item 问题：输出过长或过短
+    \item 解决：长度惩罚/奖励
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{格式问题}
+\begin{itemize}
+    \item 问题：不遵循指定格式
+    \item 解决：格式奖励、SFT预训练
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+%=========================================
+\section{未来方向}
+%=========================================
+
+\begin{frame}{研究前沿}
+\textbf{值得关注的方向}：
+
+\vspace{0.3cm}
+\begin{enumerate}
+    \item \textbf{更高效的RL算法}
+    \begin{itemize}
+        \item 减少样本复杂度
+        \item 更稳定的训练
+        \item 更低的计算成本
+    \end{itemize}
+    
+    \item \textbf{更好的奖励设计}
+    \begin{itemize}
+        \item 自动发现奖励函数
+        \item 多目标优化
+        \item 可解释的奖励
+    \end{itemize}
+    
+    \item \textbf{推理时scaling}
+    \begin{itemize}
+        \item 更高效的搜索算法
+        \item 自适应计算量
+        \item 推理成本优化
+    \end{itemize}
+    
+    \item \textbf{多模态推理}
+    \begin{itemize}
+        \item 视觉推理
+        \item 跨模态reasoning
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\begin{frame}{开放问题}
+\textbf{尚未解决的挑战}：
+
+\vspace{0.5cm}
+\begin{itemize}
+    \item \textbf{泛化性}：如何让推理能力迁移到新领域？
+    
+    \vspace{0.2cm}
+    \item \textbf{可解释性}：模型真的在"推理"还是在模式匹配？
+    
+    \vspace{0.2cm}
+    \item \textbf{长程规划}：如何进行更长horizon的推理？
+    
+    \vspace{0.2cm}
+    \item \textbf{世界模型}：是否需要显式的世界知识？
+    
+    \vspace{0.2cm}
+    \item \textbf{安全性}：推理模型可能更擅长欺骗？
+    
+    \vspace{0.2cm}
+    \item \textbf{效率}：如何降低推理成本？
+\end{itemize}
+\end{frame}
+
+%=========================================
+\section{总结}
+%=========================================
+
+\begin{frame}{核心要点回顾}
+\begin{enumerate}
+    \item \textbf{RL是提升LLM推理能力的有效方法}
+    \begin{itemize}
+        \item 无需大量人类标注
+        \item 可以超越人类示范
+    \end{itemize}
+    
+    \vspace{0.2cm}
+    \item \textbf{GRPO简化了训练流程}
+    \begin{itemize}
+        \item 无需Critic网络
+        \item 组内相对比较
+    \end{itemize}
+    
+    \vspace{0.2cm}
+    \item \textbf{可验证奖励是关键}
+    \begin{itemize}
+        \item 数学：答案匹配
+        \item 代码：执行验证
+    \end{itemize}
+    
+    \vspace{0.2cm}
+    \item \textbf{推理时Scaling开辟新维度}
+    \begin{itemize}
+        \item 更多思考=更好结果
+        \item Test-time compute
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+%=========================================
+\begin{frame}{参考资料}
+\footnotesize
+\begin{itemize}
+    \item DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via RL (2025)
+    \item DeepSeekMath: Pushing the Limits of Mathematical Reasoning (2024)
+    \item Let's Verify Step by Step (OpenAI, 2023)
+    \item Constitutional AI: Harmlessness from AI Feedback (Anthropic, 2022)
+    \item Training Language Models to Follow Instructions with Human Feedback (OpenAI, 2022)
+    \item OpenAI o1 System Card (2024)
+    \item Scaling Laws for Reward Model Overoptimization (2022)
+    \item Chain-of-Thought Prompting Elicits Reasoning in LLMs (Google, 2022)
+\end{itemize}
+
+\vspace{0.5cm}
+\begin{center}
+\Large 谢谢！欢迎提问讨论
+\end{center}
+\end{frame}
+
+\end{document}
