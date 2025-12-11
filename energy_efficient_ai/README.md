@@ -11,5 +11,8 @@ This project aims to develop and analyze new algorithms for artificial intellige
 ## Structure
 
 - `paper.tex`: The LaTeX source code for the research paper.
-- `experiments.py`: Python script for running numerical experiments and generating data/plots.
+- `experiments_v2.py`: Improved Python simulation suite for running numerical experiments and generating data/plots.
+- `experiments.py`: Legacy experiment script.
 - `references.bib`: Bibliography file.
+- `exp*.png`: Generated plots from the experiments.
+- `results_table.txt`: Raw data from the experiments.
