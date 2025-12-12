@@ -41,9 +41,9 @@ The paper presents 7 theorems on Kerr black hole stability. **UPDATE (Dec 2025):
 - **Final state:** Bondi mass/angular momentum tracking
 
 #### 4. Near-Extremal Uniformity
-- **Smallness:** $\epsilon_0(\chi) \geq c_0(1-\chi)^{3/2}$
+- **Smallness:** $\epsilon_0(\chi) \geq c_0(1-\chi)^{2}$
 - **Constants:** $C_k(\chi) \leq C_k^{(0)}(1-\chi)^{-1/2}$
-- **NHEK matching:** Rigorous frequency mapping
+- **Derivation:** $\gamma_0 \sim \sqrt{1-\chi}$, $C_{NL} \sim (1-\chi)^{-1/2}$, so $\epsilon_0 \sim \gamma_0^2/C_{NL}^2 \sim (1-\chi)^2$
 
 ---
 
