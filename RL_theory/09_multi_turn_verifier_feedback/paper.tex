@@ -1,0 +1,521 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Multi-Turn Verifier Feedback Reinforcement Learning: \\
+Exploiting Rich Error Signals for Dense Reward Shaping}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Binary pass/fail rewards waste the rich diagnostic information that verifiers provide---compiler errors localize syntax mistakes, test failures identify specific bugs, and proof assistants report tactic mismatches. We present Multi-Turn Verifier Feedback RL (MVFRL), a framework for exploiting structured verifier feedback to provide dense learning signals through iterative model-verifier interaction. Our approach treats verification as a multi-turn dialogue where the model generates solutions, receives detailed feedback, and revises accordingly. We develop feedback-conditioned policies, feedback token masking for proper credit assignment, and reward shaping schemes that extract learning signal from error messages. We establish theoretical foundations for when multi-turn feedback helps, quantify feedback information content, and derive optimal turn budgets. Our framework generalizes across domains---coding with compiler/test feedback, mathematics with CAS verification, and theorem proving with proof assistant errors---providing a unified approach to feedback-rich RLVR.
+\end{abstract}
+
+\section{Introduction}
+
+Standard RLVR treats verification as binary:
+\begin{equation}
+    r(x, y) = \begin{cases} 1 & \text{if Verifier}(x, y) = \text{Pass} \\ 0 & \text{otherwise} \end{cases}
+\end{equation}
+
+But verifiers provide much richer information:
+\begin{itemize}
+    \item \textbf{Compiler}: ``TypeError: expected int, got str at line 23''
+    \item \textbf{Tests}: ``AssertionError: expected [1,2,3], got [1,2]''
+    \item \textbf{Lean}: ``tactic 'simp' failed, goal not closed''
+    \item \textbf{CAS}: ``Division by zero at x=2''
+\end{itemize}
+
+\textbf{Key insight}: This feedback enables:
+\begin{enumerate}
+    \item \textbf{Error localization}: Know exactly where the problem is
+    \item \textbf{Iterative refinement}: Fix one error at a time
+    \item \textbf{Dense rewards}: Credit intermediate progress
+\end{enumerate}
+
+\subsection{Multi-Turn Interaction}
+
+Instead of single-shot generation, we propose multi-turn interaction:
+
+\begin{verbatim}
+Turn 1: Model generates initial solution
+     -> Verifier returns detailed error
+Turn 2: Model revises based on feedback
+     -> Verifier returns new error (or success)
+Turn 3: Model fixes remaining issues
+     -> Verifier: All tests passed!
+\end{verbatim}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item Multi-Turn Verifier Feedback RL (MVFRL) framework
+    \item Feedback-conditioned policy training
+    \item Feedback token masking for proper credit assignment
+    \item Reward shaping from structured feedback
+    \item Theoretical analysis of multi-turn benefits
+    \item Applications across coding, math, and theorem proving
+\end{enumerate}
+
+\section{Background}
+
+\subsection{Leanabell-Prover-V2}
+
+Recent work on theorem proving demonstrates multi-turn verifier interaction:
+\begin{itemize}
+    \item Model generates proof steps
+    \item Lean 4 verifier returns structured errors
+    \item Model revises based on feedback
+    \item Achieves strong results with 7B model
+\end{itemize}
+
+Key techniques:
+\begin{enumerate}
+    \item Feedback token masking
+    \item Multi-turn trajectory collection
+    \item Reward combining completion + feedback signals
+\end{enumerate}
+
+\subsection{Verifier Feedback Types}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Domain & Verifier & Feedback Type \\
+\midrule
+Coding & Compiler & Syntax/type errors with line numbers \\
+Coding & Test runner & Assertion failures with diffs \\
+Math & CAS (SymPy) & Invalid operations, domain errors \\
+Proofs & Lean/Coq & Tactic failures, type mismatches \\
+\bottomrule
+\end{tabular}
+\caption{Verifier feedback across domains}
+\end{table}
+
+\section{Multi-Turn Verifier Feedback RL}
+
+\subsection{Problem Formulation}
+
+\begin{definition}[Multi-Turn RLVR]
+A multi-turn RLVR episode consists of:
+\begin{itemize}
+    \item Initial prompt $x$
+    \item Turns $t = 1, \ldots, T_{\max}$
+    \item At each turn:
+    \begin{itemize}
+        \item Model generates response $y_t$
+        \item Verifier returns feedback $f_t = V(x, y_t)$
+    \end{itemize}
+    \item Terminal reward: $r = \mathbf{1}[\text{final } y_t \text{ passes}]$
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Multi-Turn Context]
+The context at turn $t$ includes all prior generations and feedback:
+\begin{equation}
+    c_t = (x, y_1, f_1, y_2, f_2, \ldots, y_{t-1}, f_{t-1})
+\end{equation}
+\end{definition}
+
+\subsection{Feedback-Conditioned Policy}
+
+The model conditions on feedback:
+\begin{equation}
+    \pi_\theta(y_t | c_t) = \pi_\theta(y_t | x, y_{<t}, f_{<t})
+\end{equation}
+
+\textbf{Training objective}: Learn to interpret and act on feedback.
+
+\subsection{Feedback Token Masking}
+
+Feedback tokens are provided by the verifier, not generated by the model. We should not compute loss on them:
+
+\begin{definition}[Masked Loss]
+\begin{equation}
+    L = -\sum_{t=1}^T \sum_{i \in \text{gen}_t} A_t \log \pi_\theta(y_{t,i} | c_t, y_{t,<i})
+\end{equation}
+where $\text{gen}_t$ includes only model-generated tokens, excluding feedback.
+\end{definition}
+
+\begin{algorithm}[H]
+\caption{Feedback Token Masking}
+\begin{algorithmic}[1]
+\Require Trajectory $(x, y_1, f_1, \ldots, y_T, f_T, r)$
+\State $L \leftarrow 0$
+\For{turn $t = 1$ to $T$}
+    \State $A_t \leftarrow \text{compute\_advantage}(t, r)$
+    \For{each token $i$ in $y_t$}
+        \State $L \leftarrow L - A_t \cdot \log \pi_\theta(y_{t,i} | c_t, y_{t,<i})$
+    \EndFor
+    \State \textbf{// Skip feedback tokens---no loss on $f_t$}
+    \State Append $f_t$ to context for next turn
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Reward Shaping from Feedback}
+
+\subsection{Feedback-Based Rewards}
+
+Instead of only terminal reward, extract intermediate signals:
+
+\begin{definition}[Structured Feedback Reward]
+\begin{equation}
+    r_t = r_{\text{base}}(f_t) + r_{\text{progress}}(f_t, f_{t-1})
+\end{equation}
+where:
+\begin{itemize}
+    \item $r_{\text{base}}$: Reward based on feedback type
+    \item $r_{\text{progress}}$: Reward for improvement over previous turn
+\end{itemize}
+\end{definition}
+
+\subsection{Feedback Type Rewards}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Feedback Type & Reward \\
+\midrule
+Success (pass all) & $+1.0$ \\
+Partial success (some tests pass) & $+0.5 \times \text{pass\_rate}$ \\
+Runtime error & $-0.1$ \\
+Type error & $-0.3$ \\
+Syntax error & $-0.5$ \\
+\bottomrule
+\end{tabular}
+\caption{Example feedback-based rewards for coding}
+\end{table}
+
+\subsection{Progress Rewards}
+
+\begin{definition}[Progress Reward]
+\begin{equation}
+    r_{\text{progress}}(f_t, f_{t-1}) = \text{Quality}(f_t) - \text{Quality}(f_{t-1})
+\end{equation}
+Reward improvement from one turn to the next.
+\end{definition}
+
+Examples:
+\begin{itemize}
+    \item Each error fixed: $+0.2$
+    \item Each new test passed: $+0.1$
+    \item Reduced error count: $+0.1$
+    \item Regression (more errors): $-0.1$
+\end{itemize}
+
+\subsection{Feedback-Guided Exploration}
+
+Use feedback to guide subsequent generation:
+
+\begin{algorithm}[H]
+\caption{Feedback-Guided Generation}
+\begin{algorithmic}[1]
+\Require Context $c_t$, feedback $f_{t-1}$, policy $\pi_\theta$
+\State Parse $f_{t-1}$ to extract:
+\State \quad Error location (line/token)
+\State \quad Error type
+\State \quad Suggested fix (if available)
+\State Focus attention on error location in context
+\State Generate $y_t$ with increased probability mass near error
+\State \Return $y_t$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Theoretical Analysis}
+
+\subsection{When Does Multi-Turn Help?}
+
+\begin{theorem}[Multi-Turn Benefit]\label{thm:benefit}
+Multi-turn interaction improves over single-turn when:
+\begin{enumerate}
+    \item Feedback localizes errors: $I(\text{error location}; f) > 0$
+    \item Errors are correctable: $P(\text{fix} | f) > P(\text{fix})$
+    \item Turn budget is sufficient: $T_{\max}$ allows iterative correction
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+Single-turn success requires getting everything right in one attempt:
+\begin{equation}
+    P_1 = P(\text{correct on first try})
+\end{equation}
+
+Multi-turn success allows iterative refinement:
+\begin{equation}
+    P_T = P(\text{correct within } T \text{ tries})
+\end{equation}
+
+With informative feedback:
+\begin{equation}
+    P_T \geq P_1 + (1 - P_1) \cdot P(\text{fix given feedback})^{T-1}
+\end{equation}
+
+The improvement depends on $P(\text{fix given feedback})$, which is higher when feedback is informative.
+\end{proof}
+
+\subsection{Feedback Information Content}
+
+\begin{definition}[Feedback Usefulness]
+\begin{equation}
+    U(f) = I(Y_{\text{correct}}; f | X, Y_{\text{wrong}})
+\end{equation}
+Mutual information between correct solution and feedback, given the problem and wrong attempt.
+\end{definition}
+
+\begin{proposition}[High-Usefulness Feedback]
+Feedback $f$ has high usefulness when:
+\begin{enumerate}
+    \item It localizes the error precisely
+    \item It suggests the correct fix
+    \item It is consistent across similar errors
+\end{enumerate}
+\end{proposition}
+
+\subsection{Optimal Number of Turns}
+
+\begin{theorem}[Optimal Turn Budget]\label{thm:turns}
+The optimal number of turns $T^*$ balances:
+\begin{enumerate}
+    \item Increased success probability (more turns = more chances)
+    \item Compute cost (each turn requires generation + verification)
+    \item Diminishing returns (later turns have smaller marginal benefit)
+\end{enumerate}
+
+For geometric decay in marginal improvement:
+\begin{equation}
+    T^* = \frac{\log(c / \Delta_0)}{\log(1/\gamma)}
+\end{equation}
+where $c$ is cost per turn, $\Delta_0$ is initial improvement probability, and $\gamma$ is decay rate.
+\end{theorem}
+
+\section{Domain-Specific Applications}
+
+\subsection{Coding with Compiler/Test Feedback}
+
+\begin{algorithm}[H]
+\caption{Multi-Turn Coding with Feedback}
+\begin{algorithmic}[1]
+\Require Problem $p$, tests $T$, policy $\pi_\theta$, max turns $T_{\max}$
+\State $c_1 \leftarrow p$
+\For{turn $t = 1$ to $T_{\max}$}
+    \State Generate code: $y_t \sim \pi_\theta(\cdot | c_t)$
+    \State \textbf{// Compile}
+    \State $\text{compile\_ok}, f_{\text{compile}} \leftarrow \text{compile}(y_t)$
+    \If{not compile\_ok}
+        \State $f_t \leftarrow f_{\text{compile}}$
+        \State $c_{t+1} \leftarrow c_t \oplus y_t \oplus f_t$
+        \State \textbf{continue}
+    \EndIf
+    \State \textbf{// Run tests}
+    \State $\text{pass}, f_{\text{test}} \leftarrow \text{run\_tests}(y_t, T)$
+    \If{pass}
+        \State \Return $y_t$, Success
+    \EndIf
+    \State $f_t \leftarrow f_{\text{test}}$
+    \State $c_{t+1} \leftarrow c_t \oplus y_t \oplus f_t$
+\EndFor
+\State \Return $y_{T_{\max}}$, Partial
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Mathematics with CAS Feedback}
+
+\begin{algorithm}[H]
+\caption{Multi-Turn Math with CAS Feedback}
+\begin{algorithmic}[1]
+\Require Problem $p$, CAS verifier, policy $\pi_\theta$
+\State $c_1 \leftarrow p$
+\For{turn $t = 1$ to $T_{\max}$}
+    \State Generate solution: $y_t \sim \pi_\theta(\cdot | c_t)$
+    \State \textbf{// Verify step-by-step}
+    \For{each step $s$ in $y_t$}
+        \State $\text{valid}, f_s \leftarrow \text{CAS.check}(s)$
+        \If{not valid}
+            \State $f_t \leftarrow f_s$ \Comment{First error}
+            \State \textbf{break}
+        \EndIf
+    \EndFor
+    \If{all steps valid and answer correct}
+        \State \Return $y_t$, Success
+    \EndIf
+    \State $c_{t+1} \leftarrow c_t \oplus y_t \oplus f_t$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Theorem Proving with Proof Assistant Feedback}
+
+\begin{algorithm}[H]
+\caption{Multi-Turn Proving with Lean Feedback}
+\begin{algorithmic}[1]
+\Require Theorem statement $p$, Lean verifier, policy $\pi_\theta$
+\State $c_1 \leftarrow p$
+\For{turn $t = 1$ to $T_{\max}$}
+    \State Generate proof: $y_t \sim \pi_\theta(\cdot | c_t)$
+    \State \textbf{// Check proof}
+    \State $\text{valid}, f_t \leftarrow \text{Lean.check}(y_t)$
+    \If{valid}
+        \State \Return $y_t$, Success
+    \EndIf
+    \State \textbf{// Parse Lean error}
+    \State Extract: goal state, failed tactic, error message
+    \State $c_{t+1} \leftarrow c_t \oplus y_t \oplus f_t$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Training Algorithm}
+
+\begin{algorithm}[H]
+\caption{MVFRL Training}
+\begin{algorithmic}[1]
+\Require Policy $\pi_\theta$, problems $\mathcal{P}$, verifiers
+\For{iteration}
+    \State \textbf{// Collect multi-turn trajectories}
+    \For{problem $p \in \mathcal{P}$}
+        \State $\tau \leftarrow \text{collect\_trajectory}(p, \pi_\theta)$
+        \State $\tau = (x, y_1, f_1, \ldots, y_T, f_T, r)$
+    \EndFor
+    \State \textbf{// Compute rewards}
+    \For{each trajectory $\tau$}
+        \For{turn $t$}
+            \State $r_t \leftarrow r_{\text{base}}(f_t) + r_{\text{progress}}(f_t, f_{t-1})$
+        \EndFor
+        \State $r_T \leftarrow r$ \Comment{Terminal reward}
+    \EndFor
+    \State \textbf{// Compute advantages with masking}
+    \For{each trajectory $\tau$}
+        \State Compute turn-level advantages $A_t$ from $\{r_t\}$
+    \EndFor
+    \State \textbf{// Update policy (masked loss)}
+    \State $L \leftarrow 0$
+    \For{each trajectory $\tau$}
+        \For{turn $t$}
+            \State $L \leftarrow L - A_t \sum_{i \in \text{gen}_t} \log \pi_\theta(y_{t,i} | c_t, y_{t,<i})$
+        \EndFor
+    \EndFor
+    \State $\theta \leftarrow \theta - \eta \nabla_\theta L$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experimental Framework}
+
+\subsection{Benchmarks}
+
+\begin{itemize}
+    \item \textbf{Coding}: HumanEval, MBPP with test feedback
+    \item \textbf{Math}: GSM8K, MATH with SymPy verification
+    \item \textbf{Proofs}: MiniF2F with Lean 4 feedback
+\end{itemize}
+
+\subsection{Baselines}
+
+\begin{enumerate}
+    \item Single-turn RLVR (binary reward)
+    \item Multi-turn without feedback conditioning
+    \item Multi-turn with feedback conditioning (MVFRL)
+    \item Multi-turn with reward shaping (MVFRL+)
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Description \\
+\midrule
+Pass@1 (single) & Success in one turn \\
+Pass@1 (multi) & Success within $T$ turns \\
+Turns to success & Average turns needed \\
+Feedback utilization & Improvement after feedback \\
+Sample efficiency & Successes per trajectory \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation metrics}
+\end{table}
+
+\section{Discussion}
+
+\subsection{When Multi-Turn Helps Most}
+
+Multi-turn interaction is most beneficial when:
+\begin{itemize}
+    \item Errors are localized (feedback points to specific issues)
+    \item Corrections are incremental (fix one thing at a time)
+    \item Model can interpret feedback (feedback-conditioned policy)
+    \item Turn budget allows sufficient refinement
+\end{itemize}
+
+\subsection{Feedback Quality Considerations}
+
+Not all feedback is equally useful:
+\begin{itemize}
+    \item \textbf{Precise}: ``TypeError at line 23'' vs ``Error somewhere''
+    \item \textbf{Actionable}: Suggests what to fix
+    \item \textbf{Consistent}: Same error → same feedback
+\end{itemize}
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item Multi-turn is slower than single-turn
+    \item Some errors don't localize well
+    \item Model may not interpret feedback correctly
+    \item Feedback masking requires careful implementation
+\end{itemize}
+
+\section{Conclusion}
+
+We have presented Multi-Turn Verifier Feedback RL (MVFRL), a framework for exploiting rich verifier feedback in RLVR. By treating verification as multi-turn dialogue, our approach enables iterative refinement guided by detailed error messages. The feedback-conditioned policy learns to interpret and act on feedback, while feedback token masking ensures proper credit assignment. Our reward shaping schemes extract dense learning signals from structured feedback, improving sample efficiency. The theoretical analysis establishes conditions for multi-turn benefits and optimal turn budgets. MVFRL provides a unified approach applicable across coding, mathematics, and theorem proving, transforming rich verifier feedback into actionable training signal.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[DeepSeek-AI(2024)]{deepseekmath2024}
+DeepSeek-AI.
+\newblock DeepSeekMath: Pushing the limits of mathematical reasoning in open language models.
+\newblock \emph{arXiv preprint arXiv:2402.03300}, 2024.
+
+\bibitem[Lin et al.(2024)]{leanabell2024}
+Lin, X., et al.
+\newblock Leanabell-Prover-V2: Advancing formal theorem proving via multi-turn verifier feedback.
+\newblock \emph{arXiv preprint}, 2024.
+
+\bibitem[Yang et al.(2024)]{lean2024}
+Yang, K., et al.
+\newblock LeanDojo: Theorem proving with retrieval-augmented language models.
+\newblock \emph{NeurIPS}, 2023.
+
+\bibitem[Chen et al.(2021)]{codex2021}
+Chen, M., et al.
+\newblock Evaluating large language models trained on code.
+\newblock \emph{arXiv preprint arXiv:2107.03374}, 2021.
+
+\end{thebibliography}
+
+\end{document}

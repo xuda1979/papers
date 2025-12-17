@@ -1,0 +1,540 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Formal Theorem Proving as the Ultimate Reasoning Gym: \\
+Decomposing Search and Learning in RLVR}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Formal theorem proving in systems like Lean 4 offers the ideal RLVR environment: unambiguous verification, rich structured feedback, and unlimited self-play potential. We propose using formal mathematics as a ``reasoning gym'' to develop general reasoning capabilities. Our framework decomposes theorem proving into two orthogonal components: (1) search algorithms for finding proof paths, and (2) learning to improve the policy guiding search. We analyze how this decomposition enables efficient credit assignment, curriculum learning through theorem difficulty, and verification-aware training. We establish theoretical connections between proof complexity and learning difficulty, derive optimal search-learning trade-offs, and present curriculum strategies for progressive capability building. Our analysis suggests that formal theorem proving may be the optimal substrate for developing robust reasoning abilities that transfer to broader mathematical and logical tasks.
+\end{abstract}
+
+\section{Introduction}
+
+Formal theorem proving offers unique properties for RLVR:
+
+\begin{enumerate}
+    \item \textbf{Perfect verification}: Proof assistants are sound---accepted proofs are correct
+    \item \textbf{Rich feedback}: Detailed error messages, goal states, and type information
+    \item \textbf{Unlimited data}: Can generate new theorems and conjectures
+    \item \textbf{Decomposable}: Clear step-by-step structure amenable to credit assignment
+    \item \textbf{Transfer potential}: Formal reasoning skills may generalize
+\end{enumerate}
+
+\textbf{Key insight}: Formal theorem proving is a ``reasoning gym''---a training environment for developing general reasoning capabilities.
+
+\subsection{Search vs Learning Decomposition}
+
+\begin{definition}[Search-Learning Decomposition]
+Theorem proving decomposes into:
+\begin{itemize}
+    \item \textbf{Search}: Finding the proof given unlimited computation
+    \item \textbf{Learning}: Improving the policy to make search efficient
+\end{itemize}
+\end{definition}
+
+This decomposition enables:
+\begin{itemize}
+    \item Orthogonal optimization of search algorithms and learned policies
+    \item Clear credit assignment through search tree analysis
+    \item Curriculum learning through theorem difficulty progression
+\end{itemize}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item Framework for formal theorem proving as reasoning gym
+    \item Search-learning decomposition with theoretical analysis
+    \item Proof complexity to learning difficulty connections
+    \item Curriculum strategies for progressive capability building
+    \item Optimal search-learning trade-off analysis
+\end{enumerate}
+
+\section{Background}
+
+\subsection{Formal Theorem Proving}
+
+\begin{definition}[Proof Environment]
+A formal proof environment consists of:
+\begin{itemize}
+    \item Proof assistant $\mathcal{P}$ (e.g., Lean 4, Coq, Isabelle)
+    \item Theorems $\mathcal{T} = \{(\text{statement}, \text{proof})\}$
+    \item Tactics $\mathcal{A}$: Actions that transform proof states
+    \item Verification: $\mathcal{P}$ checks correctness of proofs
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Proof State]
+A proof state $s$ consists of:
+\begin{itemize}
+    \item Goal(s) to prove
+    \item Local context (hypotheses, definitions)
+    \item Global context (imported theorems)
+\end{itemize}
+\end{definition}
+
+\subsection{Lean 4 as Target Environment}
+
+Lean 4 offers advantages:
+\begin{itemize}
+    \item Modern, fast proof assistant
+    \item Rich tactic language
+    \item Good LLM integration (LeanDojo)
+    \item Growing mathematical library (Mathlib)
+\end{itemize}
+
+\subsection{Current Approaches}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Approach & Method & Limitations \\
+\midrule
+SL & Imitation learning & Limited to seen proofs \\
+Tree Search & BFS/MCTS + LLM & High compute cost \\
+RL & Direct policy learning & Credit assignment hard \\
+\bottomrule
+\end{tabular}
+\caption{Approaches to neural theorem proving}
+\end{table}
+
+\section{Search-Learning Decomposition}
+
+\subsection{Search Component}
+
+Given a policy $\pi$, search finds proofs by exploring the proof tree:
+
+\begin{algorithm}[H]
+\caption{Proof Search with Policy}
+\begin{algorithmic}[1]
+\Require Goal $g$, policy $\pi$, search budget $B$
+\State $s_0 \leftarrow \text{initial\_state}(g)$
+\State $\text{frontier} \leftarrow \{s_0\}$
+\For{$b = 1$ to $B$}
+    \State $s \leftarrow \text{select}(\text{frontier})$ \Comment{Selection strategy}
+    \State $\{a_i\} \leftarrow \text{top\_k}(\pi(\cdot | s))$ \Comment{Policy guides expansion}
+    \For{each action $a_i$}
+        \State $s' \leftarrow \text{apply\_tactic}(s, a_i)$
+        \If{$s' = \text{QED}$}
+            \State \Return Success, trace
+        \EndIf
+        \State $\text{frontier} \leftarrow \text{frontier} \cup \{s'\}$
+    \EndFor
+\EndFor
+\State \Return Failure
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Search algorithms}:
+\begin{itemize}
+    \item Best-first search (policy score as priority)
+    \item Beam search (top-$k$ paths)
+    \item MCTS (with UCB exploration)
+\end{itemize}
+
+\subsection{Learning Component}
+
+Learning improves the policy to make search more efficient:
+
+\begin{definition}[Search Efficiency]
+\begin{equation}
+    \text{Efficiency}(\pi) = \frac{\text{Theorems proved with budget } B}{\text{Total theorems}}
+\end{equation}
+Goal: Improve $\pi$ to maximize efficiency.
+\end{definition}
+
+\begin{algorithm}[H]
+\caption{Learning from Search}
+\begin{algorithmic}[1]
+\Require Theorems $\mathcal{T}$, policy $\pi_\theta$, search algorithm $\mathcal{S}$
+\For{iteration}
+    \State \textbf{// Search phase}
+    \For{theorem $t \in \mathcal{T}$}
+        \State success, trace $\leftarrow \mathcal{S}(t, \pi_\theta)$
+        \If{success}
+            \State Store (proof trace, successful path)
+        \EndIf
+    \EndFor
+    \State \textbf{// Learn phase}
+    \State Extract successful action sequences from traces
+    \State Update $\pi_\theta$ to increase probability of successful actions
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Decomposition Benefits}
+
+\begin{theorem}[Orthogonal Optimization]
+Search and learning can be optimized independently:
+\begin{enumerate}
+    \item Better search algorithms improve success rate for fixed policy
+    \item Better policies improve success rate for fixed search budget
+    \item Improvements are multiplicative
+\end{enumerate}
+\end{theorem}
+
+\section{Proof Complexity and Learning Difficulty}
+
+\subsection{Proof Complexity Measures}
+
+\begin{definition}[Proof Complexity]
+Several measures of proof difficulty:
+\begin{itemize}
+    \item \textbf{Length}: Number of proof steps
+    \item \textbf{Breadth}: Number of branches explored
+    \item \textbf{Depth}: Maximum nesting depth
+    \item \textbf{Novelty}: Distance from training distribution
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Search Tree Complexity]
+\begin{equation}
+    C_{\text{tree}}(t) = \sum_{\text{node } n \in \text{proof tree}} \frac{1}{\pi_\theta(a_n | s_n)}
+\end{equation}
+Expected number of nodes to expand before finding proof.
+\end{definition}
+
+\subsection{Learning Difficulty}
+
+\begin{theorem}[Complexity-Difficulty Connection]
+The learning difficulty of a theorem is related to:
+\begin{equation}
+    \text{Difficulty}(t) \propto C_{\text{tree}}(t) \cdot \log \left( \frac{1}{P_\theta(\text{proof})} \right)
+\end{equation}
+where $P_\theta(\text{proof})$ is the probability of the correct proof under the current policy.
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+Learning signal depends on:
+\begin{enumerate}
+    \item Finding the proof (search tree complexity)
+    \item Assigning credit (proof probability)
+\end{enumerate}
+Higher complexity → harder to find proof → harder to learn.
+\end{proof}
+
+\subsection{Curriculum Implications}
+
+\begin{corollary}[Curriculum Design]
+Effective curriculum orders theorems by:
+\begin{equation}
+    \text{order}(t) = C_{\text{tree}}(t) \cdot \text{Novelty}(t)
+\end{equation}
+Start with low-complexity, familiar theorems; progress to harder ones.
+\end{corollary}
+
+\section{Credit Assignment in Proof Search}
+
+\subsection{Step-Level Credit}
+
+Proof structure enables fine-grained credit assignment:
+
+\begin{definition}[Proof Step Advantage]
+For each step $i$ in successful proof:
+\begin{equation}
+    A_i = \underbrace{V(s_{i+1}) - V(s_i)}_{\text{state improvement}} + \underbrace{\text{Difficulty}(a_i | s_i)}_{\text{action difficulty}}
+\end{equation}
+\end{definition}
+
+\begin{algorithm}[H]
+\caption{Proof-Level Credit Assignment}
+\begin{algorithmic}[1]
+\Require Successful proof trace $(s_0, a_0, s_1, \ldots, s_T = \text{QED})$
+\State \textbf{// Backward pass: compute returns}
+\State $G_T \leftarrow 1$ \Comment{Success}
+\For{$i = T-1$ down to $0$}
+    \State $G_i \leftarrow \gamma G_{i+1}$
+\EndFor
+\State \textbf{// Alternative: step-level rewards}
+\For{$i = 0$ to $T-1$}
+    \State $r_i \leftarrow \text{GoalsRemaining}(s_i) - \text{GoalsRemaining}(s_{i+1})$
+    \State \textbf{// Reward closing subgoals}
+\EndFor
+\State Compute advantages $A_i$ using GAE or similar
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Search Tree Credit}
+
+Use the search tree structure for credit:
+
+\begin{definition}[Branch Quality]
+For a proof tree node $n$:
+\begin{equation}
+    Q(n) = \begin{cases}
+        1 & \text{if } n \text{ leads to proof} \\
+        0 & \text{otherwise}
+    \end{cases}
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Search Credit]
+Actions on the successful path receive credit proportional to:
+\begin{equation}
+    \text{Credit}(a, s) = \frac{1}{\text{alternatives explored at } s}
+\end{equation}
+More focused search → higher credit for correct actions.
+\end{theorem}
+
+\section{Curriculum Learning}
+
+\subsection{Theorem Difficulty Estimation}
+
+\begin{algorithm}[H]
+\caption{Difficulty Estimation}
+\begin{algorithmic}[1]
+\Require Theorem $t$, policy $\pi_\theta$, $N$ search attempts
+\State $\text{successes} \leftarrow 0$
+\State $\text{total\_nodes} \leftarrow 0$
+\For{$n = 1$ to $N$}
+    \State success, nodes $\leftarrow \text{search}(t, \pi_\theta)$
+    \If{success}
+        \State $\text{successes} \leftarrow \text{successes} + 1$
+    \EndIf
+    \State $\text{total\_nodes} \leftarrow \text{total\_nodes} + \text{nodes}$
+\EndFor
+\State $\text{difficulty} \leftarrow 1 - \text{successes}/N + \alpha \cdot \text{total\_nodes}/(N \cdot B)$
+\State \Return difficulty
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Progressive Curriculum}
+
+\begin{algorithm}[H]
+\caption{Curriculum Training}
+\begin{algorithmic}[1]
+\Require Theorem library $\mathcal{T}$, policy $\pi_\theta$
+\State $\mathcal{T}_{\text{current}} \leftarrow$ easy theorems \Comment{Initial curriculum}
+\For{stage $= 1$ to $S$}
+    \State \textbf{// Train on current curriculum}
+    \While{not converged}
+        \State Sample batch from $\mathcal{T}_{\text{current}}$
+        \State Search and collect successful proofs
+        \State Update $\pi_\theta$ with policy gradient
+    \EndWhile
+    \State \textbf{// Expand curriculum}
+    \State Re-estimate difficulties with updated $\pi_\theta$
+    \State Add next difficulty tier to $\mathcal{T}_{\text{current}}$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Curriculum Strategies}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Strategy & Description & Use Case \\
+\midrule
+Length-based & Short proofs first & Basic skill building \\
+Topic-based & Related theorems together & Domain expertise \\
+Prerequisite-based & Dependencies first & Mathematical structure \\
+Success-based & High success rate first & Confidence building \\
+\bottomrule
+\end{tabular}
+\caption{Curriculum strategies for theorem proving}
+\end{table}
+
+\section{Search-Learning Trade-offs}
+
+\subsection{Optimal Resource Allocation}
+
+\begin{theorem}[Search-Learning Trade-off]\label{thm:tradeoff}
+Given total compute budget $C$, optimal allocation between search (budget $B$) and learning (steps $L$) satisfies:
+\begin{equation}
+    \frac{\partial \text{Success}}{\partial B} \cdot c_B = \frac{\partial \text{Success}}{\partial L} \cdot c_L
+\end{equation}
+where $c_B, c_L$ are compute costs per unit of search budget and learning step.
+\end{theorem}
+
+\begin{proof}
+At optimum, marginal returns per unit compute are equal across allocations. Otherwise, reallocating would improve success rate.
+\end{proof}
+
+\subsection{Stage-Dependent Strategy}
+
+\begin{proposition}[Dynamic Allocation]
+Optimal strategy varies with training stage:
+\begin{itemize}
+    \item \textbf{Early}: More search (policy weak, needs exploration)
+    \item \textbf{Middle}: Balanced (improving policy, moderate search)
+    \item \textbf{Late}: Less search (strong policy, efficient search)
+\end{itemize}
+\end{proposition}
+
+\subsection{Verification-Aware Training}
+
+\begin{algorithm}[H]
+\caption{Verification-Aware Training}
+\begin{algorithmic}[1]
+\Require Policy $\pi_\theta$, theorems $\mathcal{T}$
+\For{iteration}
+    \For{theorem $t \in \mathcal{T}$}
+        \State \textbf{// Generate candidate proofs}
+        \State proofs $\leftarrow$ sample $K$ proofs from $\pi_\theta$
+        \State \textbf{// Verify all candidates}
+        \For{proof $p$ in proofs}
+            \State valid, feedback $\leftarrow$ Lean.verify($t$, $p$)
+            \If{valid}
+                \State Add to positive examples
+            \Else
+                \State Parse feedback for learning signal
+            \EndIf
+        \EndFor
+    \EndFor
+    \State Update $\pi_\theta$ with verified proofs
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Transfer Learning from Formal Proofs}
+
+\subsection{Hypothesis: Formal Reasoning as Foundation}
+
+\textbf{Hypothesis}: Skills learned from formal theorem proving transfer to:
+\begin{itemize}
+    \item Informal mathematical reasoning
+    \item Logical reasoning tasks
+    \item Code generation (proofs as programs)
+    \item General step-by-step reasoning
+\end{itemize}
+
+\subsection{Transfer Mechanisms}
+
+\begin{enumerate}
+    \item \textbf{Logical structure}: Formal proofs require rigorous logical steps
+    \item \textbf{Abstraction}: Mathematical concepts generalize
+    \item \textbf{Verification habits}: Learning to check one's work
+    \item \textbf{Decomposition}: Breaking complex problems into subgoals
+\end{enumerate}
+
+\subsection{Experimental Framework}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Source Task & Target Task & Transfer Signal \\
+\midrule
+Lean proofs & MATH benchmark & Step-by-step reasoning \\
+Lean proofs & GSM8K & Arithmetic chains \\
+Lean proofs & Code generation & Structural similarity \\
+Lean proofs & Logic puzzles & Deductive reasoning \\
+\bottomrule
+\end{tabular}
+\caption{Transfer learning experiments from formal proofs}
+\end{table}
+
+\section{Experimental Framework}
+
+\subsection{Benchmarks}
+
+\begin{itemize}
+    \item \textbf{MiniF2F}: 488 theorems from math olympiads
+    \item \textbf{ProofNet}: Large-scale Lean 4 theorems
+    \item \textbf{Mathlib}: Curated theorems from Mathlib
+\end{itemize}
+
+\subsection{Baselines}
+
+\begin{enumerate}
+    \item Supervised learning (imitation on human proofs)
+    \item Expert iteration (search + imitation)
+    \item RLVR (binary reward)
+    \item RLVR + Search-Learning decomposition (ours)
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{itemize}
+    \item Theorem proving rate (at budget $B$)
+    \item Search efficiency (nodes per proof)
+    \item Transfer performance (on downstream tasks)
+    \item Learning speed (iterations to convergence)
+\end{itemize}
+
+\section{Discussion}
+
+\subsection{Why Formal Theorem Proving?}
+
+Advantages over other RLVR domains:
+\begin{enumerate}
+    \item \textbf{Perfect verification}: No false positives/negatives
+    \item \textbf{Infinite data}: Can generate new theorems
+    \item \textbf{Structured feedback}: Rich error messages
+    \item \textbf{Clear progress}: Subgoals provide milestones
+    \item \textbf{Transfer potential}: Mathematical reasoning is foundational
+\end{enumerate}
+
+\subsection{Challenges}
+
+\begin{itemize}
+    \item Large action space (many possible tactics)
+    \item Long proofs (credit assignment over many steps)
+    \item Sparse signal (most random sequences are invalid)
+    \item Domain knowledge (mathematical background needed)
+\end{itemize}
+
+\subsection{Future Directions}
+
+\begin{enumerate}
+    \item Automated theorem generation for curriculum
+    \item Cross-proof-assistant transfer
+    \item Integration with informal reasoning
+    \item Scaling to research-level mathematics
+\end{enumerate}
+
+\section{Conclusion}
+
+We have proposed formal theorem proving as the ultimate reasoning gym for RLVR. Our search-learning decomposition enables orthogonal optimization of search algorithms and learned policies. The theoretical analysis establishes connections between proof complexity and learning difficulty, informing curriculum design. Credit assignment benefits from proof structure, enabling fine-grained learning signals. The framework suggests that formal theorem proving may be the optimal substrate for developing robust reasoning capabilities that transfer to broader tasks. As proof assistants and mathematical libraries grow, this approach offers a scalable path to advanced reasoning abilities.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[Yang et al.(2023)]{leandojo2023}
+Yang, K., Swope, A., Gu, A., Chalamala, R., Song, P., Yu, S., Godil, S., Prenger, R., and Anandkumar, A.
+\newblock LeanDojo: Theorem proving with retrieval-augmented language models.
+\newblock \emph{NeurIPS}, 2023.
+
+\bibitem[Polu and Sutskever(2020)]{gptf2020}
+Polu, S. and Sutskever, I.
+\newblock Generative language modeling for automated theorem proving.
+\newblock \emph{arXiv preprint arXiv:2009.03393}, 2020.
+
+\bibitem[Zheng et al.(2021)]{minif2f2021}
+Zheng, K., Han, J., and Polu, S.
+\newblock MiniF2F: A cross-system benchmark for formal Olympiad-level mathematics.
+\newblock \emph{ICLR}, 2022.
+
+\bibitem[Moura and Ullrich(2021)]{lean42021}
+de Moura, L. and Ullrich, S.
+\newblock The Lean 4 theorem prover and programming language.
+\newblock \emph{CADE}, 2021.
+
+\end{thebibliography}
+
+\end{document}

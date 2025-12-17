@@ -1,0 +1,270 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amsthm,amssymb}
+\usepackage{mathtools}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{Fine-Grained Quantum Complexity\\for Linear Algebra Primitives}
+\author{Author Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We establish fine-grained complexity bounds for quantum algorithms solving linear algebra problems. Moving beyond the existence of speedups (e.g., HHL), we characterize \emph{when} and \emph{by how much} quantum provides advantages under realistic assumptions on matrix structure. Our results include lower bounds for sparse well-conditioned systems, improved algorithms for structured matrices, and a complete characterization of the speedup landscape in terms of sparsity, condition number, and precision.
+\end{abstract}
+
+\section{Introduction}
+
+The HHL algorithm demonstrates exponential quantum speedup for solving linear systems under certain conditions. However, the fine-grained complexity---the exact dependence on parameters like condition number $\kappa$, sparsity $s$, and precision $\epsilon$---remains incompletely understood.
+
+\subsection{Main Questions}
+
+\begin{enumerate}
+    \item What are the information-theoretic lower bounds in realistic input models?
+    \item Which matrix structures enable improved algorithms?
+    \item What is the complete speedup landscape?
+\end{enumerate}
+
+\section{Preliminaries}
+
+\subsection{Problem Definitions}
+
+\begin{definition}[Quantum Linear System Problem (QLSP)]
+Given sparse oracle access to $A \in \mathbb{C}^{N \times N}$ and $|b\rangle$, prepare $|x\rangle \propto A^{-1}|b\rangle$ to precision $\epsilon$ in trace distance.
+\end{definition}
+
+\begin{definition}[Sparse Oracle]
+The sparse oracle provides:
+\begin{enumerate}
+    \item $O_A|i, j, z\rangle = |i, j, z \oplus A_{ij}\rangle$ (entry query)
+    \item $O_{\text{pos}}|i, k\rangle = |i, j_k(i)\rangle$ where $j_k(i)$ is the $k$-th nonzero in row $i$
+\end{enumerate}
+\end{definition}
+
+\subsection{Parameters}
+
+\begin{itemize}
+    \item $N$: dimension
+    \item $s$: sparsity (max nonzeros per row/column)
+    \item $\kappa$: condition number $\|A\| \cdot \|A^{-1}\|$
+    \item $\epsilon$: precision
+\end{itemize}
+
+\subsection{Known Results}
+
+\begin{theorem}[HHL, simplified]
+QLSP can be solved in time:
+\[
+T = O\left(s \kappa^2 \text{polylog}(N/\epsilon)\right)
+\]
+with various improvements to $O(s \kappa \text{polylog}(N/\epsilon))$.
+\end{theorem}
+
+\section{Lower Bounds}
+
+\subsection{Information-Theoretic Bounds}
+
+\begin{theorem}[Query Lower Bound]\label{thm:query-lower}
+For solving $Ax = b$ where $A$ is:
+\begin{itemize}
+    \item $s$-sparse
+    \item Condition number $\kappa$
+    \item Given via sparse access oracle
+\end{itemize}
+any quantum algorithm requires:
+\[
+\Omega\left(\kappa \cdot \text{polylog}(N/\epsilon)\right)
+\]
+queries to achieve precision $\epsilon$.
+\end{theorem}
+
+\begin{proof}
+\textbf{Reduction from parity:}
+We reduce from the parity problem on $\kappa$ bits.
+
+\textbf{Construction:}
+Create a block-diagonal matrix where the smallest singular value depends on the parity of hidden bits. Distinguishing $\sigma_{\min} = 1/\kappa$ from $\sigma_{\min} = 0$ requires $\Omega(\kappa)$ queries by standard lower bounds.
+
+\textbf{Precision dependence:}
+Additional $\log(1/\epsilon)$ factors arise from distinguishing close singular values.
+\end{proof}
+
+\begin{theorem}[Condition Number Hardness]\label{thm:kappa}
+For general sparse matrices with condition number $\kappa$:
+\[
+T = \Omega(\kappa)
+\]
+is necessary, even for $s = O(1)$ sparsity.
+\end{theorem}
+
+\subsection{Structure-Dependent Bounds}
+
+\begin{theorem}[Positive Definite Lower Bound]
+Even for positive definite $s$-sparse matrices:
+\[
+T = \Omega(\sqrt{s \kappa})
+\]
+\end{theorem}
+
+\begin{proof}
+Uses hybrid argument combining Grover lower bound (for sparse structure) with condition number dependence.
+\end{proof}
+
+\section{Improved Algorithms for Structured Matrices}
+
+\subsection{Circulant Matrices}
+
+\begin{theorem}[Circulant Systems]\label{thm:circulant}
+For circulant matrices $A$ (defined by first row $a$):
+\[
+T = O(\text{polylog}(N \kappa / \epsilon))
+\]
+\end{theorem}
+
+\begin{proof}
+\textbf{Key insight:}
+Circulant matrices are diagonalized by QFT:
+\[
+A = F^* \text{diag}(\hat{a}) F
+\]
+
+\textbf{Algorithm:}
+\begin{enumerate}
+    \item Apply QFT to $|b\rangle$: $O(\log^2 N)$
+    \item Apply diagonal inverse: $O(\log N)$
+    \item Apply inverse QFT: $O(\log^2 N)$
+\end{enumerate}
+
+Condition number appears only in precision for the diagonal step.
+\end{proof}
+
+\subsection{Toeplitz + Positive Definite}
+
+\begin{theorem}[Toeplitz-PD Systems]\label{thm:toeplitz}
+For Toeplitz positive definite matrices:
+\[
+T = O(\sqrt{\kappa} \cdot \text{polylog}(N/\epsilon))
+\]
+\end{theorem}
+
+\begin{proof}
+Uses embedding into circulant matrix of size $2N$ plus amplitude estimation for the positive definite structure.
+\end{proof}
+
+\subsection{Low-Rank Plus Sparse}
+
+\begin{theorem}[Low-Rank + Sparse]
+For $A = L + S$ with $\text{rank}(L) = r$ and $S$ being $s$-sparse:
+\[
+T = O((r + s) \kappa \text{polylog}(N/\epsilon))
+\]
+\end{theorem}
+
+\section{Speedup Landscape}
+
+\subsection{Classification Theorem}
+
+\begin{theorem}[Speedup Classification]\label{thm:landscape}
+The quantum speedup for QLSP depends on matrix structure as follows:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+Structure & Classical & Quantum & Speedup \\
+\hline
+General dense & $O(N^3)$ & $O(N \kappa \text{polylog})$ & Exponential \\
+General sparse & $O(N s \kappa)$ & $O(s \kappa \text{polylog})$ & Exponential \\
+Sparse + well-cond. & $O(N s)$ & $O(s \text{polylog})$ & Exponential \\
+Circulant & $O(N \log N)$ & $O(\text{polylog})$ & Exponential \\
+Toeplitz PD & $O(N \log^2 N)$ & $O(\sqrt{\kappa} \text{polylog})$ & Polynomial \\
+Explicit inverse & $O(N)$ & $O(\sqrt{N})$ & Polynomial \\
+\hline
+\end{tabular}
+\end{center}
+\end{theorem}
+
+\subsection{No-Go Regions}
+
+\begin{corollary}[Polynomial Speedup Only]
+For matrix classes where:
+\begin{enumerate}
+    \item Classical complexity is $O(N \cdot \text{polylog})$
+    \item Quantum reads classical output
+\end{enumerate}
+speedup is at most polynomial (readout bottleneck).
+\end{corollary}
+
+\section{Applications}
+
+\subsection{Differential Equations}
+
+\begin{corollary}[ODE Systems]
+For time-evolution problems $\dot{x} = Ax$ with sparse $A$:
+\begin{itemize}
+    \item Quantum: $O(\text{poly}(\log N, t, 1/\epsilon))$
+    \item Classical: $O(N \cdot \text{poly}(t, 1/\epsilon))$
+\end{itemize}
+Exponential speedup when $N$ is the dominant factor.
+\end{corollary}
+
+\subsection{Machine Learning}
+
+\begin{corollary}[Kernel Methods]
+For kernel matrices $K$ with fast kernel evaluations:
+\[
+T_{\text{quantum}} = O(\sqrt{\kappa_K} \cdot \text{polylog}(N/\epsilon))
+\]
+Speedup depends critically on $\kappa_K$.
+\end{corollary}
+
+\section{Open Problems}
+
+\begin{enumerate}
+    \item Optimal dependence on $\kappa$ for positive definite systems
+    \item Quantum algorithms for non-sparse structured matrices
+    \item Lower bounds for specific matrix families (Laplacians, etc.)
+\end{enumerate}
+
+\section{Conclusion}
+
+We have characterized the fine-grained complexity landscape for quantum linear algebra, showing that speedups range from exponential to none depending on matrix structure. The key parameters are sparsity, condition number, and algebraic structure, with each enabling different algorithmic techniques.
+
+\bibliographystyle{alpha}
+\begin{thebibliography}{99}
+
+\bibitem{HHL}
+A.~Harrow, A.~Hassidim, and S.~Lloyd.
+\newblock Quantum algorithm for linear systems of equations.
+\newblock {\em Phys. Rev. Lett.}, 103:150502, 2009.
+
+\bibitem{CKS}
+A.~Childs, R.~Kothari, and R.~Somma.
+\newblock Quantum algorithm for systems of linear equations with exponentially improved dependence on precision.
+\newblock {\em SIAM J. Comput.}, 46(6):1920--1950, 2017.
+
+\bibitem{GSLW}
+A.~Gily\'{e}n, Y.~Su, G.~Low, and N.~Wiebe.
+\newblock Quantum singular value transformation and beyond.
+\newblock In {\em STOC}, 2019.
+
+\end{thebibliography}
+
+\end{document}

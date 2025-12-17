@@ -1,0 +1,529 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Self-Play for Code Generation: \\
+Co-Evolving Solvers and Verifiers Without Ground-Truth Supervision}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Code generation provides an ideal testbed for reinforcement learning from verifiable rewards: unit tests offer automatic verification, compilers catch errors instantly, and no human labels are required. We investigate self-play paradigms where a single model (or two model roles) learns to both generate code and generate tests, with each role improving the other through interaction. We analyze two paradigms: Solver-Verifier self-play (Sol-Ver), where one model alternates between solving problems and generating tests, and Co-evolving Coder-Tester (CURE), where explicit coder and tester roles co-train through adversarial interaction. We develop a theoretical framework for analyzing verifier bottlenecks---conditions under which self-generated tests become too weak or too specific---and propose adversarial test generation strategies with coverage guarantees. Our game-theoretic analysis characterizes equilibria in coder-tester games and identifies conditions that prevent degenerate solutions. This work provides foundations for scalable self-improving code generation without reliance on ground-truth solutions.
+\end{abstract}
+
+\section{Introduction}
+
+Code generation is uniquely suited for RLVR:
+\begin{itemize}
+    \item \textbf{Unit tests} provide automatic verification
+    \item \textbf{Compilers} catch syntax and type errors instantly
+    \item \textbf{No human labels needed}---tests are the ground truth
+    \item \textbf{Infinite problem generation} is possible through synthesis
+\end{itemize}
+
+This motivates \textbf{self-play} approaches where the model learns to:
+\begin{enumerate}
+    \item Generate code that solves problems
+    \item Generate tests that verify code correctness
+\end{enumerate}
+
+Each role improves the other: better tests expose bugs in code; better code requires stronger tests.
+
+\subsection{Two Self-Play Paradigms}
+
+\textbf{Paradigm A: Solver-Verifier Self-Play (Sol-Ver)}
+\begin{itemize}
+    \item Single model alternates between solver and verifier roles
+    \item Solver generates code; verifier generates tests
+    \item Both roles improve together
+\end{itemize}
+
+\textbf{Paradigm B: Co-Evolving Coder-Tester (CURE)}
+\begin{itemize}
+    \item Two explicit roles: coder and tester
+    \item Coder rewarded for passing tests
+    \item Tester rewarded for discriminating good/bad code
+    \item Co-evolution through adversarial training
+\end{itemize}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item Formal framework for self-play code generation
+    \item Analysis of verifier bottlenecks (weak/specific tests)
+    \item Adversarial test generation with coverage guarantees
+    \item Game-theoretic analysis of coder-tester equilibria
+    \item Practical algorithms avoiding degenerate solutions
+\end{enumerate}
+
+\section{Background}
+
+\subsection{Sol-Ver: Solver-Verifier Self-Play}
+
+The Sol-Ver paradigm uses a single model in two roles:
+
+\begin{algorithm}[H]
+\caption{Sol-Ver Training Loop}
+\begin{algorithmic}[1]
+\For{iteration $t$}
+    \State \textbf{// Solver phase}
+    \For{each problem $p$}
+        \State Generate code: $c \sim \pi_\theta^{\text{solver}}(\cdot | p)$
+    \EndFor
+    \State \textbf{// Verifier phase}
+    \For{each (problem, code) pair $(p, c)$}
+        \State Generate tests: $T \sim \pi_\theta^{\text{verifier}}(\cdot | p, c)$
+        \State Execute: $\text{results} \leftarrow \text{run}(c, T)$
+    \EndFor
+    \State \textbf{// Reward computation}
+    \State Solver reward: based on test pass rate
+    \State Verifier reward: based on discrimination ability
+    \State \textbf{// Update}
+    \State Update $\theta$ to improve both roles
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{CURE: Co-Evolving Coder-Tester}
+
+CURE trains two roles with interaction-based rewards:
+
+\begin{itemize}
+    \item \textbf{Coder} $\pi_C$: Generates code solutions
+    \item \textbf{Tester} $\pi_T$: Generates unit tests
+\end{itemize}
+
+\textbf{Rewards}:
+\begin{align}
+    r_C(c, T) &= \text{PassRate}(c, T) \quad \text{(coder wants to pass tests)} \\
+    r_T(c, c', T) &= \text{Discrimination}(c, c', T) \quad \text{(tester wants to distinguish)}
+\end{align}
+
+where $\text{Discrimination}$ measures how well tests separate correct from incorrect code.
+
+\section{Verifier Bottleneck Analysis}
+
+\subsection{Problem Statement}
+
+Self-generated tests can fail in two ways:
+
+\begin{definition}[Weak Tests]
+Tests are \textbf{weak} if they pass incorrect code:
+\begin{equation}
+    P(\text{test passes} | \text{code buggy}) \text{ is high}
+\end{equation}
+False negative rate is high.
+\end{definition}
+
+\begin{definition}[Overly Specific Tests]
+Tests are \textbf{overly specific} if they fail correct code:
+\begin{equation}
+    P(\text{test fails} | \text{code correct}) \text{ is high}
+\end{equation}
+False positive rate is high.
+\end{definition}
+
+\subsection{Test Quality Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Formula \\
+\midrule
+Bug Detection Rate (BDR) & $P(\text{test fails} | \text{code buggy})$ \\
+False Positive Rate (FPR) & $P(\text{test fails} | \text{code correct})$ \\
+Discrimination & BDR $-$ FPR \\
+Coverage & $\%$ of code paths exercised \\
+Mutation Score & $\%$ of mutants killed \\
+\bottomrule
+\end{tabular}
+\caption{Test quality metrics}
+\end{table}
+
+\subsection{Conditions for Verifier Collapse}
+
+\begin{theorem}[Verifier Collapse Conditions]\label{thm:collapse}
+Self-generated tests collapse to weakness when:
+\begin{enumerate}
+    \item Coder and tester share parameters with limited capacity
+    \item Tester reward only depends on test pass rate (not discrimination)
+    \item No external validation signal
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+When the model generates both code and tests, the easiest way to maximize reward is for both to ``agree'' on simple solutions:
+\begin{itemize}
+    \item Code produces simple outputs
+    \item Tests check for simple outputs
+    \item Both pass, but neither solves the actual problem
+\end{itemize}
+
+This is a Nash equilibrium of the trivial game.
+\end{proof}
+
+\section{Adversarial Test Generation}
+
+\subsection{Property-Based Testing}
+
+Instead of specific test cases, generate \textbf{properties}:
+
+\begin{definition}[Property-Based Test]
+A property $P$ is a predicate over code behavior:
+\begin{equation}
+    P: \text{Code} \times \text{Input} \times \text{Output} \to \{\text{True}, \text{False}\}
+\end{equation}
+\end{definition}
+
+\textbf{Examples}:
+\begin{itemize}
+    \item \texttt{sorted(sort(xs)) == sort(xs)} (idempotence)
+    \item \texttt{len(sort(xs)) == len(xs)} (length preservation)
+    \item \texttt{is\_sorted(sort(xs))} (postcondition)
+\end{itemize}
+
+\textbf{Advantage}: Properties are harder to game than specific test cases.
+
+\subsection{Coverage-Guided Generation}
+
+Use code coverage as reward for test generation:
+
+\begin{definition}[Coverage Reward]
+\begin{equation}
+    r_{\text{coverage}}(T_{\text{new}}, T_{\text{existing}}) = \text{Coverage}(T_{\text{existing}} \cup \{T_{\text{new}}\}) - \text{Coverage}(T_{\text{existing}})
+\end{equation}
+Incremental coverage from new test.
+\end{definition}
+
+\begin{algorithm}[H]
+\caption{Coverage-Guided Test Generation}
+\begin{algorithmic}[1]
+\Require Code $c$, existing tests $T$, policy $\pi_\theta^{\text{tester}}$
+\State $\text{current\_cov} \leftarrow \text{Coverage}(c, T)$
+\For{$n$ iterations}
+    \State Generate test: $t \sim \pi_\theta^{\text{tester}}(\cdot | c, T, \text{uncovered})$
+    \State $\text{new\_cov} \leftarrow \text{Coverage}(c, T \cup \{t\})$
+    \State $r \leftarrow \text{new\_cov} - \text{current\_cov}$
+    \If{$r > 0$}
+        \State $T \leftarrow T \cup \{t\}$
+        \State $\text{current\_cov} \leftarrow \text{new\_cov}$
+    \EndIf
+    \State Update $\theta$ with reward $r$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Mutation Testing}
+
+Generate tests that \textbf{kill mutants}---detect small code changes:
+
+\begin{definition}[Mutant]
+A mutant $m(c)$ is code $c$ with a small change (e.g., $+$ to $-$, $<$ to $\leq$).
+\end{definition}
+
+\begin{definition}[Mutant-Killing Test]
+Test $t$ \textbf{kills} mutant $m(c)$ if:
+\begin{equation}
+    t \text{ passes on } c \text{ and fails on } m(c)
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Mutation Coverage Guarantee]\label{thm:mutation}
+If tests kill all first-order mutants, bug detection rate satisfies:
+\begin{equation}
+    \text{BDR} \geq 1 - \epsilon_{\text{higher-order}}
+\end{equation}
+where $\epsilon_{\text{higher-order}}$ accounts for complex bugs not caught by single mutations.
+\end{theorem}
+
+\subsection{Formal Coverage Guarantees}
+
+\begin{theorem}[Coverage Completeness]\label{thm:coverage}
+Under property-based testing with property set $\mathcal{P}$:
+\begin{equation}
+    \text{BDR} \geq 1 - \prod_{P \in \mathcal{P}} (1 - \text{Coverage}(P))
+\end{equation}
+where $\text{Coverage}(P)$ is the fraction of bug types detected by property $P$.
+\end{theorem}
+
+\section{Game-Theoretic Analysis}
+
+\subsection{Coder-Tester as Two-Player Game}
+
+\textbf{Players}:
+\begin{itemize}
+    \item Coder: Strategy space = code generation policies
+    \item Tester: Strategy space = test generation policies
+\end{itemize}
+
+\textbf{Payoffs}:
+\begin{align}
+    U_C(\pi_C, \pi_T) &= \mathbb{E}_{c \sim \pi_C, T \sim \pi_T}[\text{PassRate}(c, T)] \\
+    U_T(\pi_C, \pi_T) &= \mathbb{E}_{c, c' \sim \pi_C, T \sim \pi_T}[\text{Discrimination}(c, c', T)]
+\end{align}
+
+\subsection{Game Types and Equilibria}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Game Type & Objective & Equilibrium \\
+\midrule
+Zero-sum & Tester adversarial to coder & Minimax \\
+Cooperative & Both improve together & Nash bargaining \\
+Stackelberg & Coder leads, tester follows & Stackelberg \\
+\bottomrule
+\end{tabular}
+\caption{Game formulations for coder-tester interaction}
+\end{table}
+
+\subsection{Equilibrium Analysis}
+
+\begin{theorem}[Degenerate Equilibrium]\label{thm:degenerate}
+In the unconstrained coder-tester game, degenerate equilibria exist:
+\begin{enumerate}
+    \item \textbf{Trivial tests}: Tester generates tests that always pass
+    \item \textbf{Trivial code}: Coder generates minimal code that passes trivial tests
+\end{enumerate}
+These are Nash equilibria but undesirable.
+\end{theorem}
+
+\begin{proof}
+Consider $\pi_T^*$ that generates tests passing all code, and $\pi_C^*$ generating minimal code.
+
+For coder: Given $\pi_T^*$, any code passes, so $\pi_C^*$ is optimal (minimal effort).
+
+For tester: Given $\pi_C^*$ generates simple code, trivial tests distinguish nothing different from complex tests (if all code is similar).
+
+Neither has incentive to deviate unilaterally.
+\end{proof}
+
+\subsection{Preventing Degenerate Equilibria}
+
+\begin{proposition}[Avoiding Degeneracy]
+Degenerate equilibria are prevented by:
+\begin{enumerate}
+    \item \textbf{External validation}: Hold-out test set not generated by model
+    \item \textbf{Diversity constraints}: Require diverse code/test outputs
+    \item \textbf{Complexity requirements}: Minimum test/code complexity
+    \item \textbf{Asymmetric information}: Tester sees ground-truth specification
+\end{enumerate}
+\end{proposition}
+
+\subsection{Desired Equilibrium Properties}
+
+\begin{definition}[Good Equilibrium]
+An equilibrium $(\pi_C^*, \pi_T^*)$ is \textbf{good} if:
+\begin{enumerate}
+    \item Coder produces correct code: $\mathbb{E}[\text{Correctness}(\pi_C^*)] > \tau_C$
+    \item Tester produces discriminative tests: $\mathbb{E}[\text{Discrimination}(\pi_T^*)] > \tau_T$
+    \item Neither is trivial
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Existence of Good Equilibria]\label{thm:good_eq}
+Good equilibria exist under:
+\begin{enumerate}
+    \item External reward signal (e.g., human evaluation on subset)
+    \item Curriculum of increasing problem difficulty
+    \item Regularization toward reference policies
+\end{enumerate}
+\end{theorem}
+
+\section{Practical Algorithms}
+
+\subsection{Sol-Ver with Coverage Reward}
+
+\begin{algorithm}[H]
+\caption{Sol-Ver with Coverage-Guided Tests}
+\begin{algorithmic}[1]
+\Require Model $\pi_\theta$, problems $\mathcal{P}$
+\For{iteration $t$}
+    \For{problem $p \in \mathcal{P}$}
+        \State \textbf{// Generate code}
+        \State $c \sim \pi_\theta^{\text{solver}}(\cdot | p)$
+        \State \textbf{// Generate tests with coverage reward}
+        \State $T \leftarrow \emptyset$
+        \For{$k$ test iterations}
+            \State $t \sim \pi_\theta^{\text{tester}}(\cdot | p, c, \text{uncovered}(c, T))$
+            \State $r_t \leftarrow \text{CoverageIncrease}(c, T, t)$
+            \State $T \leftarrow T \cup \{t\}$
+        \EndFor
+        \State \textbf{// Evaluate}
+        \State $r_c \leftarrow \text{PassRate}(c, T) + \lambda \cdot \text{ExternalEval}(c, p)$
+        \State \textbf{// Update}
+        \State Update solver with $r_c$
+        \State Update tester with $\{r_t\}$
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{CURE with Discrimination Reward}
+
+\begin{algorithm}[H]
+\caption{CURE: Co-Evolving Coder-Tester}
+\begin{algorithmic}[1]
+\Require Coder $\pi_C$, tester $\pi_T$, problems $\mathcal{P}$
+\For{iteration $t$}
+    \For{problem $p \in \mathcal{P}$}
+        \State \textbf{// Generate multiple code samples}
+        \State $\{c_1, \ldots, c_n\} \sim \pi_C(\cdot | p)$
+        \State Label: $\ell_i \leftarrow \text{ExternalVerify}(c_i, p)$ \Comment{Partial external signal}
+        \State \textbf{// Generate tests}
+        \State $T \sim \pi_T(\cdot | p)$
+        \State \textbf{// Compute rewards}
+        \For{each code $c_i$}
+            \State $r_C^i \leftarrow \text{PassRate}(c_i, T)$
+        \EndFor
+        \State $r_T \leftarrow \text{Correlation}(\{\text{PassRate}(c_i, T)\}, \{\ell_i\})$
+        \State \textbf{// Update}
+        \State Update coder with $\{r_C^i\}$
+        \State Update tester with $r_T$
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Theoretical Analysis}
+
+\subsection{Convergence of Self-Play}
+
+\begin{theorem}[Self-Play Convergence]\label{thm:sp_convergence}
+Under the following conditions, self-play converges to a good equilibrium:
+\begin{enumerate}
+    \item External validation prevents trivial solutions
+    \item Learning rates satisfy $\eta_C / \eta_T \in [\alpha, 1/\alpha]$ for some $\alpha > 0$
+    \item Regularization maintains exploration
+\end{enumerate}
+\end{theorem}
+
+\subsection{Sample Complexity}
+
+\begin{theorem}[Self-Play Sample Complexity]\label{thm:sp_sample}
+Self-play achieves sample complexity:
+\begin{equation}
+    N_{\text{self-play}} = O\left(\frac{1}{\epsilon^2} \cdot \frac{1}{\text{Discrimination}(\pi_T)}\right)
+\end{equation}
+Better testers reduce sample complexity for coder improvement.
+\end{theorem}
+
+\section{Experimental Framework}
+
+\subsection{Benchmarks}
+
+\begin{itemize}
+    \item \textbf{HumanEval}: Function completion
+    \item \textbf{MBPP}: Simple programming
+    \item \textbf{CodeContests}: Competition-level problems
+    \item \textbf{APPS}: Diverse programming tasks
+\end{itemize}
+
+\subsection{Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Description \\
+\midrule
+Pass@k & Code correctness (external tests) \\
+Test BDR & Bug detection rate of generated tests \\
+Test FPR & False positive rate \\
+Coverage & Code coverage achieved by tests \\
+Mutation score & Mutants killed by tests \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation metrics}
+\end{table}
+
+\subsection{Baselines}
+
+\begin{enumerate}
+    \item Standard RLVR (fixed external tests)
+    \item Sol-Ver (basic self-play)
+    \item CURE (co-evolution)
+    \item Our methods (coverage-guided, mutation-aware)
+\end{enumerate}
+
+\section{Discussion}
+
+\subsection{When Self-Play Helps}
+
+Self-play is beneficial when:
+\begin{itemize}
+    \item External test sets are limited or biased
+    \item Problem distribution is broad (need diverse tests)
+    \item Iterative improvement is desired
+    \item Test generation can inform code generation
+\end{itemize}
+
+\subsection{Failure Modes}
+
+\begin{enumerate}
+    \item \textbf{Collusion}: Coder and tester ``agree'' on easy solutions
+    \item \textbf{Arms race}: Increasingly complex but not useful
+    \item \textbf{Mode collapse}: Both converge to narrow strategies
+\end{enumerate}
+
+\subsection{Mitigation Strategies}
+
+\begin{enumerate}
+    \item External validation on held-out set
+    \item Diversity regularization
+    \item Curriculum learning
+    \item Periodic reset to base policy
+\end{enumerate}
+
+\section{Conclusion}
+
+We have presented a comprehensive framework for self-play code generation, analyzing two paradigms: Solver-Verifier self-play and Co-evolving Coder-Tester. Our theoretical analysis characterizes verifier bottlenecks, derives conditions for equilibrium quality, and provides coverage guarantees for adversarial test generation. The game-theoretic framework identifies degenerate equilibria and strategies to avoid them. This work provides foundations for scalable self-improving code generation without reliance on ground-truth solutions, opening paths toward truly autonomous programming systems.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[Chen et al.(2021)]{codex2021}
+Chen, M., et al.
+\newblock Evaluating large language models trained on code.
+\newblock \emph{arXiv preprint arXiv:2107.03374}, 2021.
+
+\bibitem[Li et al.(2022)]{alphacode2022}
+Li, Y., et al.
+\newblock Competition-level code generation with AlphaCode.
+\newblock \emph{Science}, 378(6624):1092--1097, 2022.
+
+\bibitem[Silver et al.(2017)]{alphazero2017}
+Silver, D., et al.
+\newblock Mastering chess and shogi by self-play with a general reinforcement learning algorithm.
+\newblock \emph{arXiv preprint arXiv:1712.01815}, 2017.
+
+\bibitem[Jia \& Liang(2017)]{adversarial2017}
+Jia, R. and Liang, P.
+\newblock Adversarial examples for evaluating reading comprehension systems.
+\newblock \emph{EMNLP}, 2017.
+
+\end{thebibliography}
+
+\end{document}

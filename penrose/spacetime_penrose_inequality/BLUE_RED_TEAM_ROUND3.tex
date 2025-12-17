@@ -1,0 +1,549 @@
+%% BLUE_RED_TEAM_ROUND3.tex
+%%
+%% ROUND 3: Attack on the Hull + Maximal Slice Approach
+%%
+%% Target: PENROSE_1973_BREAKTHROUGH.tex
+%%
+%% Red Team: Find fatal flaws
+%% Blue Team: Fix or circumvent
+%%
+%% December 2025
+
+\documentclass[11pt]{amsart}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+
+\tcbuselibrary{theorems}
+
+\newtcolorbox{redattack}{
+    colback=red!5!white,
+    colframe=red!75!black,
+    title={\textbf{RED TEAM ATTACK}}
+}
+
+\newtcolorbox{bluedefense}{
+    colback=blue!5!white,
+    colframe=blue!75!black,
+    title={\textbf{BLUE TEAM DEFENSE}}
+}
+
+\newtcolorbox{verdict}{
+    colback=yellow!10!white,
+    colframe=orange!75!black,
+    title={\textbf{VERDICT}}
+}
+
+\newtcolorbox{newattack}{
+    colback=purple!5!white,
+    colframe=purple!75!black,
+    title={\textbf{NEW ATTACK VECTOR}}
+}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}[theorem]{Claim}
+
+\newcommand{\ADM}{\mathrm{ADM}}
+\newcommand{\Area}{\mathrm{Area}}
+\newcommand{\tr}{\mathrm{tr}}
+
+\title{Blue/Red Team Analysis: Round 3\\
+\large Attack on the Hull + Maximal Slice Approach}
+\author{}
+\date{December 2025}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We subject the ``Hull + Maximal Slice'' approach from PENROSE\_1973\_BREAKTHROUGH.tex to rigorous adversarial analysis. We identify \textbf{three critical gaps} and attempt to fix them.
+\end{abstract}
+
+\tableofcontents
+
+%% ============================================================================
+\section{Summary of the Proposed Proof}
+%% ============================================================================
+
+The proposed proof in PENROSE\_1973\_BREAKTHROUGH.tex claims:
+
+\begin{theorem}[Claimed]
+On a maximal Cauchy surface $(M, g, k)$ with DEC, for any trapped surface $\Sigma$:
+\begin{equation}
+    M_{\ADM} \ge \sqrt{\frac{A(\Sigma)}{16\pi}}
+\end{equation}
+\end{theorem}
+
+\textbf{Proof strategy:}
+\begin{enumerate}
+    \item On maximal slice: $\tr k = 0 \Rightarrow R_g = |k|^2 + 2\mu \ge 0$.
+    \item Construct outer-area minimizing hull $\hat{\Sigma}$ of trapped surface $\Sigma$.
+    \item Claim: $A(\hat{\Sigma}) \le A(\Sigma)$ and $H_{\hat{\Sigma}} \ge 0$.
+    \item Apply Riemannian Penrose inequality to $\hat{\Sigma}$.
+    \item Conclude $M_{\ADM} \ge \sqrt{A(\hat{\Sigma})/(16\pi)} \ge \sqrt{A(\Sigma)/(16\pi)}$.
+\end{enumerate}
+
+%% ============================================================================
+\section{Critical Gap \#1: Hull Definition and Existence}
+%% ============================================================================
+
+\begin{redattack}
+\textbf{Attack:} The ``outer-area minimizing hull'' is not properly defined for a \textbf{non-minimal surface}.
+
+The paper defines:
+\begin{equation}
+    \hat{\Omega} := \bigcap\{\Omega' : \Omega \subset \Omega', \; \partial\Omega' \text{ is area-minimizing among surfaces enclosing } \Omega\}
+\end{equation}
+
+\textbf{Problem 1:} The set of surfaces enclosing $\Sigma$ and minimizing area is \textbf{empty} if there is no global area minimizer.
+
+\textbf{Problem 2:} Even if a minimizer exists, the intersection of regions is not well-defined (the boundary of the intersection may not be area-minimizing).
+
+\textbf{Problem 3:} In the standard theory, the ``outer hull'' is defined for \textbf{minimal surfaces}, not arbitrary surfaces.
+\end{redattack}
+
+\begin{bluedefense}
+\textbf{Corrected definition:} Use the \textbf{outward minimizing hull} from geometric measure theory.
+
+\begin{definition}[Outward Minimizing Hull - Correct Version]
+For a compact set $K \subset M$, define:
+\begin{equation}
+    \hat{K} := \{x \in M : \text{every surface separating } x \text{ from } \infty \text{ has area} \ge A^*\}
+\end{equation}
+where $A^* = \inf\{A(\Sigma') : \Sigma' \text{ encloses } K\}$.
+\end{definition}
+
+\textbf{Existence:} By the direct method in geometric measure theory, a minimizing sequence converges to a varifold, and regularity theory (Allard, Simon) shows the limit is smooth almost everywhere.
+
+\textbf{Properties:}
+\begin{enumerate}
+    \item $\partial\hat{K}$ has $H \ge 0$ (by first variation)
+    \item $A(\partial\hat{K}) \le A(\Sigma)$ if $\Sigma$ encloses $K$
+    \item $\partial\hat{K}$ may be empty if no finite-area surface encloses $K$
+\end{enumerate}
+
+\textbf{For trapped surfaces:} Take $K = \Sigma$ (treating $\Sigma$ as a 2D subset). Then $\partial\hat{K}$ is the outer hull.
+\end{bluedefense}
+
+\begin{verdict}
+\textbf{Status: FIXABLE}
+
+The hull construction is valid with proper GMT definition. The key property $A(\hat{\Sigma}) \le A(\Sigma)$ follows from minimization.
+
+\textbf{However:} New issue arises - see Critical Gap \#2.
+\end{verdict}
+
+%% ============================================================================
+\section{Critical Gap \#2: Hull May Be Empty or Disconnected}
+%% ============================================================================
+
+\begin{redattack}
+\textbf{Attack:} The outer hull $\hat{\Sigma}$ of a trapped surface may have \textbf{zero area} or be \textbf{disconnected}.
+
+\textbf{Scenario 1 (Zero Area):} If the trapped surface $\Sigma$ is inside a ``neck'' region, the area-minimizing surface enclosing it might have arbitrarily small area (by pinching the neck).
+
+\textbf{Scenario 2 (Disconnected):} The minimizer might have multiple components, some of which don't enclose $\Sigma$.
+
+\textbf{Scenario 3 (Non-existence):} In non-compact manifolds, the infimum might not be achieved.
+\end{redattack}
+
+\begin{bluedefense}
+\textbf{Defense against Scenario 1:}
+
+On a maximal slice with $R_g \ge 0$, the isoperimetric inequality bounds area from below. A surface enclosing volume $V$ has:
+\begin{equation}
+    A \ge c \cdot V^{2/3}
+\end{equation}
+for some $c > 0$ depending on scalar curvature bounds.
+
+If $\Sigma$ is trapped, it bounds a non-trivial region (by the Jordan-Brouwer theorem). Thus $\hat{\Sigma}$ has positive area.
+
+\textbf{Defense against Scenario 2:}
+
+Take the component of the minimizer that encloses $\Sigma$. This component alone has $A \le A(\Sigma)$ (otherwise, removing other components would decrease area).
+
+\textbf{Defense against Scenario 3:}
+
+On asymptotically flat manifolds, surfaces at infinity have area $\to \infty$, so minimizing sequences are confined to a compact region. Standard compactness gives existence.
+\end{bluedefense}
+
+\begin{verdict}
+\textbf{Status: PARTIALLY FIXED}
+
+Scenarios 2 and 3 are resolved. Scenario 1 requires more care:
+
+\textbf{Remaining Issue:} The ``volume enclosed'' argument assumes $\Sigma$ is a topological sphere bounding a region. What if $\Sigma$ is a torus or higher genus?
+
+\textbf{For genus 0:} Argument works.
+
+\textbf{For higher genus:} Need separate analysis (see Critical Gap \#3).
+\end{verdict}
+
+%% ============================================================================
+\section{Critical Gap \#3: Maximal Slice Through Trapped Surface}
+%% ============================================================================
+
+\begin{redattack}
+\textbf{Attack:} Can we always find a maximal Cauchy surface containing a given trapped surface?
+
+The proof assumes:
+\begin{enumerate}
+    \item Given any trapped surface $\Sigma$ in spacetime
+    \item There exists a maximal Cauchy surface $\mathcal{C}_{\max}$ with $\Sigma \subset \mathcal{C}_{\max}$
+\end{enumerate}
+
+\textbf{This is FALSE in general.}
+
+A maximal surface satisfies $\tr K = 0$ where $K$ is the extrinsic curvature of the slice in spacetime. This is a \textbf{global} constraint on the slice.
+
+A given trapped surface $\Sigma$ is a 2D submanifold. There's no reason a global maximal slice must pass through $\Sigma$.
+
+\textbf{Counterexample:} In Schwarzschild, the constant-$t$ slices are maximal, but these are just one family. A trapped surface near the singularity cannot lie on any constant-$t$ slice.
+\end{redattack}
+
+\begin{bluedefense}
+\textbf{Partial defense:}
+
+\textbf{Approach 1 (Deformation):} Given any Cauchy surface $\mathcal{C}$ containing $\Sigma$, deform it to a maximal surface. The deformed surface $\mathcal{C}_{\max}$ will contain a surface isotopic to $\Sigma$.
+
+\textbf{Problem:} The deformed surface may not contain the original $\Sigma$, and the isotopic surface may not be trapped.
+
+\textbf{Approach 2 (Comparison):} Use the spacetime constraint equations to relate $\Sigma$ on $\mathcal{C}$ to a surface on $\mathcal{C}_{\max}$.
+
+\textbf{Problem:} This doesn't preserve the trapped condition.
+
+\textbf{Approach 3 (Accept non-maximal):} Work on general Cauchy surfaces using the Jang equation to achieve $R \ge 0$.
+
+\textbf{This is the standard approach}, which brings us back to the original area dominance problem.
+\end{bluedefense}
+
+\begin{verdict}
+\textbf{Status: FATAL GAP}
+
+The maximal slice approach \textbf{cannot be applied} to a general trapped surface because:
+\begin{enumerate}
+    \item There may be no maximal slice through the trapped surface
+    \item Deforming to a maximal slice doesn't preserve the trapped condition
+    \item The Penrose inequality is about \textbf{the original trapped surface}, not some deformed version
+\end{enumerate}
+
+\textbf{Conclusion:} The maximal slice approach works only for trapped surfaces that \textit{happen} to lie on a maximal slice, which is a measure-zero condition.
+\end{verdict}
+
+%% ============================================================================
+\section{Critical Gap \#4: The IMCF Starting Condition}
+%% ============================================================================
+
+\begin{redattack}
+\textbf{Attack:} Even if the hull exists with $H_{\hat{\Sigma}} \ge 0$, IMCF requires $H > 0$ strictly.
+
+The inverse mean curvature flow:
+\begin{equation}
+    \frac{\partial x}{\partial t} = \frac{\nu}{H}
+\end{equation}
+is undefined where $H = 0$.
+
+If $\hat{\Sigma}$ is minimal ($H = 0$), IMCF cannot start.
+\end{redattack}
+
+\begin{bluedefense}
+\textbf{Defense:}
+
+\textbf{Case 1:} If $\hat{\Sigma}$ is minimal, apply the Riemannian Penrose inequality directly (Bray or Huisken-Ilmanen). This gives:
+\begin{equation}
+    M_{\ADM} \ge \sqrt{\frac{A(\hat{\Sigma})}{16\pi}}
+\end{equation}
+
+Since $A(\hat{\Sigma}) \le A(\Sigma)$, we get the desired bound.
+
+\textbf{Case 2:} If $H_{\hat{\Sigma}} > 0$ somewhere, use Huisken-Ilmanen's \textbf{weak IMCF}, which handles $H \ge 0$ with $H = 0$ on a set of measure zero.
+
+\textbf{Case 3:} If $H_{\hat{\Sigma}} = 0$ everywhere but $\hat{\Sigma}$ is not a connected minimal surface, there's an issue. However, by GMT, the area-minimizing hull should be a connected minimal surface or have $H > 0$.
+\end{bluedefense}
+
+\begin{verdict}
+\textbf{Status: FIXED}
+
+The IMCF starting condition is not a real gap because:
+\begin{enumerate}
+    \item If hull is minimal: use RPI directly
+    \item If hull has $H > 0$: use weak IMCF
+    \item If hull has $H \ge 0$ with $H = 0$ on measure-zero set: weak IMCF handles this
+\end{enumerate}
+\end{verdict}
+
+%% ============================================================================
+\section{New Attack: The Riemannian vs. Spacetime Distinction}
+%% ============================================================================
+
+\begin{newattack}
+\textbf{Fundamental Problem:} The Riemannian Penrose inequality applies to \textbf{minimal surfaces}, not to \textbf{MOTS} or \textbf{trapped surfaces}.
+
+In the spacetime setting:
+\begin{itemize}
+    \item A trapped surface has $\theta^+ < 0, \theta^- < 0$
+    \item On a maximal slice: $H = (\theta^+ + \theta^-)/2 < 0$
+    \item So trapped surfaces have $H < 0$, not $H = 0$
+\end{itemize}
+
+The hull $\hat{\Sigma}$ has $H \ge 0$, but this is a \textbf{different surface} from the trapped surface $\Sigma$.
+
+\textbf{The key inequality} $A(\hat{\Sigma}) \le A(\Sigma)$ is what makes this work.
+
+\textbf{But wait:} On a maximal slice, the trapped surface has $H < 0$. The outer hull has $H \ge 0$. These are geometrically very different.
+
+\textbf{Question:} Is it always true that the area-minimizing surface enclosing $\Sigma$ has area $\le A(\Sigma)$?
+\end{newattack}
+
+\begin{redattack}
+\textbf{Critical Analysis of $A(\hat{\Sigma}) \le A(\Sigma)$:}
+
+The claim is: the outer-area minimizing hull $\hat{\Sigma}$ satisfies $A(\hat{\Sigma}) \le A(\Sigma)$.
+
+\textbf{This is only true if $\Sigma$ is one of the surfaces considered in the minimization.}
+
+\textbf{Problem:} The minimization is over surfaces \textbf{enclosing} $\Sigma$, not surfaces equal to $\Sigma$.
+
+If $\Sigma$ is a trapped surface (not area-minimizing), then:
+\begin{itemize}
+    \item $\Sigma$ itself is in the class of surfaces enclosing $\Sigma$ (vacuously, or as the boundary of the region bounded by $\Sigma$)
+    \item The infimum over this class is $\le A(\Sigma)$
+    \item But the infimum might be achieved by a surface \textbf{larger than} $\Sigma$ if we're measuring area incorrectly
+\end{itemize}
+
+\textbf{Wait:} If $\Sigma$ bounds a region $\Omega$, then $\Sigma$ is a surface enclosing $\Omega$. The infimum of areas of surfaces enclosing $\Omega$ is $\le A(\Sigma)$. So $A(\hat{\Sigma}) \le A(\Sigma)$. ✓
+
+\textbf{The inequality is correct} as long as we define ``enclosing'' properly.
+\end{redattack}
+
+\begin{verdict}
+\textbf{Status: VALID}
+
+The inequality $A(\hat{\Sigma}) \le A(\Sigma)$ is correct by definition of infimum, as long as $\Sigma$ itself is among the surfaces enclosing the region it bounds.
+\end{verdict}
+
+%% ============================================================================
+\section{Synthesis: What Survives?}
+%% ============================================================================
+
+\subsection{Summary Table}
+
+\begin{center}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+\textbf{Gap} & \textbf{Issue} & \textbf{Red} & \textbf{Blue Fix} \\
+\midrule
+Hull definition & Not properly defined & Valid attack & \textcolor{green}{GMT definition} \\
+Hull existence & May be empty/disconnected & Valid attack & \textcolor{green}{Compactness + connectivity} \\
+Maximal slice & May not exist through $\Sigma$ & \textbf{FATAL} & \textcolor{red}{No fix} \\
+IMCF starting & Needs $H > 0$ & Valid attack & \textcolor{green}{Case analysis} \\
+Area inequality & $A(\hat{\Sigma}) \le A(\Sigma)$? & Attempted & \textcolor{green}{Valid by definition} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{The Fatal Gap}
+
+\begin{tcolorbox}[colback=red!10!white, colframe=red!75!black, title=\textbf{FATAL GAP}]
+The proof in PENROSE\_1973\_BREAKTHROUGH.tex fails because:
+
+\textbf{Not every trapped surface lies on a maximal Cauchy surface.}
+
+The set of trapped surfaces lying on maximal slices has \textbf{measure zero} in the space of all trapped surfaces.
+
+Penrose's 1973 conjecture is about \textbf{all} trapped surfaces, not just those on maximal slices.
+\end{tcolorbox}
+
+%% ============================================================================
+\section{Salvage Attempt: The Jang Reduction}
+%% ============================================================================
+
+\begin{bluedefense}
+\textbf{Can we combine the hull idea with the Jang approach?}
+
+\textbf{Strategy:}
+\begin{enumerate}
+    \item Start with general initial data $(M, g, k)$, trapped surface $\Sigma_0$
+    \item Solve Jang equation blowing up at outermost MOTS $\Sigma^*$
+    \item On Jang manifold: $R_{\bar{g}} \ge 0$, $\Sigma^*$ is minimal
+    \item Construct outer hull of $\Sigma_0$ in Jang manifold
+    \item Apply RPI to the hull
+\end{enumerate}
+
+\textbf{Problem:} The original trapped surface $\Sigma_0$ may not embed nicely in the Jang manifold (the Jang surface blows up at $\Sigma^*$, not at $\Sigma_0$).
+
+\textbf{Key question:} Is the area of $\Sigma_0$ preserved under the Jang embedding?
+
+On the Jang surface, area is computed with metric $\bar{g}$. For surfaces away from the blow-up, $\bar{g} \approx g$, so areas are approximately preserved.
+
+For the trapped surface $\Sigma_0$ (which is \textbf{inside} $\Sigma^*$), the Jang surface is smooth near $\Sigma_0$, so:
+\begin{equation}
+    A_{\bar{g}}(\Sigma_0) \approx A_g(\Sigma_0)
+\end{equation}
+
+\textbf{Then:}
+\begin{enumerate}
+    \item Take outer hull $\hat{\Sigma}_0$ of $\Sigma_0$ in $(M, \bar{g})$
+    \item $A_{\bar{g}}(\hat{\Sigma}_0) \le A_{\bar{g}}(\Sigma_0) \approx A_g(\Sigma_0)$
+    \item Apply RPI: $M_{\ADM}(\bar{g}) \ge \sqrt{A_{\bar{g}}(\hat{\Sigma}_0)/(16\pi)}$
+    \item Since $M_{\ADM}(\bar{g}) = M_{\ADM}(g)$: done!
+\end{enumerate}
+\end{bluedefense}
+
+\begin{redattack}
+\textbf{Attack on the salvage:}
+
+\textbf{Problem 1:} The Jang metric $\bar{g}$ is not the same as $g$. The hull $\hat{\Sigma}_0$ in $(M, \bar{g})$ may be different from the hull in $(M, g)$.
+
+\textbf{Problem 2:} The statement ``$A_{\bar{g}}(\Sigma_0) \approx A_g(\Sigma_0)$'' is not rigorous. We need exact equality or a one-sided bound.
+
+\textbf{Problem 3:} Even if $A_{\bar{g}}(\hat{\Sigma}_0) \le A_{\bar{g}}(\Sigma_0)$, we need $A_{\bar{g}}(\Sigma_0) \le A_g(\Sigma_0)$ to conclude $M \ge \sqrt{A_g(\Sigma_0)/(16\pi)}$.
+
+\textbf{The conformal relationship:} On the Jang surface, $\bar{g}_{ij} = g_{ij} + \nabla_i f \nabla_j f$ where $f$ is the Jang solution. This gives:
+\begin{equation}
+    A_{\bar{g}}(\Sigma) \ge A_g(\Sigma)
+\end{equation}
+with equality iff $\nabla f \perp \Sigma$.
+
+\textbf{This is the WRONG direction!} We get $A_{\bar{g}} \ge A_g$, but we need $A_{\bar{g}} \le A_g$ for the Penrose inequality.
+\end{redattack}
+
+\begin{verdict}
+\textbf{Status: FAILED}
+
+The Jang + Hull approach fails because:
+\begin{enumerate}
+    \item Jang metric has $A_{\bar{g}}(\Sigma) \ge A_g(\Sigma)$ (wrong direction)
+    \item This would give $M \ge \sqrt{A_{\bar{g}}/(16\pi)} \ge \sqrt{A_g/(16\pi)}$... \\
+    \textbf{Wait, this is the RIGHT direction!}
+\end{enumerate}
+
+\textbf{Re-analysis:}
+\begin{align}
+    M_{\ADM}(g) &= M_{\ADM}(\bar{g}) & \text{(Jang preserves mass)} \\
+    &\ge \sqrt{\frac{A_{\bar{g}}(\hat{\Sigma}_0)}{16\pi}} & \text{(RPI for hull)} \\
+    &\le \sqrt{\frac{A_{\bar{g}}(\Sigma_0)}{16\pi}} & \text{(hull has smaller area)} \\
+    &\le \sqrt{\frac{A_g(\Sigma_0)}{16\pi}} & \text{(NEED THIS)}
+\end{align}
+
+The last step requires $A_{\bar{g}}(\Sigma_0) \le A_g(\Sigma_0)$, but we have $A_{\bar{g}} \ge A_g$.
+
+\textbf{The argument fails.}
+\end{verdict}
+
+%% ============================================================================
+\section{Alternative: Direct Hull in Original Metric}
+%% ============================================================================
+
+\begin{bluedefense}
+\textbf{New approach:} Work entirely in the original metric $(M, g)$.
+
+\textbf{Problem:} We don't have $R_g \ge 0$ on a general slice.
+
+\textbf{Idea:} Use the constraint equations to bound the ``deficit'' from $R_g \ge 0$.
+
+The Hamiltonian constraint:
+\begin{equation}
+    R_g = |k|^2 - (\tr k)^2 + 2\mu \ge 2\mu - (\tr k)^2
+\end{equation}
+
+With DEC: $\mu \ge |J| \ge 0$. But $(\tr k)^2$ can be large and negative.
+
+\textbf{Geroch-type monotonicity with error:}
+
+Under IMCF in $(M, g)$:
+\begin{equation}
+    \frac{d m_H}{dt} = \frac{1}{2}\sqrt{\frac{A}{16\pi}} \int_\Sigma \left(\frac{R_g}{2} + \text{other terms}\right) \frac{dA}{H^2}
+\end{equation}
+
+If $R_g$ has a negative part, $m_H$ might decrease, and the monotonicity fails.
+
+\textbf{Conclusion:} Cannot use IMCF directly on general slices.
+\end{bluedefense}
+
+%% ============================================================================
+\section{Final Assessment}
+%% ============================================================================
+
+\begin{tcolorbox}[colback=yellow!10!white, colframe=orange!75!black, title=\textbf{ROUND 3 CONCLUSION}]
+The ``Hull + Maximal Slice'' approach in PENROSE\_1973\_BREAKTHROUGH.tex has:
+
+\textbf{Valid components:}
+\begin{enumerate}
+    \item Hull construction (with proper GMT definition)
+    \item Area inequality $A(\hat{\Sigma}) \le A(\Sigma)$
+    \item IMCF from hull when $H > 0$
+    \item RPI application when hull is minimal
+\end{enumerate}
+
+\textbf{Fatal flaw:}
+\begin{enumerate}
+    \item Cannot guarantee maximal slice through arbitrary trapped surface
+\end{enumerate}
+
+\textbf{Failed salvage attempts:}
+\begin{enumerate}
+    \item Jang + Hull: area inequality goes wrong direction
+    \item Direct hull on general slice: no $R \ge 0$
+\end{enumerate}
+
+\textbf{Status of 1973 Conjecture:} Still open. The area dominance problem persists in all approaches.
+\end{tcolorbox}
+
+%% ============================================================================
+\section{New Attack Vector: Spacetime Hull}
+%% ============================================================================
+
+\begin{newattack}
+\textbf{Idea:} Instead of working on a Cauchy surface, work directly in spacetime.
+
+Define the \textbf{spacetime hull} of a trapped surface $\Sigma$ as the outermost marginally outer trapped surface (MOTS) enclosing $\Sigma$ in the spacetime.
+
+By the barrier method (Andersson-Mars-Simon), such a MOTS $\Sigma^*$ exists.
+
+\textbf{Key question:} Is $A(\Sigma) \le A(\Sigma^*)$?
+
+This is precisely the area dominance problem, restated in spacetime language.
+
+\textbf{New insight:} In spacetime, we can consider \textbf{null hypersurfaces} emanating from $\Sigma$.
+
+Along the outgoing null hypersurface from $\Sigma$:
+\begin{equation}
+    \frac{dA}{d\lambda} = \int_{\Sigma_\lambda} \theta^+ dA < 0
+\end{equation}
+(since $\theta^+ < 0$ for trapped surface).
+
+So the area \textbf{decreases} along the outgoing null direction. This is the wrong direction to reach the MOTS.
+
+Along the ingoing null hypersurface:
+\begin{equation}
+    \frac{dA}{d\lambda} = \int_{\Sigma_\lambda} \theta^- dA < 0
+\end{equation}
+Also decreasing!
+
+\textbf{Conclusion:} Null flows from trapped surfaces always decrease area. There's no natural way to reach a MOTS with larger area.
+
+This confirms the fundamental obstruction identified in Round 2.
+\end{newattack}
+
+%% ============================================================================
+\section{Remaining Viable Paths}
+%% ============================================================================
+
+After Round 3, the remaining paths are:
+
+\begin{enumerate}
+    \item \textbf{Spinor bypass:} Prove $M \ge \sqrt{A(\Sigma)/(16\pi)}$ directly without using MOTS.
+    
+    \item \textbf{Capacity theory:} Develop $\theta$-capacity with sharp isoperimetric constant.
+    
+    \item \textbf{Accept conditional:} The theorem holds under (OM) assumption.
+    
+    \item \textbf{Physical assumption:} Use weak cosmic censorship to justify area dominance dynamically.
+\end{enumerate}
+
+\textbf{Most promising:} Path 4 --- use the full power of WCC to show that dynamical evolution increases horizon area past $A(\Sigma)$.
+
+\end{document}

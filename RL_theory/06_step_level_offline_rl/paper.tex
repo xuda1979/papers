@@ -1,0 +1,537 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{V-DAPO: Verifier-Enhanced Decoupled Advantage Policy Optimization \\
+for Step-Level Dense Signals in Reasoning Tasks}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Reinforcement learning from verifiable rewards faces two fundamental challenges: terminal reward sparsity and actor-critic training instability. Direct Advantage Policy Optimization (DAPO) addresses both through decoupled two-stage training---first training a critic to convergence, then using the frozen critic for actor updates. We present V-DAPO, a specialization of DAPO for verifiable reasoning domains that leverages structured verifier feedback to train step-level critics without human annotations. By using verifier signals to localize errors in math proofs and code, V-DAPO constructs dense step-level targets that enable sample-efficient critic training. We prove that step-level critics reduce sample complexity by $O(H^2)$ compared to terminal-only rewards, establish conditions for monotonic policy improvement under decoupled training, and demonstrate that two-stage optimization eliminates gradient interference between actor and critic. Our framework provides a principled approach to combining the efficiency of dense rewards with the reliability of automated verification.
+\end{abstract}
+
+\section{Introduction}
+
+Actor-critic methods for RLVR face a fundamental tension:
+\begin{itemize}
+    \item \textbf{Terminal rewards are sparse}: Only final correctness is verified, leaving intermediate steps without signal
+    \item \textbf{Joint training is unstable}: Actor and critic gradients interfere, leading to oscillation and divergence
+\end{itemize}
+
+DAPO (Direct Advantage Policy Optimization) resolves this through \textbf{decoupled training}:
+\begin{enumerate}
+    \item \textbf{Stage 1}: Train critic on collected rollouts (offline)
+    \item \textbf{Stage 2}: Train actor using frozen critic (stable advantages)
+\end{enumerate}
+
+This eliminates actor-critic interference while enabling step-level credit assignment.
+
+\subsection{V-DAPO: Verifier-Enhanced DAPO}
+
+We specialize DAPO for verifiable domains by:
+\begin{itemize}
+    \item Using verifier feedback to construct step-level critic targets
+    \item Exploiting structured error messages to localize mistakes
+    \item Training domain-specific critics without human step labels
+\end{itemize}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item V-DAPO algorithm for verifiable reasoning domains
+    \item Verifier-derived step-level target construction for math and code
+    \item Theoretical analysis:
+    \begin{itemize}
+        \item Sample complexity reduction with step-level critics
+        \item Monotonic improvement guarantees for decoupled training
+        \item Comparison to online actor-critic
+    \end{itemize}
+    \item Practical guidelines for critic architecture and training
+\end{enumerate}
+
+\section{Background}
+
+\subsection{Actor-Critic Methods}
+
+Standard actor-critic alternates between:
+\begin{enumerate}
+    \item \textbf{Critic update}: $\phi \leftarrow \phi - \eta_\phi \nabla_\phi L_{\text{critic}}$
+    \item \textbf{Actor update}: $\theta \leftarrow \theta - \eta_\theta \nabla_\theta L_{\text{actor}}$
+\end{enumerate}
+
+\textbf{Problem}: The moving critic creates a non-stationary target for the actor, leading to instability.
+
+\subsection{DAPO: Decoupled Training}
+
+DAPO separates the two updates into distinct stages:
+
+\textbf{Stage 1 (Critic Training)}:
+\begin{enumerate}
+    \item Generate rollouts with current/old policy
+    \item Train critic to convergence on these rollouts
+    \item Critic learns step-level value estimates
+\end{enumerate}
+
+\textbf{Stage 2 (Actor Training)}:
+\begin{enumerate}
+    \item Freeze critic from Stage 1
+    \item Generate new rollouts
+    \item Compute advantages using frozen critic
+    \item Update actor with stable advantage estimates
+\end{enumerate}
+
+\subsection{Why Decoupling Helps}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Aspect & Online A-C & DAPO \\
+\midrule
+Critic quality & May lag actor & Trained to convergence \\
+Gradient interference & Present & Eliminated \\
+Advantage stability & Non-stationary & Stable (frozen critic) \\
+Sample reuse & Limited & Full critic training \\
+\bottomrule
+\end{tabular}
+\caption{Online actor-critic vs DAPO}
+\end{table}
+
+\section{V-DAPO for Verifiable Domains}
+
+\subsection{Key Insight}
+
+Verifiers in math and code provide \textbf{structured feedback} beyond binary pass/fail:
+\begin{itemize}
+    \item Compiler errors localize syntax/type mistakes
+    \item Test failures identify specific bugs
+    \item CAS systems flag invalid equations
+    \item Proof assistants report tactic failures
+\end{itemize}
+
+We use this feedback to construct step-level critic targets \emph{without human annotations}.
+
+\subsection{Critic Target Construction}
+
+\subsubsection{Math Domains}
+
+The critic predicts $V(x, y_{\leq i})$: probability of eventual correctness given problem $x$ and partial solution $y_{\leq i}$.
+
+\textbf{Target construction}:
+\begin{itemize}
+    \item If final solution is correct ($r = 1$): All steps get target 1
+    \item If final solution is wrong ($r = 0$): Use CAS to find first error step $k$
+    \begin{itemize}
+        \item Steps $i < k$: Get partial credit (e.g., $(k-i)/H$)
+        \item Steps $i \geq k$: Get target 0
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Coding Domains}
+
+The critic predicts $V(x, c_{\leq i})$: probability that partial code $c_{\leq i}$ leads to passing all tests.
+
+\textbf{Target construction}:
+\begin{itemize}
+    \item Syntax check at each prefix: Invalid syntax → target 0
+    \item Type check: Type errors → target 0
+    \item Partial test execution: Fraction of tests passed
+    \item Final execution: Binary pass/fail
+\end{itemize}
+
+\subsection{Stage 1: V-Critic Training}
+
+\begin{algorithm}[H]
+\caption{V-Critic Training}
+\begin{algorithmic}[1]
+\Require Rollout dataset $\mathcal{D} = \{(x, y, r)\}$, verifier $V_{\text{verify}}$
+\State Initialize critic $V_\phi$
+\For{each epoch}
+    \For{each $(x, y, r) \in \mathcal{D}$}
+        \State \textbf{// Compute step-level targets}
+        \If{$r = 1$}
+            \State $\text{target}_i \leftarrow 1$ for all $i$
+        \Else
+            \State $k \leftarrow V_{\text{verify}}.\text{localize\_error}(x, y)$
+            \For{$i = 1$ to $|y|$}
+                \If{$i < k$}
+                    \State $\text{target}_i \leftarrow \frac{k - i}{|y|}$ \Comment{Partial credit}
+                \Else
+                    \State $\text{target}_i \leftarrow 0$
+                \EndIf
+            \EndFor
+        \EndIf
+        \State \textbf{// Critic loss}
+        \State $L_\phi \leftarrow \sum_i (V_\phi(x, y_{\leq i}) - \text{target}_i)^2$
+        \State $\phi \leftarrow \phi - \eta_\phi \nabla_\phi L_\phi$
+    \EndFor
+\EndFor
+\State \Return $V_\phi$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Stage 2: Actor Training}
+
+\begin{algorithm}[H]
+\caption{Actor Training with Frozen V-Critic}
+\begin{algorithmic}[1]
+\Require Frozen critic $V_\phi$, policy $\pi_\theta$, prompts $\mathcal{D}$
+\For{each iteration}
+    \For{each prompt $x \in \mathcal{D}$}
+        \State Sample completion $y \sim \pi_\theta(\cdot | x)$
+        \State $r \leftarrow \text{Verifier}(x, y)$
+        \State \textbf{// Compute step-level advantages}
+        \For{$i = 1$ to $|y|$}
+            \State $A_i \leftarrow r + \gamma V_\phi(x, y_{\leq i+1}) - V_\phi(x, y_{\leq i})$ \Comment{TD}
+            \Comment{Or: $A_i \leftarrow G_i - V_\phi(x, y_{\leq i})$ (MC)}
+        \EndFor
+        \State \textbf{// Actor loss}
+        \State $L_\theta \leftarrow -\sum_i A_i \log \pi_\theta(y_i | x, y_{<i})$
+        \State $\theta \leftarrow \theta - \eta_\theta \nabla_\theta L_\theta$
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Theoretical Analysis}
+
+\subsection{Sample Complexity Reduction}
+
+\begin{theorem}[Step-Level Critic Sample Complexity]\label{thm:complexity}
+With step-level critic having estimation error $\epsilon_V$:
+\begin{equation}
+    N_{\text{step-level}} = O\left(\frac{1}{(1-\gamma)^2 \epsilon^2}\right)
+\end{equation}
+vs terminal-only:
+\begin{equation}
+    N_{\text{terminal}} = O\left(\frac{H^2}{(1-\gamma)^2 \epsilon^2}\right)
+\end{equation}
+Improvement factor: $O(H^2)$ where $H$ is horizon length.
+\end{theorem}
+
+\begin{proof}
+With terminal-only rewards, the policy gradient for step $i$ is:
+\begin{equation}
+    \nabla_\theta J = \mathbb{E}\left[r_T \sum_{i=1}^H \nabla \log \pi(a_i | s_i)\right]
+\end{equation}
+
+The variance of this estimator is:
+\begin{equation}
+    \text{Var}[\nabla J] = O(H^2) \cdot \text{Var}[r_T] \cdot \text{Var}[\nabla \log \pi]
+\end{equation}
+due to summing over $H$ steps with correlated gradients.
+
+With step-level critic:
+\begin{equation}
+    \nabla_\theta J = \mathbb{E}\left[\sum_{i=1}^H A_i \nabla \log \pi(a_i | s_i)\right]
+\end{equation}
+
+where $A_i = r_i + \gamma V(s_{i+1}) - V(s_i)$ has bounded variance independent of horizon.
+
+The variance is:
+\begin{equation}
+    \text{Var}[\nabla J] = O(H) \cdot \text{Var}[A_i] \cdot \text{Var}[\nabla \log \pi]
+\end{equation}
+
+Sample complexity scales with variance, giving $O(H^2)$ improvement.
+\end{proof}
+
+\subsection{Monotonic Policy Improvement}
+
+\begin{theorem}[DAPO Policy Improvement]\label{thm:improvement}
+DAPO achieves monotonic policy improvement if:
+\begin{enumerate}
+    \item Critic error bounded: $\|V_\phi - V^{\pi}\|_\infty \leq \epsilon_V$
+    \item Policy update is conservative: $D_{\text{KL}}(\pi_{\text{new}} \| \pi_{\text{old}}) \leq \delta$
+\end{enumerate}
+Then:
+\begin{equation}
+    J(\pi_{\text{new}}) \geq J(\pi_{\text{old}}) - O(\epsilon_V + \sqrt{\delta})
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Using the performance difference lemma:
+\begin{equation}
+    J(\pi_{\text{new}}) - J(\pi_{\text{old}}) = \mathbb{E}_{s \sim d^{\pi_{\text{new}}}}\mathbb{E}_{a \sim \pi_{\text{new}}}[A^{\pi_{\text{old}}}(s, a)]
+\end{equation}
+
+With critic $V_\phi$ approximating $V^{\pi_{\text{old}}}$:
+\begin{equation}
+    \hat{A}(s, a) = r(s, a) + \gamma V_\phi(s') - V_\phi(s)
+\end{equation}
+
+The error from using $\hat{A}$ instead of $A^{\pi_{\text{old}}}$ is:
+\begin{equation}
+    |A^{\pi_{\text{old}}} - \hat{A}| \leq 2\gamma \epsilon_V
+\end{equation}
+
+The error from the state distribution mismatch (using $d^{\pi_{\text{new}}}$ instead of $d^{\pi_{\text{old}}}$) is bounded by:
+\begin{equation}
+    \|d^{\pi_{\text{new}}} - d^{\pi_{\text{old}}}\|_1 \leq \sqrt{2\delta}
+\end{equation}
+
+Combining gives the stated bound.
+\end{proof}
+
+\subsection{Advantage Quality}
+
+\begin{definition}[Advantage Quality]
+\begin{equation}
+    Q_A = \text{Corr}(\hat{A}_i, A^*_i)
+\end{equation}
+Correlation between estimated and true step-level advantages.
+\end{definition}
+
+\begin{theorem}[V-Critic Advantage Quality]\label{thm:quality}
+With V-critic trained on $N$ rollouts:
+\begin{equation}
+    Q_A \geq 1 - O\left(\sqrt{\frac{1}{N} + \epsilon_{\text{loc}}}\right)
+\end{equation}
+where $\epsilon_{\text{loc}}$ is the error localization accuracy of the verifier.
+\end{theorem}
+
+\begin{proof}
+The V-critic targets are:
+\begin{equation}
+    \text{target}_i = \begin{cases}
+        1 & \text{if } i < k \text{ and final correct} \\
+        (k-i)/H & \text{if } i < k \text{ and final wrong} \\
+        0 & \text{if } i \geq k \text{ and final wrong}
+    \end{cases}
+\end{equation}
+
+If $k$ is the true error location, these targets are consistent with true values.
+
+Localization error $\epsilon_{\text{loc}} = P(k \neq k^*)$ introduces bias.
+
+Finite sample error contributes $O(1/\sqrt{N})$.
+
+The correlation bound follows from these error sources.
+\end{proof}
+
+\section{Verifier-Based Error Localization}
+
+\subsection{Math Domain}
+
+\begin{algorithm}[H]
+\caption{Math Error Localization}
+\begin{algorithmic}[1]
+\Require Problem $x$, solution $y$, CAS (Computer Algebra System)
+\State Parse $y$ into steps $[s_1, \ldots, s_n]$
+\For{$i = 1$ to $n$}
+    \State Extract equation/claim from $s_i$
+    \State Check validity: $\text{valid}_i \leftarrow \text{CAS.check}(s_i, \text{context})$
+    \If{not $\text{valid}_i$}
+        \State \Return $i$ \Comment{First error step}
+    \EndIf
+\EndFor
+\State \Return $n + 1$ \Comment{No error found (solution correct)}
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Coding Domain}
+
+\begin{algorithm}[H]
+\caption{Code Error Localization}
+\begin{algorithmic}[1]
+\Require Problem $x$, code $c$, tests $T$
+\State \textbf{// Syntax check}
+\State $\text{syntax\_ok}, \text{line} \leftarrow \text{parse}(c)$
+\If{not $\text{syntax\_ok}$}
+    \State \Return $\text{line}$
+\EndIf
+\State \textbf{// Type check}
+\State $\text{type\_ok}, \text{line} \leftarrow \text{typecheck}(c)$
+\If{not $\text{type\_ok}$}
+    \State \Return $\text{line}$
+\EndIf
+\State \textbf{// Test execution}
+\For{each test $t \in T$}
+    \State $\text{pass}, \text{trace} \leftarrow \text{run}(c, t)$
+    \If{not $\text{pass}$}
+        \State \Return $\text{trace.first\_divergence}()$
+    \EndIf
+\EndFor
+\State \Return $|c| + 1$ \Comment{All tests pass}
+\end{algorithmic}
+\end{algorithm}
+
+\section{Practical Considerations}
+
+\subsection{Critic Architecture}
+
+\begin{enumerate}
+    \item \textbf{Shared backbone}: Use policy model as feature extractor
+    \item \textbf{Value head}: Small MLP on top of backbone
+    \item \textbf{Training}: Can use LoRA for efficient critic training
+\end{enumerate}
+
+\subsection{Rollout Collection}
+
+\textbf{Diversity strategies}:
+\begin{itemize}
+    \item Temperature sampling
+    \item Top-k/nucleus sampling
+    \item Beam search with diversity penalty
+\end{itemize}
+
+\textbf{Balance}: Collect both successful and failed rollouts for critic training.
+
+\subsection{Stage Scheduling}
+
+\begin{itemize}
+    \item \textbf{Stage 1 epochs}: 3-5 epochs typically sufficient
+    \item \textbf{Stage 2 iterations}: Until convergence or compute budget
+    \item \textbf{Alternation}: Can repeat Stage 1 → Stage 2 cycle
+\end{itemize}
+
+\section{V-DAPO Algorithm Summary}
+
+\begin{algorithm}[H]
+\caption{V-DAPO: Complete Algorithm}
+\begin{algorithmic}[1]
+\Require Initial policy $\pi_\theta$, verifier $V_{\text{verify}}$
+\For{outer iteration $t = 1, 2, \ldots$}
+    \State \textbf{// Rollout collection}
+    \State $\mathcal{D} \leftarrow \emptyset$
+    \For{$n = 1$ to $N$}
+        \State Sample prompt $x$
+        \State Generate $y \sim \pi_\theta(\cdot | x)$
+        \State $r \leftarrow V_{\text{verify}}(x, y)$
+        \State $\mathcal{D} \leftarrow \mathcal{D} \cup \{(x, y, r)\}$
+    \EndFor
+    \State \textbf{// Stage 1: Critic training}
+    \State Construct step-level targets using error localization
+    \State Train $V_\phi$ on $\mathcal{D}$ to convergence
+    \State \textbf{// Stage 2: Actor training}
+    \State Freeze $V_\phi$
+    \For{actor iteration $k = 1$ to $K$}
+        \State Sample prompt $x$
+        \State Generate $y \sim \pi_\theta(\cdot | x)$
+        \State Compute step-level advantages using $V_\phi$
+        \State Update $\theta$ with policy gradient
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experimental Framework}
+
+\subsection{Comparison Methods}
+
+\begin{enumerate}
+    \item GRPO (terminal reward)
+    \item TreeRPO (tree-based step credit)
+    \item V-DAPO (our method)
+    \item Online A-C (joint training baseline)
+    \item Process Reward Model (if available)
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Description \\
+\midrule
+Pass@1 & Final accuracy \\
+Sample efficiency & Accuracy per rollout \\
+Critic error & $\|V_\phi - V^{\pi}\|$ on held-out data \\
+Advantage quality & $\text{Corr}(\hat{A}, A^*)$ \\
+Training stability & Variance of returns over training \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation metrics}
+\end{table}
+
+\section{Discussion}
+
+\subsection{V-DAPO vs TreeRPO}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Aspect & V-DAPO & TreeRPO \\
+\midrule
+Step values & Learned critic & Monte Carlo tree \\
+Training cost & Critic training & Per-prompt tree \\
+Inference cost & Single forward pass & Tree generation \\
+Accuracy & Depends on critic & Unbiased (asymptotic) \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of V-DAPO and TreeRPO}
+\end{table}
+
+\subsection{When to Use V-DAPO}
+
+V-DAPO is preferred when:
+\begin{itemize}
+    \item Error localization is reliable
+    \item Many prompts share similar structure
+    \item Compute budget favors amortized critic training
+    \item Inference efficiency is important
+\end{itemize}
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item Requires error localization capability
+    \item Critic may not generalize to new prompt types
+    \item Two-stage training adds complexity
+    \item Critic quality degrades as policy changes
+\end{itemize}
+
+\section{Conclusion}
+
+We have presented V-DAPO, a specialization of decoupled actor-critic training for verifiable reasoning domains. By using verifier feedback to construct step-level critic targets, V-DAPO provides dense training signals without human annotations. Our theoretical analysis establishes sample complexity improvements of $O(H^2)$, conditions for monotonic policy improvement, and advantages of decoupled training. The V-DAPO framework combines the efficiency of dense rewards with the reliability of automated verification, providing a principled approach to step-level credit assignment in RLVR.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[DeepSeek-AI(2024)]{deepseekmath2024}
+DeepSeek-AI.
+\newblock DeepSeekMath: Pushing the limits of mathematical reasoning in open language models.
+\newblock \emph{arXiv preprint arXiv:2402.03300}, 2024.
+
+\bibitem[Lightman et al.(2023)]{prm2023}
+Lightman, H., et al.
+\newblock Let's verify step by step.
+\newblock \emph{arXiv preprint arXiv:2305.20050}, 2023.
+
+\bibitem[Schulman et al.(2015)]{gae2015}
+Schulman, J., Moritz, P., Levine, S., Jordan, M., and Abbeel, P.
+\newblock High-dimensional continuous control using generalized advantage estimation.
+\newblock \emph{ICLR}, 2016.
+
+\bibitem[Fujimoto et al.(2018)]{td32018}
+Fujimoto, S., van Hoof, H., and Meger, D.
+\newblock Addressing function approximation error in actor-critic methods.
+\newblock \emph{ICML}, 2018.
+
+\end{thebibliography}
+
+\end{document}

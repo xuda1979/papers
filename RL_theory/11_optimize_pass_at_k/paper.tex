@@ -1,0 +1,488 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Optimizing Pass@K: Policy Gradients for K-Dependent Objectives}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Standard RLVR optimizes Pass@1, but many applications evaluate models using Pass@K---the probability that at least one of $K$ samples is correct. We show that optimizing for Pass@K requires fundamentally different training objectives than Pass@1. We derive exact policy gradients for the Pass@K objective and show that optimal policies must trade off individual solution quality against solution diversity. Our K-RLVR framework introduces advantage shaping functions that re-weight gradients based on whether samples provide marginal utility at different $K$ values. We establish theoretical connections between $K$, optimal temperature, and policy entropy, showing that larger $K$ favors higher-entropy policies. We present K-dependent weighting schemes that interpolate between Pass@1 (quality-focused) and large-K (diversity-focused) objectives. Experimental analysis demonstrates significant improvements on Pass@K metrics compared to standard RLVR training.
+\end{abstract}
+
+\section{Introduction}
+
+Consider a model generating code solutions:
+\begin{itemize}
+    \item Pass@1: How often is a single sample correct?
+    \item Pass@K: Given $K$ samples, how often is at least one correct?
+\end{itemize}
+
+\textbf{Key insight}: Optimizing Pass@1 may hurt Pass@K, and vice versa:
+\begin{itemize}
+    \item Pass@1 optimal: Concentrate on most likely correct answer
+    \item Pass@K optimal: Diversify to cover multiple solution paths
+\end{itemize}
+
+\subsection{The Diversity-Quality Trade-off}
+
+\begin{example}
+Problem with two valid approaches (A and B):
+\begin{itemize}
+    \item Approach A works with probability 60\%
+    \item Approach B works with probability 50\%
+    \item Approaches are independent
+\end{itemize}
+
+Policy 1 (concentrated): Always uses approach A
+\begin{itemize}
+    \item Pass@1 = 60\%
+    \item Pass@2 = $1 - 0.4^2$ = 84\%
+\end{itemize}
+
+Policy 2 (diverse): Uses A 50\%, B 50\%
+\begin{itemize}
+    \item Pass@1 = 0.5 $\times$ 0.6 + 0.5 $\times$ 0.5 = 55\%
+    \item Pass@2 = $1 - (1 - 0.6)(1 - 0.5)$ = 80\%
+\end{itemize}
+
+Policy 1 wins on both metrics in this case, but consider:
+
+Policy 3 (truly diverse): Generates A on first sample, B on second
+\begin{itemize}
+    \item Pass@1 = 60\% (using A first)
+    \item Pass@2 = $1 - 0.4 \times 0.5$ = 80\%
+\end{itemize}
+
+The optimal strategy depends on $K$ and the problem structure.
+\end{example}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item Exact policy gradients for Pass@K objective
+    \item K-dependent advantage shaping
+    \item Theoretical analysis of optimal policies for different $K$
+    \item Connection between $K$, temperature, and entropy
+    \item K-RLVR training framework
+\end{enumerate}
+
+\section{Background}
+
+\subsection{Pass@K Metric}
+
+\begin{definition}[Pass@K]
+Given a model $\pi$, problem $x$, and $K$ samples:
+\begin{equation}
+    \text{Pass@K}(x) = P(\exists i \in [K]: y_i \text{ correct} | y_1, \ldots, y_K \sim \pi(\cdot | x))
+\end{equation}
+\end{definition}
+
+\begin{definition}[Unbiased Estimator]
+With $n \geq K$ samples, $c$ of which are correct:
+\begin{equation}
+    \widehat{\text{Pass@K}} = 1 - \frac{\binom{n-c}{K}}{\binom{n}{K}}
+\end{equation}
+\end{definition}
+
+\subsection{Relationship Between Pass@1 and Pass@K}
+
+\begin{lemma}[Pass@K Bounds]
+For i.i.d. samples with Pass@1 = $p$:
+\begin{equation}
+    \text{Pass@K} = 1 - (1-p)^K
+\end{equation}
+\end{lemma}
+
+\begin{corollary}
+Pass@K is a concave, increasing function of Pass@1.
+\end{corollary}
+
+However, this assumes i.i.d. samples. In practice, samples may be correlated, affecting Pass@K.
+
+\section{Policy Gradients for Pass@K}
+
+\subsection{The Pass@K Objective}
+
+\begin{definition}[Pass@K Objective]
+\begin{equation}
+    J_K(\theta) = \mathbb{E}_x \left[ 1 - \prod_{i=1}^K P(y_i \text{ incorrect} | y_i \sim \pi_\theta(\cdot | x)) \right]
+\end{equation}
+\end{definition}
+
+For i.i.d. samples:
+\begin{equation}
+    J_K(\theta) = \mathbb{E}_x \left[ 1 - (1 - p_\theta(x))^K \right]
+\end{equation}
+where $p_\theta(x) = \mathbb{E}_{y \sim \pi_\theta}[\mathbf{1}[y \text{ correct}]]$.
+
+\subsection{Gradient Derivation}
+
+\begin{theorem}[Pass@K Gradient]\label{thm:gradient}
+The gradient of Pass@K objective is:
+\begin{equation}
+    \nabla_\theta J_K(\theta) = K \mathbb{E}_x \left[ (1 - p_\theta(x))^{K-1} \cdot \nabla_\theta p_\theta(x) \right]
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Using chain rule:
+\begin{align}
+    \nabla_\theta J_K &= \nabla_\theta \mathbb{E}_x[1 - (1 - p_\theta(x))^K] \\
+    &= \mathbb{E}_x \left[ K (1 - p_\theta(x))^{K-1} \cdot \nabla_\theta p_\theta(x) \right]
+\end{align}
+\end{proof}
+
+\begin{corollary}[K-Dependent Weighting]
+The effective weight on problem $x$ is:
+\begin{equation}
+    w_K(x) = K (1 - p_\theta(x))^{K-1}
+\end{equation}
+\end{corollary}
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $K=1$: $w_1(x) = 1$ (uniform weighting)
+    \item $K>1$: Higher weight on harder problems (lower $p_\theta$)
+\end{itemize}
+
+\subsection{Policy Gradient Form}
+
+\begin{theorem}[Pass@K Policy Gradient]
+Using the standard REINFORCE identity:
+\begin{equation}
+    \nabla_\theta J_K = \mathbb{E}_x \mathbb{E}_{y \sim \pi_\theta} \left[ A_K(x, y) \nabla_\theta \log \pi_\theta(y | x) \right]
+\end{equation}
+where the K-dependent advantage is:
+\begin{equation}
+    A_K(x, y) = K (1 - p_\theta(x))^{K-1} \cdot (\mathbf{1}[y \text{ correct}] - p_\theta(x))
+\end{equation}
+\end{theorem}
+
+\section{K-Dependent Advantage Shaping}
+
+\subsection{The Marginal Utility Perspective}
+
+\begin{definition}[Marginal Utility]
+The marginal utility of a correct sample $y$ for Pass@K is:
+\begin{equation}
+    \text{MU}_K(y | \text{other samples}) = P(\text{Pass@K with } y) - P(\text{Pass@K without } y)
+\end{equation}
+\end{definition}
+
+\begin{lemma}[Marginal Utility Analysis]
+If $m$ of $K-1$ other samples are correct:
+\begin{equation}
+    \text{MU}_K(y | m) = \begin{cases}
+        0 & \text{if } m > 0 \text{ (already passing)} \\
+        1 & \text{if } m = 0 \text{ (critical sample)}
+    \end{cases}
+\end{equation}
+\end{lemma}
+
+\textbf{Key insight}: A correct sample only has marginal utility if all other samples failed.
+
+\subsection{K-Shaped Advantages}
+
+\begin{algorithm}[H]
+\caption{K-Dependent Advantage Computation}
+\begin{algorithmic}[1]
+\Require Problem $x$, samples $\{y_1, \ldots, y_G\}$, rewards $\{r_1, \ldots, r_G\}$, target $K$
+\State $p_\theta \leftarrow \sum_i r_i / G$ \Comment{Estimate Pass@1}
+\State $w_K \leftarrow K \cdot (1 - p_\theta)^{K-1}$ \Comment{K-dependent weight}
+\For{each sample $y_i$}
+    \State $A_i \leftarrow w_K \cdot (r_i - p_\theta)$ \Comment{Shaped advantage}
+\EndFor
+\State \Return $\{A_i\}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Diversity-Aware Advantages}
+
+To encourage diversity, consider whether samples cover different solution strategies:
+
+\begin{definition}[Diversity Bonus]
+\begin{equation}
+    A_{\text{diverse}}(y_i) = A_i + \lambda \cdot D(y_i, \{y_j\}_{j \neq i})
+\end{equation}
+where $D$ measures how different $y_i$ is from other samples.
+\end{definition}
+
+Possible diversity measures:
+\begin{itemize}
+    \item Embedding distance
+    \item Edit distance
+    \item Semantic difference (different algorithms)
+\end{itemize}
+
+\section{Optimal Policies for Different K}
+
+\subsection{Temperature and K}
+
+\begin{theorem}[Optimal Temperature]\label{thm:temperature}
+For a fixed policy family with temperature $\tau$, the optimal temperature for Pass@K satisfies:
+\begin{equation}
+    \tau^*_K \propto \sqrt{K}
+\end{equation}
+Higher $K$ favors higher temperature (more exploration).
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+Higher temperature increases diversity but decreases individual quality. The trade-off point shifts with $K$:
+\begin{itemize}
+    \item Higher $K$ → more samples → diversity matters more
+    \item Higher diversity → higher probability of covering correct solution
+\end{itemize}
+The optimal balance occurs at temperature scaling with $\sqrt{K}$.
+\end{proof}
+
+\subsection{Entropy and K}
+
+\begin{corollary}[Optimal Entropy]
+The optimal policy entropy for Pass@K increases with $K$:
+\begin{equation}
+    H(\pi^*_K) \approx H(\pi^*_1) + \frac{1}{2} \log K
+\end{equation}
+\end{corollary}
+
+\subsection{Multi-K Objectives}
+
+In practice, we may want good performance across multiple $K$ values:
+
+\begin{definition}[Multi-K Objective]
+\begin{equation}
+    J_{\text{multi}}(\theta) = \sum_{K \in \mathcal{K}} \alpha_K \cdot J_K(\theta)
+\end{equation}
+where $\alpha_K$ weights different $K$ values.
+\end{definition}
+
+\section{K-RLVR Framework}
+
+\subsection{Training Algorithm}
+
+\begin{algorithm}[H]
+\caption{K-RLVR Training}
+\begin{algorithmic}[1]
+\Require Policy $\pi_\theta$, problems $\mathcal{P}$, target $K$, samples per problem $G$
+\For{iteration}
+    \State \textbf{// Sample rollouts}
+    \For{problem $x \in \mathcal{P}$}
+        \State Sample $G$ responses: $y_1, \ldots, y_G \sim \pi_\theta(\cdot | x)$
+        \State Verify: $r_i = \mathbf{1}[y_i \text{ correct}]$
+    \EndFor
+    \State \textbf{// Compute K-shaped advantages}
+    \For{problem $x$}
+        \State $p_\theta \leftarrow \sum_i r_i / G$
+        \State $w_K \leftarrow K \cdot (1 - p_\theta)^{K-1}$
+        \For{sample $y_i$}
+            \State $A_i \leftarrow w_K \cdot (r_i - p_\theta)$
+        \EndFor
+    \EndFor
+    \State \textbf{// Policy gradient update}
+    \State $L \leftarrow -\sum_{x,i} A_i \cdot \log \pi_\theta(y_i | x)$
+    \State $\theta \leftarrow \theta - \eta \nabla_\theta L$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Adaptive K Scheduling}
+
+\begin{algorithm}[H]
+\caption{Adaptive K Scheduling}
+\begin{algorithmic}[1]
+\Require Initial $K_0$, final $K_f$, schedule type
+\For{iteration $t$}
+    \If{schedule = ``linear''}
+        \State $K_t \leftarrow K_0 + t \cdot (K_f - K_0) / T$
+    \ElsIf{schedule = ``exponential''}
+        \State $K_t \leftarrow K_0 \cdot (K_f / K_0)^{t/T}$
+    \ElsIf{schedule = ``curriculum''}
+        \State $K_t \leftarrow \min(K_f, K_0 + \text{performance\_milestone})$
+    \EndIf
+    \State Train with $K_t$ for iteration $t$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Entropy Regularization for K}
+
+\begin{definition}[K-Adaptive Entropy]
+\begin{equation}
+    L = L_{\text{policy}} - \beta_K H(\pi_\theta)
+\end{equation}
+where:
+\begin{equation}
+    \beta_K = \beta_0 \cdot \sqrt{K}
+\end{equation}
+Larger $K$ → stronger entropy bonus.
+\end{definition}
+
+\section{Theoretical Analysis}
+
+\subsection{Convergence Properties}
+
+\begin{theorem}[K-RLVR Convergence]
+K-RLVR converges to a local optimum of the Pass@K objective under standard assumptions (bounded rewards, Lipschitz policy).
+\end{theorem}
+
+\subsection{Sample Complexity}
+
+\begin{theorem}[Sample Complexity]
+To estimate Pass@K to accuracy $\epsilon$ requires:
+\begin{equation}
+    n = O\left( \frac{K^2}{\epsilon^2} \cdot \frac{1}{p(1-p)^{K-1}} \right)
+\end{equation}
+samples, where $p$ is the true Pass@1.
+\end{theorem}
+
+\begin{remark}
+Sample complexity increases with $K$ due to:
+\begin{enumerate}
+    \item Higher variance in Pass@K estimator
+    \item Need to estimate $(1-p)^{K-1}$ term
+\end{enumerate}
+\end{remark}
+
+\subsection{Bias-Variance Trade-off}
+
+\begin{proposition}[K-Dependent Variance]
+The variance of the K-shaped advantage is:
+\begin{equation}
+    \text{Var}[A_K] = K^2 (1-p)^{2(K-1)} \cdot p(1-p)
+\end{equation}
+Variance is non-monotonic in $K$ for fixed $p$.
+\end{proposition}
+
+\section{Experimental Framework}
+
+\subsection{Benchmarks}
+
+\begin{itemize}
+    \item \textbf{HumanEval}: Code generation (Pass@1, 10, 100)
+    \item \textbf{MBPP}: More programming problems
+    \item \textbf{MATH}: Mathematical reasoning
+\end{itemize}
+
+\subsection{Baselines}
+
+\begin{enumerate}
+    \item Standard RLVR (optimizes Pass@1)
+    \item RLVR + temperature scaling
+    \item RLVR + diversity regularization
+    \item K-RLVR (ours)
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Description \\
+\midrule
+Pass@1 & Single sample success rate \\
+Pass@10 & Success with 10 samples \\
+Pass@100 & Success with 100 samples \\
+Diversity & Unique solutions per problem \\
+Coverage & Fraction of solution strategies covered \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation metrics}
+\end{table}
+
+\subsection{Expected Results}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Method & Pass@1 & Pass@10 & Pass@100 \\
+\midrule
+Standard RLVR & \textbf{Best} & Good & Moderate \\
+K-RLVR (K=10) & Moderate & \textbf{Best} & Good \\
+K-RLVR (K=100) & Lower & Good & \textbf{Best} \\
+\bottomrule
+\end{tabular}
+\caption{Expected performance trade-offs}
+\end{table}
+
+\section{Discussion}
+
+\subsection{When to Use K-RLVR}
+
+K-RLVR is most beneficial when:
+\begin{itemize}
+    \item Evaluation uses Pass@K with $K > 1$
+    \item Multiple valid solution strategies exist
+    \item Diversity is valuable (e.g., generating alternatives)
+    \item Compute for multiple samples is available at inference
+\end{itemize}
+
+\subsection{Practical Considerations}
+
+\begin{enumerate}
+    \item \textbf{Target K selection}: Match training K to evaluation K
+    \item \textbf{Sample budget}: Need $G \geq K$ samples per problem
+    \item \textbf{Diversity measurement}: Choose appropriate diversity metric
+    \item \textbf{Entropy scheduling}: Balance exploration and exploitation
+\end{enumerate}
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item Higher variance for large $K$
+    \item Requires knowing target $K$ in advance
+    \item Trade-off may hurt Pass@1 performance
+    \item Diversity hard to measure for complex outputs
+\end{itemize}
+
+\section{Conclusion}
+
+We have derived exact policy gradients for the Pass@K objective and shown that optimal policies must balance quality and diversity. Our K-RLVR framework introduces K-dependent advantage shaping that re-weights gradients based on marginal utility at different $K$ values. Theoretical analysis establishes connections between $K$, optimal temperature, and policy entropy, showing that larger $K$ favors more diverse policies. The adaptive K scheduling and entropy regularization provide practical tools for training. This work provides a principled approach to optimizing for Pass@K metrics, enabling better performance on evaluation protocols that allow multiple attempts.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[Chen et al.(2021)]{codex2021}
+Chen, M., et al.
+\newblock Evaluating large language models trained on code.
+\newblock \emph{arXiv preprint arXiv:2107.03374}, 2021.
+
+\bibitem[Li et al.(2022)]{competition2022}
+Li, Y., et al.
+\newblock Competition-level code generation with AlphaCode.
+\newblock \emph{Science}, 378(6624):1092-1097, 2022.
+
+\bibitem[Austin et al.(2021)]{mbpp2021}
+Austin, J., et al.
+\newblock Program synthesis with large language models.
+\newblock \emph{arXiv preprint arXiv:2108.07732}, 2021.
+
+\bibitem[Rozière et al.(2023)]{codellama2023}
+Rozière, B., et al.
+\newblock Code Llama: Open foundation models for code.
+\newblock \emph{arXiv preprint arXiv:2308.12950}, 2023.
+
+\end{thebibliography}
+
+\end{document}

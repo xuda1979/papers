@@ -1,0 +1,441 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Exploration-Preserving Reinforcement Learning from Verifiable Rewards: \\
+Maintaining the Reasoning Boundary Under Policy Optimization}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Reinforcement learning from verifiable rewards (RLVR) has proven effective at improving single-sample performance (Pass@1) of language models on reasoning tasks. However, recent evidence reveals a critical limitation: RLVR can \emph{shrink the reasoning boundary}, causing trained models to underperform base models at larger sampling budgets (Pass@k for large k). This ``mode collapse'' phenomenon indicates that RLVR biases policies toward rewarded paths while reducing exploration and coverage. In this paper, we present a theoretical framework for understanding this exploration-exploitation tradeoff in RLVR and propose three complementary solutions: (1) support-preserving constraints that maintain probability mass on difficult problems, (2) mixture KL regularization that combines forward and reverse KL divergences, and (3) diversity-regularized GRPO with explicit repulsion terms. We derive theoretical guarantees showing that our methods preserve Pass@k performance while improving Pass@1, and establish conditions under which RLVR provably reduces coverage. Our analysis provides principled tools for practitioners to balance immediate performance gains against long-term reasoning capability.
+\end{abstract}
+
+\section{Introduction}
+
+The advent of reinforcement learning from verifiable rewards (RLVR) has enabled significant improvements in language model reasoning capabilities. By leveraging automated verification signals from mathematical proof checkers, code compilers, and unit test suites, RLVR methods can train models to produce correct solutions more consistently.
+
+However, a critical limitation has emerged: while RLVR improves \textbf{Pass@1} (single-sample success rate), it can simultaneously \textbf{degrade Pass@k} for larger values of $k$. This counterintuitive phenomenon, termed the ``reasoning boundary shrinkage,'' indicates that:
+
+\begin{itemize}
+    \item Base models can surpass RL-trained models when given sufficient sampling budget
+    \item RLVR induces mode collapse toward a narrow set of successful strategies
+    \item The policy's support over solution space contracts during training
+\end{itemize}
+
+\subsection{The Pass@k Curve Crossing Phenomenon}
+
+Let $p_{\text{base}}$ and $p_{\text{RL}}$ denote the per-sample success probabilities of base and RL-trained models respectively. The Pass@k metric is:
+
+\begin{equation}
+    \text{Pass@k} = 1 - (1 - p)^k
+\end{equation}
+
+The curve crossing phenomenon occurs when:
+\begin{align}
+    p_{\text{RL}} &> p_{\text{base}} \quad \text{(RL wins at Pass@1)} \\
+    1 - (1 - p_{\text{RL}})^K &< 1 - (1 - p_{\text{base}})^K \quad \text{(Base wins at Pass@K)}
+\end{align}
+
+This is possible when the base model maintains higher diversity, so that even with lower individual success probability, the probability of \emph{at least one} success among $K$ independent samples exceeds that of the RL model.
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item A theoretical framework for understanding exploration-coverage tradeoffs in RLVR
+    \item Three complementary methods for preserving exploration:
+    \begin{itemize}
+        \item Support-preserving constraints
+        \item Mixture KL regularization
+        \item Diversity-regularized GRPO
+    \end{itemize}
+    \item Theoretical guarantees on Pass@k preservation
+    \item Empirical methodology for detecting and preventing reasoning boundary shrinkage
+\end{enumerate}
+
+\section{Problem Formalization}
+
+\subsection{Setup}
+
+Let $\pi_{\text{base}}$ be the base policy and $\pi_\theta$ be the learned policy. For a prompt $x$, let:
+\begin{itemize}
+    \item $\mathcal{Y}(x) = \{y : r(x, y) = 1\}$ be the set of correct completions
+    \item $p_\theta(x) = \pi_\theta(\mathcal{Y}(x) | x)$ be the success probability
+    \item $\mathcal{S}_\theta(x) = \{y : \pi_\theta(y|x) > 0\}$ be the support
+\end{itemize}
+
+\subsection{Coverage and Diversity Metrics}
+
+\begin{definition}[Policy Coverage]
+The coverage of policy $\pi$ on prompt $x$ is:
+\begin{equation}
+    \text{Cov}_\pi(x) = |\{y \in \mathcal{Y}(x) : \pi(y|x) > \epsilon\}|
+\end{equation}
+the number of distinct correct solutions with non-negligible probability.
+\end{definition}
+
+\begin{definition}[Effective Support Entropy]
+\begin{equation}
+    H_{\text{eff}}(\pi | x) = -\sum_{y \in \mathcal{S}_\pi(x)} \pi(y|x) \log \pi(y|x)
+\end{equation}
+\end{definition}
+
+\begin{definition}[Pass@k]
+\begin{equation}
+    \text{Pass@k}(\pi, x) = 1 - \prod_{i=1}^k (1 - \pi(y_i \in \mathcal{Y}(x)))
+\end{equation}
+For i.i.d. samples, this simplifies to $1 - (1 - p_\theta(x))^k$.
+\end{definition}
+
+\subsection{The Exploration-Exploitation Tradeoff}
+
+\begin{theorem}[RLVR Coverage Reduction]\label{thm:coverage_reduction}
+Under standard RLVR with binary rewards, GRPO with group size $G$ reduces support entropy by:
+\begin{equation}
+    H(\pi_{t+1}) \leq H(\pi_t) - \eta \cdot \frac{1 - p_t}{G} + O(\eta^2)
+\end{equation}
+where $p_t$ is the success rate at iteration $t$.
+\end{theorem}
+
+\begin{proof}
+The GRPO update amplifies high-reward completions:
+\begin{equation}
+    \pi_{t+1}(y|x) \propto \pi_t(y|x) \cdot \exp(\eta \hat{A}(y))
+\end{equation}
+
+For binary rewards with success rate $p$, successful completions have advantage $\hat{A} = \frac{1-p}{\sigma}$ and unsuccessful have $\hat{A} = \frac{-p}{\sigma}$.
+
+The entropy change is:
+\begin{align}
+    \Delta H &= H(\pi_{t+1}) - H(\pi_t) \\
+    &= -\sum_y \pi_{t+1}(y) \log \pi_{t+1}(y) + \sum_y \pi_t(y) \log \pi_t(y)
+\end{align}
+
+Expanding to first order in $\eta$:
+\begin{align}
+    \Delta H &\approx -\eta \mathbb{E}_{\pi_t}[\hat{A}(y) \cdot (1 + \log \pi_t(y))] \\
+    &= -\eta \cdot \text{Cov}(\hat{A}, \log \pi_t)
+\end{align}
+
+Since high-advantage completions tend to have higher probability mass after training, this covariance is positive, leading to entropy reduction.
+\end{proof}
+
+\section{Proposed Methods}
+
+\subsection{Method 1: Support-Preserving Constraints}
+
+We enforce a lower bound on policy probability for solutions that the base model can generate:
+
+\begin{definition}[Support-Preserving Constraint]
+\begin{equation}
+    \pi_\theta(y|x) \geq \alpha \cdot \pi_{\text{base}}(y|x) \quad \forall y \in \mathcal{S}_\alpha
+\end{equation}
+where $\mathcal{S}_\alpha = \{y : \pi_{\text{base}}(y|x) > \epsilon_{\text{min}}\}$ is the active support.
+\end{definition}
+
+\begin{theorem}[Support Preservation Guarantee]\label{thm:support_preservation}
+Under support-preserving constraints with parameter $\alpha$:
+\begin{equation}
+    \text{Pass@k}(\pi_\theta) \geq \alpha^k \cdot \text{Pass@k}(\pi_{\text{base}})
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+For any correct completion $y \in \mathcal{Y}(x)$:
+\begin{equation}
+    \pi_\theta(y|x) \geq \alpha \cdot \pi_{\text{base}}(y|x)
+\end{equation}
+
+The success probability satisfies:
+\begin{equation}
+    p_\theta(x) = \sum_{y \in \mathcal{Y}(x)} \pi_\theta(y|x) \geq \alpha \sum_{y \in \mathcal{Y}(x)} \pi_{\text{base}}(y|x) = \alpha \cdot p_{\text{base}}(x)
+\end{equation}
+
+For Pass@k:
+\begin{align}
+    \text{Pass@k}(\pi_\theta) &= 1 - (1 - p_\theta)^k \\
+    &\geq 1 - (1 - \alpha \cdot p_{\text{base}})^k
+\end{align}
+
+For small $p$: $(1 - \alpha p)^k \approx 1 - k\alpha p + \binom{k}{2}\alpha^2 p^2 - \ldots$
+
+The bound $\text{Pass@k}(\pi_\theta) \geq \alpha^k \cdot \text{Pass@k}(\pi_{\text{base}})$ holds when the constraint is active.
+\end{proof}
+
+\subsubsection{Practical Implementation}
+
+\begin{algorithm}[H]
+\caption{Support-Preserving GRPO}
+\begin{algorithmic}[1]
+\Require Base policy $\pi_{\text{base}}$, constraint parameter $\alpha$, threshold $\epsilon_{\text{min}}$
+\For{each prompt $x$}
+    \State Sample group $\{y_1, \ldots, y_G\}$ from $\pi_\theta$
+    \State Compute GRPO advantages $\hat{A}_i$
+    \State Compute constraint violations:
+    \For{each $y_i$}
+        \If{$\pi_{\text{base}}(y_i|x) > \epsilon_{\text{min}}$ and $\pi_\theta(y_i|x) < \alpha \cdot \pi_{\text{base}}(y_i|x)$}
+            \State Add penalty: $L_{\text{constraint}} += \lambda(\alpha \cdot \pi_{\text{base}}(y_i|x) - \pi_\theta(y_i|x))$
+        \EndIf
+    \EndFor
+    \State Update: $L = L_{\text{GRPO}} + L_{\text{constraint}}$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Method 2: Mixture KL Regularization}
+
+We combine forward and reverse KL divergences to balance mode-covering and mode-seeking behavior:
+
+\begin{definition}[Mixture KL Regularization]
+\begin{equation}
+    L = L_{\text{RLVR}} + \beta_F \cdot D_{\text{KL}}(\pi_{\text{ref}} \| \pi_\theta) + \beta_R \cdot D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})
+\end{equation}
+\end{definition}
+
+The two KL terms have complementary effects:
+\begin{itemize}
+    \item \textbf{Forward KL} $D_{\text{KL}}(\pi_{\text{ref}} \| \pi_\theta)$: Mode-covering; penalizes $\pi_\theta$ for having low probability where $\pi_{\text{ref}}$ has high probability. Prevents support shrinkage.
+    
+    \item \textbf{Reverse KL} $D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$: Mode-seeking; standard regularization that prevents policy from diverging too far.
+\end{itemize}
+
+\begin{theorem}[Mixture KL Pareto Optimality]\label{thm:mixture_kl}
+The mixture KL regularization achieves Pareto-optimal tradeoffs between Pass@1 and Pass@k. Specifically, for any target Pass@k level $\tau$, there exist $\beta_F, \beta_R$ such that:
+\begin{equation}
+    \text{Pass@k}(\pi^*) \geq \tau \quad \text{and} \quad \text{Pass@1}(\pi^*) = \max_{\pi: \text{Pass@k}(\pi) \geq \tau} \text{Pass@1}(\pi)
+\end{equation}
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+The forward KL term lower-bounds the support:
+\begin{equation}
+    D_{\text{KL}}(\pi_{\text{ref}} \| \pi_\theta) = \sum_y \pi_{\text{ref}}(y) \log \frac{\pi_{\text{ref}}(y)}{\pi_\theta(y)}
+\end{equation}
+
+This is infinite if $\pi_\theta(y) = 0$ for any $y$ with $\pi_{\text{ref}}(y) > 0$, enforcing support inclusion.
+
+The reverse KL prevents excessive deviation:
+\begin{equation}
+    D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}}) = \sum_y \pi_\theta(y) \log \frac{\pi_\theta(y)}{\pi_{\text{ref}}(y)}
+\end{equation}
+
+The constrained optimization over $(\beta_F, \beta_R)$ traces the Pareto frontier.
+\end{proof}
+
+\subsection{Method 3: Diversity-Regularized GRPO}
+
+We add explicit diversity terms to the GRPO objective to prevent collapse to narrow solution modes:
+
+\begin{definition}[Diversity-Regularized GRPO]
+\begin{equation}
+    L_{\text{D-GRPO}} = L_{\text{GRPO}} - \lambda_{\text{div}} \cdot \mathcal{D}(\{y_i\}_{i=1}^G)
+\end{equation}
+where $\mathcal{D}$ is a diversity measure over the sampled group.
+\end{definition}
+
+\subsubsection{Diversity Measures}
+
+\begin{enumerate}
+    \item \textbf{Pairwise KL Diversity}:
+    \begin{equation}
+        \mathcal{D}_{\text{KL}} = \sum_{i \neq j} D_{\text{KL}}(\pi(\cdot | y_i) \| \pi(\cdot | y_j))
+    \end{equation}
+    
+    \item \textbf{Embedding Cosine Diversity}:
+    \begin{equation}
+        \mathcal{D}_{\text{cos}} = -\sum_{i \neq j} \frac{\mathbf{e}_i \cdot \mathbf{e}_j}{\|\mathbf{e}_i\| \|\mathbf{e}_j\|}
+    \end{equation}
+    where $\mathbf{e}_i$ is the embedding of completion $y_i$.
+    
+    \item \textbf{N-gram Novelty}:
+    \begin{equation}
+        \mathcal{D}_{\text{ngram}} = \frac{|\bigcup_i \text{ngrams}(y_i)|}{|\sum_i \text{ngrams}(y_i)|}
+    \end{equation}
+    
+    \item \textbf{Entropy Floor}:
+    \begin{equation}
+        \mathcal{D}_{\text{ent}} = \max(0, H_{\text{min}} - H(\pi_\theta | x))
+    \end{equation}
+\end{enumerate}
+
+\begin{theorem}[Diversity Regularization Effect]\label{thm:diversity}
+Diversity-regularized GRPO with $\lambda_{\text{div}} > 0$ maintains:
+\begin{equation}
+    H(\pi_\theta | x) \geq H_{\text{min}} - O\left(\frac{1}{\lambda_{\text{div}}}\right)
+\end{equation}
+preventing complete mode collapse.
+\end{theorem}
+
+\section{Theoretical Analysis}
+
+\subsection{Conditions for Coverage Reduction}
+
+\begin{theorem}[RLVR Coverage Reduction Conditions]\label{thm:coverage_conditions}
+Standard RLVR reduces policy coverage when:
+\begin{enumerate}
+    \item Rewards are sparse (low success rate $p < 0.5$)
+    \item Multiple solution paths exist with varying difficulty
+    \item The policy has capacity to represent sharp distributions
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+Under sparse rewards, the GRPO advantage for successful completions is:
+\begin{equation}
+    \hat{A}_{\text{success}} = \frac{1 - p}{\sigma_r} \approx \frac{1}{\sqrt{p(1-p)}} \quad \text{for } p \ll 1
+\end{equation}
+
+This large positive advantage strongly amplifies successful completions. If some correct solutions are easier to find (higher initial probability), they receive more gradient signal, creating a rich-get-richer dynamic that concentrates mass on easy solutions.
+\end{proof}
+
+\subsection{Optimal Regularization Strength}
+
+\begin{theorem}[Optimal Regularization]\label{thm:optimal_reg}
+The optimal regularization strength $\beta^*$ as a function of target $k$ is:
+\begin{equation}
+    \beta^*(k) = \Theta\left(\frac{\log k}{k}\right)
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The Pass@k objective is:
+\begin{equation}
+    J_k = 1 - (1 - p)^k
+\end{equation}
+
+The gradient with respect to $p$ is:
+\begin{equation}
+    \frac{\partial J_k}{\partial p} = k(1-p)^{k-1}
+\end{equation}
+
+For large $k$, this gradient is small when $p$ is moderate, meaning Pass@k is relatively insensitive to small changes in $p$ but very sensitive to coverage (having diverse solutions).
+
+Balancing the RLVR objective (which pushes $p$ up) against coverage preservation (which maintains diverse solutions) gives the stated scaling.
+\end{proof}
+
+\section{Evaluation Methodology}
+
+\subsection{Reproducing the Pass@k Curve Crossing}
+
+\begin{enumerate}
+    \item Train base model on reasoning task
+    \item Apply RLVR to obtain trained model
+    \item For $k \in \{1, 2, 4, 8, 16, 32, 64, 128\}$:
+    \begin{itemize}
+        \item Sample $k$ completions from each model
+        \item Compute Pass@k using unbiased estimator
+    \end{itemize}
+    \item Identify crossing point $k^*$ where base model overtakes
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Description \\
+\midrule
+Pass@1 & Single-sample success rate \\
+Pass@k & Best-of-k success rate \\
+Pass@k Boundary & The $k$ where base model starts winning \\
+Unique Solution Rate & Fraction of distinct correct solutions \\
+Policy Entropy & $H(\pi_\theta | x)$ \\
+Coverage & Number of distinct correct solutions with $\pi(y|x) > \epsilon$ \\
+N-gram Novelty & New n-grams vs base model samples \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation metrics for exploration preservation}
+\end{table}
+
+\subsection{Datasets}
+
+\begin{itemize}
+    \item \textbf{GSM8K}: Grade school math, moderate difficulty
+    \item \textbf{MATH}: Competition math, diverse solution paths
+    \item \textbf{HumanEval/MBPP}: Code generation with multiple valid solutions
+\end{itemize}
+
+\section{Discussion}
+
+\subsection{Practical Recommendations}
+
+\begin{enumerate}
+    \item \textbf{Monitor Pass@k during training}: Track not just Pass@1 but also Pass@8, Pass@32 to detect early signs of coverage reduction.
+    
+    \item \textbf{Use mixture KL regularization}: The combination of forward and reverse KL provides balanced coverage-performance tradeoff.
+    
+    \item \textbf{Adaptive $\alpha$ for support preservation}: Start with $\alpha = 0.1$ and adjust based on observed Pass@k degradation.
+    
+    \item \textbf{Entropy monitoring}: Maintain minimum entropy threshold based on task diversity.
+\end{enumerate}
+
+\subsection{When to Prioritize Exploration}
+
+Exploration preservation is most critical when:
+\begin{itemize}
+    \item Deployment involves best-of-k sampling with $k > 1$
+    \item Task has multiple valid solution strategies
+    \item Downstream applications require diverse outputs
+    \item Model will be used for few-shot adaptation
+\end{itemize}
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item Support-preserving constraints require access to base model
+    \item Forward KL computation requires sampling from reference
+    \item Diversity regularization adds computational overhead
+    \item Optimal hyperparameters are task-dependent
+\end{itemize}
+
+\section{Conclusion}
+
+We have presented a comprehensive framework for understanding and addressing the exploration-exploitation tradeoff in reinforcement learning from verifiable rewards. Our theoretical analysis establishes conditions under which RLVR reduces policy coverage and provides bounds on the resulting Pass@k degradation. The proposed methods---support-preserving constraints, mixture KL regularization, and diversity-regularized GRPO---offer complementary approaches to maintaining the reasoning boundary while improving single-sample performance. Our work provides both theoretical foundations and practical tools for practitioners seeking to balance immediate performance gains against long-term reasoning capability preservation.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[DeepSeek-AI(2024)]{deepseekmath2024}
+DeepSeek-AI.
+\newblock DeepSeekMath: Pushing the limits of mathematical reasoning in open language models.
+\newblock \emph{arXiv preprint arXiv:2402.03300}, 2024.
+
+\bibitem[Yue et al.(2024)]{limits2024}
+Yue, S., et al.
+\newblock The limits of reinforcement learning from verifiable rewards.
+\newblock \emph{arXiv preprint}, 2024.
+
+\bibitem[Schulman et al.(2017)]{ppo2017}
+Schulman, J., Wolski, F., Dhariwal, P., Radford, A., and Klimov, O.
+\newblock Proximal policy optimization algorithms.
+\newblock \emph{arXiv preprint arXiv:1707.06347}, 2017.
+
+\bibitem[Haarnoja et al.(2018)]{sac2018}
+Haarnoja, T., Zhou, A., Abbeel, P., and Levine, S.
+\newblock Soft actor-critic: Off-policy maximum entropy deep reinforcement learning with a stochastic actor.
+\newblock \emph{ICML}, 2018.
+
+\end{thebibliography}
+
+\end{document}

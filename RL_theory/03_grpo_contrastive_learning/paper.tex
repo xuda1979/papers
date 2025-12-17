@@ -1,0 +1,504 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{GRPO as Contrastive Learning: \\
+A Theoretical Framework for Success Amplification in Verifiable Reward Settings}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Group Relative Policy Optimization (GRPO) has emerged as an effective critic-free method for reinforcement learning from verifiable rewards. In this paper, we reveal a deep connection between GRPO and contrastive learning: the group-relative normalization in GRPO implicitly induces a weighted contrastive loss over policy samples. This perspective enables principled analysis of GRPO's success amplification dynamics and motivates novel loss designs with provable guarantees. We derive explicit recurrence relations for success probability evolution under GRPO, establish optimal normalization schemes that minimize gradient variance, and propose Explicit Contrastive RLVR (EC-RLVR)---an InfoNCE-inspired loss with theoretical bounds on convergence rate. Our framework unifies disparate aspects of GRPO analysis and provides actionable insights for practitioners designing RLVR objectives.
+\end{abstract}
+
+\section{Introduction}
+
+Group Relative Policy Optimization (GRPO) has proven remarkably effective for training language models on verifiable tasks, achieving strong results without the computational overhead of critic networks. However, the theoretical foundations of GRPO---particularly why group normalization works and how to design optimal normalizations---remain underexplored.
+
+In this paper, we develop a \textbf{contrastive learning interpretation} of GRPO that provides:
+\begin{itemize}
+    \item Unified view of GRPO as weighted contrastive learning
+    \item Principled derivation of optimal normalization schemes
+    \item Explicit bounds on success amplification rates
+    \item Novel loss designs with theoretical guarantees
+\end{itemize}
+
+\subsection{Key Insight}
+
+GRPO's reward normalization partitions samples into positive (high reward) and negative (low reward) groups, with weights determined by the normalization. This is precisely a \textbf{contrastive objective}:
+\begin{itemize}
+    \item \textbf{Positives}: Correct completions (reward = 1)
+    \item \textbf{Negatives}: Incorrect completions (reward = 0)
+    \item \textbf{Contrast}: Amplify positives relative to negatives
+\end{itemize}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item Formal equivalence between GRPO and weighted contrastive loss
+    \item Analysis of optimal normalization under binary rewards
+    \item Success amplification recurrence relations and convergence bounds
+    \item Explicit Contrastive RLVR (EC-RLVR) with InfoNCE-style objective
+    \item Gradient variance analysis and minimum variance normalization
+\end{enumerate}
+
+\section{GRPO as Contrastive Learning}
+
+\subsection{Standard GRPO Objective}
+
+For a prompt $x$ and group of samples $\{y_1, \ldots, y_G\}$ from $\pi_{\theta_{\text{old}}}$:
+
+\begin{equation}
+    L_{\text{GRPO}}(\theta) = -\mathbb{E}_{x, \{y_i\}}\left[\sum_{i=1}^G \hat{A}_i \log \pi_\theta(y_i | x)\right]
+\end{equation}
+
+where the normalized advantage is:
+\begin{equation}
+    \hat{A}_i = \frac{r_i - \bar{r}}{\sigma_r}, \quad \bar{r} = \frac{1}{G}\sum_{j=1}^G r_j, \quad \sigma_r = \sqrt{\frac{1}{G}\sum_{j=1}^G (r_j - \bar{r})^2}
+\end{equation}
+
+\subsection{Contrastive Reformulation}
+
+\begin{theorem}[Contrastive Equivalence]\label{thm:contrastive}
+The GRPO loss is equivalent to a weighted contrastive loss:
+\begin{equation}
+    L_{\text{GRPO}} = -\mathbb{E}_x\left[\sum_{i: r_i = 1} w_i^+ \log \pi_\theta(y_i|x) + \sum_{j: r_j = 0} w_j^- \log \pi_\theta(y_j|x)\right]
+\end{equation}
+where the weights are:
+\begin{align}
+    w_i^+ &= \frac{1 - p}{\sigma_r} > 0 \quad \text{(positive weight for successes)} \\
+    w_j^- &= \frac{-p}{\sigma_r} < 0 \quad \text{(negative weight for failures)}
+\end{align}
+and $p = \frac{1}{G}\sum_i r_i$ is the empirical success rate in the group.
+\end{theorem}
+
+\begin{proof}
+Under binary rewards $r_i \in \{0, 1\}$:
+\begin{align}
+    \bar{r} &= p \\
+    \sigma_r &= \sqrt{p(1-p)}
+\end{align}
+
+For successful completions ($r_i = 1$):
+\begin{equation}
+    \hat{A}_i = \frac{1 - p}{\sqrt{p(1-p)}} = \sqrt{\frac{1-p}{p}}
+\end{equation}
+
+For failed completions ($r_j = 0$):
+\begin{equation}
+    \hat{A}_j = \frac{0 - p}{\sqrt{p(1-p)}} = -\sqrt{\frac{p}{1-p}}
+\end{equation}
+
+This gives the stated weight structure with:
+\begin{itemize}
+    \item Positive samples: Amplified by $w^+ > 0$
+    \item Negative samples: Suppressed by $w^- < 0$
+\end{itemize}
+\end{proof}
+
+\subsection{Connection to InfoNCE}
+
+The InfoNCE contrastive loss is:
+\begin{equation}
+    L_{\text{InfoNCE}} = -\log \frac{\exp(f(x, y^+))}{\sum_{j=1}^N \exp(f(x, y_j))}
+\end{equation}
+
+\begin{proposition}[GRPO-InfoNCE Relationship]
+GRPO can be viewed as a \textbf{soft} version of InfoNCE where:
+\begin{itemize}
+    \item Similarity function: $f(x, y) = \log \pi_\theta(y|x)$
+    \item Positive: Samples with $r = 1$
+    \item Negative: Samples with $r = 0$
+    \item Softness: Gradient weighting instead of hard partition
+\end{itemize}
+\end{proposition}
+
+\section{Optimal Normalization}
+
+\subsection{Normalization Schemes}
+
+We analyze various normalization choices:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Normalization & Formula & Properties \\
+\midrule
+Mean-only & $\hat{A}_i = r_i - \bar{r}$ & Simple, variable scale \\
+Mean+Std & $\hat{A}_i = (r_i - \bar{r})/\sigma_r$ & Unit variance, undefined if constant \\
+Percentile & $\hat{A}_i = \text{rank}(r_i)/G$ & Robust to outliers \\
+Softmax & $w_i = e^{r_i/\tau}/\sum_j e^{r_j/\tau}$ & Temperature-controlled \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of normalization schemes}
+\end{table}
+
+\subsection{Optimal Whitening for Binary Rewards}
+
+\begin{theorem}[Minimum Variance Normalization]\label{thm:optimal_norm}
+For binary rewards with success rate $p$, the minimum variance advantage normalization is:
+\begin{equation}
+    \hat{A}_i^* = \begin{cases}
+        \frac{1-p}{p} & \text{if } r_i = 1 \\
+        -1 & \text{if } r_i = 0
+    \end{cases}
+\end{equation}
+This achieves gradient variance:
+\begin{equation}
+    \text{Var}[\nabla L^*] = O\left(\frac{1}{Gp(1-p)}\right)
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Let $n_+ = Gp$ be the number of successes and $n_- = G(1-p)$ be failures.
+
+The gradient is:
+\begin{equation}
+    \nabla L = -\sum_{i: r_i=1} \hat{A}_i^+ \nabla \log \pi - \sum_{j: r_j=0} \hat{A}_j^- \nabla \log \pi
+\end{equation}
+
+For unbiased gradient: $\mathbb{E}[\nabla L] = c \cdot \nabla J$ for some constant $c$.
+
+This requires:
+\begin{equation}
+    n_+ \hat{A}^+ + n_- \hat{A}^- = 0
+\end{equation}
+
+The variance is:
+\begin{equation}
+    \text{Var}[\nabla L] = n_+ (\hat{A}^+)^2 \text{Var}[\nabla \log \pi^+] + n_- (\hat{A}^-)^2 \text{Var}[\nabla \log \pi^-]
+\end{equation}
+
+Minimizing variance subject to the unbiasedness constraint via Lagrange multipliers:
+\begin{align}
+    \frac{\partial}{\partial \hat{A}^+}\left[n_+ (\hat{A}^+)^2 + \lambda(n_+ \hat{A}^+ + n_- \hat{A}^-)\right] &= 0 \\
+    2n_+ \hat{A}^+ + \lambda n_+ &= 0 \\
+    \hat{A}^+ &= -\frac{\lambda}{2}
+\end{align}
+
+Similarly: $\hat{A}^- = -\frac{\lambda}{2}$
+
+With the constraint $n_+ \hat{A}^+ + n_- \hat{A}^- = 0$ and normalization $|\hat{A}^-| = 1$:
+\begin{equation}
+    \hat{A}^+ = \frac{n_-}{n_+} = \frac{1-p}{p}, \quad \hat{A}^- = -1
+\end{equation}
+\end{proof}
+
+\subsection{Adaptive Normalization}
+
+Based on Theorem \ref{thm:optimal_norm}, we propose adaptive normalization:
+
+\begin{algorithm}[H]
+\caption{Adaptive Normalization GRPO}
+\begin{algorithmic}[1]
+\Require Group $\{(y_i, r_i)\}_{i=1}^G$
+\State $p \leftarrow \frac{1}{G}\sum_i r_i$ \Comment{Empirical success rate}
+\If{$p = 0$ or $p = 1$}
+    \State Skip update (degenerate group)
+\EndIf
+\For{each sample $i$}
+    \If{$r_i = 1$}
+        \State $\hat{A}_i \leftarrow (1-p)/p$
+    \Else
+        \State $\hat{A}_i \leftarrow -1$
+    \EndIf
+\EndFor
+\State \Return $\{\hat{A}_i\}$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Success Amplification Dynamics}
+
+\subsection{Recurrence Relations}
+
+\begin{theorem}[Success Probability Recurrence]\label{thm:recurrence}
+Under GRPO with learning rate $\eta$ and KL regularization $\beta$, the success probability evolves as:
+\begin{equation}
+    p_{t+1} = f(p_t) = p_t + \eta \cdot p_t(1-p_t) \cdot \frac{1}{\sqrt{p_t(1-p_t)}} - \beta \cdot g(p_t)
+\end{equation}
+where $g(p_t)$ captures the KL penalty effect.
+\end{theorem}
+
+\begin{proof}
+The policy update under GRPO modifies log-probabilities:
+\begin{equation}
+    \log \pi_{t+1}(y|x) = \log \pi_t(y|x) + \eta \hat{A}(y)
+\end{equation}
+
+For successful completions with $\hat{A}^+ = \sqrt{(1-p)/p}$:
+\begin{equation}
+    \pi_{t+1}(y^+|x) = \pi_t(y^+|x) \cdot \exp\left(\eta \sqrt{\frac{1-p}{p}}\right)
+\end{equation}
+
+The new success probability:
+\begin{align}
+    p_{t+1} &= \frac{\sum_{y^+} \pi_t(y^+) \exp(\eta \hat{A}^+)}{Z} \\
+    &\approx p_t \cdot \left(1 + \eta \sqrt{\frac{1-p_t}{p_t}}\right) / Z
+\end{align}
+
+where $Z$ is the normalization constant. Expanding to first order in $\eta$ gives the recurrence.
+\end{proof}
+
+\subsection{Convergence Analysis}
+
+\begin{theorem}[Convergence Rate]\label{thm:convergence}
+Under GRPO with optimal normalization, starting from $p_0 > 0$:
+\begin{equation}
+    p_t \geq 1 - (1 - p_0) \cdot \exp\left(-\frac{\eta t}{\sqrt{p_0(1-p_0)}}\right)
+\end{equation}
+The success probability converges exponentially to 1.
+\end{theorem}
+
+\begin{proof}
+From the recurrence relation, the increment is:
+\begin{equation}
+    \Delta p = p_{t+1} - p_t \approx \eta \sqrt{p_t(1-p_t)}
+\end{equation}
+
+This is maximized when $p = 0.5$ (balanced groups).
+
+Let $q_t = 1 - p_t$ (failure probability). Then:
+\begin{equation}
+    q_{t+1} = q_t - \eta \sqrt{p_t q_t} \leq q_t \left(1 - \frac{\eta}{\sqrt{q_t/p_t}}\right)
+\end{equation}
+
+For $q_t$ small: $q_{t+1} \leq q_t \cdot \exp(-\eta/\sqrt{q_t})$
+
+This gives exponential decay in $q_t$, hence exponential convergence of $p_t$ to 1.
+\end{proof}
+
+\section{Explicit Contrastive RLVR}
+
+Based on our analysis, we propose a principled contrastive loss for RLVR:
+
+\subsection{EC-RLVR Loss}
+
+\begin{definition}[Explicit Contrastive RLVR]
+\begin{equation}
+    L_{\text{EC-RLVR}}(\theta) = -\mathbb{E}_x\left[\log \frac{\sum_{i: r_i=1} \pi_\theta(y_i|x)^{1/\tau}}{\sum_{j=1}^G \pi_\theta(y_j|x)^{1/\tau}}\right]
+\end{equation}
+where $\tau$ is a temperature parameter controlling sharpness.
+\end{definition}
+
+This is an InfoNCE-style loss where:
+\begin{itemize}
+    \item Numerator: Sum over correct completions (positives)
+    \item Denominator: Sum over all completions
+    \item Temperature $\tau$: Controls how sharply to distinguish positives
+\end{itemize}
+
+\subsection{Theoretical Properties}
+
+\begin{theorem}[EC-RLVR Success Amplification]\label{thm:ecrlvr}
+Under EC-RLVR with learning rate $\eta$ and temperature $\tau$:
+\begin{equation}
+    p_{t+1} \geq p_t + \eta \cdot \frac{p_t(1-p_t)}{\tau}
+\end{equation}
+until reaching a stationary point.
+\end{theorem}
+
+\begin{proof}
+The gradient of EC-RLVR:
+\begin{align}
+    \nabla_\theta L &= -\nabla_\theta \log \frac{\sum_{i:r_i=1} \pi_\theta(y_i)^{1/\tau}}{\sum_j \pi_\theta(y_j)^{1/\tau}}
+\end{align}
+
+Let $S^+ = \sum_{i:r_i=1} \pi_\theta(y_i)^{1/\tau}$ and $S = \sum_j \pi_\theta(y_j)^{1/\tau}$.
+
+\begin{align}
+    \nabla_\theta L &= -\frac{1}{S^+}\sum_{i:r_i=1} \frac{1}{\tau}\pi_\theta^{1/\tau-1} \nabla\pi_\theta + \frac{1}{S}\sum_j \frac{1}{\tau}\pi_\theta^{1/\tau-1}\nabla\pi_\theta
+\end{align}
+
+The policy update increases probability mass on positives relative to negatives.
+
+For $\tau = 1$ and uniform $\pi$:
+\begin{equation}
+    \Delta p \approx \eta \cdot p(1-p)
+\end{equation}
+
+The $1/\tau$ factor amplifies this for $\tau < 1$.
+\end{proof}
+
+\begin{theorem}[EC-RLVR Gradient Variance]\label{thm:variance}
+The variance of the EC-RLVR gradient is:
+\begin{equation}
+    \text{Var}[\nabla L_{\text{EC-RLVR}}] = O\left(\frac{1}{G \cdot p(1-p)}\right)
+\end{equation}
+minimized when $p = 0.5$ (balanced groups).
+\end{theorem}
+
+\begin{proof}
+The gradient variance depends on the sampling variance of positives and negatives.
+
+With $Gp$ positives and $G(1-p)$ negatives:
+\begin{equation}
+    \text{Var}[\nabla L] \propto \frac{1}{Gp} + \frac{1}{G(1-p)} = \frac{1}{Gp(1-p)}
+\end{equation}
+
+This is minimized at $p = 0.5$.
+\end{proof}
+
+\subsection{EC-RLVR Algorithm}
+
+\begin{algorithm}[H]
+\caption{Explicit Contrastive RLVR}
+\begin{algorithmic}[1]
+\Require Policy $\pi_\theta$, temperature $\tau$, group size $G$
+\For{each prompt $x$}
+    \State Sample $\{y_1, \ldots, y_G\} \sim \pi_\theta(\cdot|x)$
+    \State Compute rewards: $r_i = \text{Verifier}(x, y_i)$
+    \State Compute scaled log-probs: $s_i = \frac{1}{\tau}\log \pi_\theta(y_i|x)$
+    \State Positives: $S^+ = \text{logsumexp}(\{s_i : r_i = 1\})$
+    \State All: $S = \text{logsumexp}(\{s_i\}_{i=1}^G)$
+    \State Loss: $L = -(S^+ - S)$
+    \State Update: $\theta \leftarrow \theta - \eta \nabla_\theta L$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Comparison: GRPO vs EC-RLVR}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Aspect & GRPO & EC-RLVR \\
+\midrule
+Loss type & Weighted log-likelihood & Contrastive (InfoNCE-style) \\
+Normalization & Mean+Std & Temperature softmax \\
+Gradient & Sample-level weighting & Ratio-based \\
+Hyperparameters & None (auto-normalized) & Temperature $\tau$ \\
+Variance & $O(1/G)$ & $O(1/(Gp(1-p)))$ \\
+Edge cases & Undefined if all same & Always defined \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of GRPO and EC-RLVR}
+\end{table}
+
+\subsection{When to Use Each}
+
+\textbf{Use GRPO when}:
+\begin{itemize}
+    \item Auto-normalization is preferred (fewer hyperparameters)
+    \item Success rate is moderate ($p \approx 0.5$)
+    \item Simplicity is prioritized
+\end{itemize}
+
+\textbf{Use EC-RLVR when}:
+\begin{itemize}
+    \item Theoretical guarantees are important
+    \item Success rate is extreme ($p \ll 0.5$ or $p \gg 0.5$)
+    \item Temperature control is desired
+\end{itemize}
+
+\section{Experimental Framework}
+
+\subsection{Experiments to Validate Theory}
+
+\begin{enumerate}
+    \item \textbf{Normalization comparison}: Compare mean-only, mean+std, optimal, percentile normalizations on convergence speed and final performance.
+    
+    \item \textbf{Success amplification curves}: Track $p_t$ over training, verify exponential convergence prediction.
+    
+    \item \textbf{Variance analysis}: Measure gradient variance under different normalizations, verify $O(1/G)$ scaling.
+    
+    \item \textbf{Temperature sensitivity}: Ablate $\tau$ in EC-RLVR, characterize optimal range.
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Description \\
+\midrule
+Pass@1 & Single-sample success rate \\
+Convergence steps & Iterations to reach 90\% of final performance \\
+Gradient variance & Empirical $\text{Var}[\nabla L]$ \\
+Amplification rate & $\Delta p / \Delta t$ during training \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation metrics}
+\end{table}
+
+\section{Discussion}
+
+\subsection{Insights from Contrastive View}
+
+The contrastive interpretation reveals:
+\begin{enumerate}
+    \item GRPO's effectiveness comes from implicit hard negative mining
+    \item Group normalization automatically balances positive/negative contributions
+    \item Temperature (via std normalization) adapts to success rate
+\end{enumerate}
+
+\subsection{Design Principles for RLVR Losses}
+
+Based on our analysis:
+\begin{enumerate}
+    \item \textbf{Balance}: Ensure positive and negative gradients are balanced
+    \item \textbf{Adapt}: Scale gradients based on current success rate
+    \item \textbf{Bound}: Clip or normalize to prevent gradient explosion
+    \item \textbf{Contrast}: Explicitly maximize positive-negative separation
+\end{enumerate}
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item Analysis assumes binary rewards (extensions to continuous rewards less clean)
+    \item Convergence bounds are asymptotic
+    \item EC-RLVR introduces temperature hyperparameter
+\end{itemize}
+
+\section{Conclusion}
+
+We have established a formal connection between GRPO and contrastive learning, revealing that group-relative normalization implicitly implements weighted contrastive objectives. This perspective enables principled analysis of success amplification dynamics, optimal normalization design, and novel loss formulations. Our Explicit Contrastive RLVR provides an alternative to GRPO with clearer theoretical properties and temperature-controlled sharpness. The framework unifies disparate aspects of GRPO analysis and provides actionable guidelines for designing RLVR objectives.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[DeepSeek-AI(2024)]{deepseekmath2024}
+DeepSeek-AI.
+\newblock DeepSeekMath: Pushing the limits of mathematical reasoning in open language models.
+\newblock \emph{arXiv preprint arXiv:2402.03300}, 2024.
+
+\bibitem[Oord et al.(2018)]{infonce2018}
+van den Oord, A., Li, Y., and Vinyals, O.
+\newblock Representation learning with contrastive predictive coding.
+\newblock \emph{arXiv preprint arXiv:1807.03748}, 2018.
+
+\bibitem[Chen et al.(2020)]{simclr2020}
+Chen, T., Kornblith, S., Norouzi, M., and Hinton, G.
+\newblock A simple framework for contrastive learning of visual representations.
+\newblock \emph{ICML}, 2020.
+
+\bibitem[Radford et al.(2021)]{clip2021}
+Radford, A., et al.
+\newblock Learning transferable visual models from natural language supervision.
+\newblock \emph{ICML}, 2021.
+
+\end{thebibliography}
+
+\end{document}

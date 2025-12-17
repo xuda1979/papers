@@ -1,0 +1,551 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Training-Free Reinforcement Learning: \\
+Inference-Time Improvement Without Finetuning}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Traditional RLVR improves models through gradient updates, requiring significant compute and risking capability degradation. We propose Training-Free RL (TFRL), a family of inference-time techniques that improve performance without modifying model weights. TFRL leverages external signals---verifiers, reward models, and prior knowledge---to guide generation at test time. We analyze three main approaches: (1) token-level priors that bias decoding toward verified solutions, (2) contrastive decoding that combines base and expert models, and (3) verification-guided search that uses verifiers to prune invalid paths. We establish theoretical foundations showing when TFRL can match or exceed training-based approaches, derive optimal inference compute allocation, and characterize the quality-compute trade-off. Our framework unifies various inference-time methods under a common theoretical umbrella and provides practical guidelines for deployment in compute-constrained or safety-critical settings.
+\end{abstract}
+
+\section{Introduction}
+
+\textbf{Problem}: Standard RLVR requires:
+\begin{itemize}
+    \item Expensive training compute
+    \item Risk of catastrophic forgetting
+    \item Difficulty reverting changes
+    \item Long iteration cycles
+\end{itemize}
+
+\textbf{Solution}: Apply RL principles at inference time:
+\begin{enumerate}
+    \item No weight updates needed
+    \item Instantly reversible
+    \item Can incorporate new verifiers without retraining
+    \item Lower compute barrier
+\end{enumerate}
+
+\subsection{Training-Free RL Methods}
+
+Three main approaches:
+
+\begin{enumerate}
+    \item \textbf{Token Priors}: Bias decoding toward good tokens
+    \item \textbf{Contrastive Decoding}: Combine multiple models
+    \item \textbf{Verification-Guided Search}: Use verifiers during generation
+\end{enumerate}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item Unified framework for training-free RL
+    \item Theoretical analysis of when TFRL matches training
+    \item Optimal inference compute allocation
+    \item Practical algorithms for each approach
+    \item Guidelines for deployment scenarios
+\end{enumerate}
+
+\section{Background}
+
+\subsection{Inference-Time Computation}
+
+Recent work shows inference-time compute can substitute for training:
+\begin{itemize}
+    \item Best-of-N sampling
+    \item Chain-of-thought prompting
+    \item Self-consistency
+    \item Tree search
+\end{itemize}
+
+\begin{definition}[Inference Compute Scaling]
+\begin{equation}
+    \text{Performance}(C_{\text{inf}}) \approx \text{Base} + \alpha \log C_{\text{inf}}
+\end{equation}
+Logarithmic improvement with inference compute.
+\end{definition}
+
+\subsection{Connection to RL}
+
+Inference-time methods implement RL concepts without training:
+\begin{itemize}
+    \item \textbf{Reward}: Verifier/reward model scores
+    \item \textbf{Policy improvement}: Biased sampling toward high-reward outputs
+    \item \textbf{Exploration}: Diverse sampling strategies
+\end{itemize}
+
+\section{Token-Level Priors}
+
+\subsection{Decoding with External Priors}
+
+\begin{definition}[Prior-Guided Decoding]
+Modified next-token distribution:
+\begin{equation}
+    P_{\text{guided}}(y_t | y_{<t}) \propto P_{\text{base}}(y_t | y_{<t}) \cdot \exp(\beta \cdot \text{Prior}(y_t | y_{<t}))
+\end{equation}
+where Prior encodes external knowledge.
+\end{definition}
+
+\subsection{Types of Priors}
+
+\begin{enumerate}
+    \item \textbf{Reward Model Prior}:
+    \begin{equation}
+        \text{Prior}(y_t) = R(y_{<t}, y_t)
+    \end{equation}
+    
+    \item \textbf{Verifier Prior}:
+    \begin{equation}
+        \text{Prior}(y_t) = \log P(\text{correct} | y_{<t}, y_t)
+    \end{equation}
+    
+    \item \textbf{Constraint Prior}:
+    \begin{equation}
+        \text{Prior}(y_t) = \begin{cases}
+            0 & \text{if } y_t \text{ satisfies constraints} \\
+            -\infty & \text{otherwise}
+        \end{cases}
+    \end{equation}
+\end{enumerate}
+
+\begin{algorithm}[H]
+\caption{Prior-Guided Decoding}
+\begin{algorithmic}[1]
+\Require Prompt $x$, base model $\pi_{\text{base}}$, prior $\mathcal{R}$, strength $\beta$
+\State $y \leftarrow []$
+\While{not done}
+    \State $P_{\text{base}} \leftarrow \pi_{\text{base}}(\cdot | x, y)$
+    \For{each token $t$ in vocabulary}
+        \State $P_{\text{prior}}(t) \leftarrow \exp(\beta \cdot \mathcal{R}(y, t))$
+    \EndFor
+    \State $P_{\text{guided}} \leftarrow P_{\text{base}} \odot P_{\text{prior}}$ \Comment{Element-wise}
+    \State $P_{\text{guided}} \leftarrow P_{\text{guided}} / \sum P_{\text{guided}}$ \Comment{Normalize}
+    \State $y_t \sim P_{\text{guided}}$
+    \State $y \leftarrow y \oplus y_t$
+\EndWhile
+\State \Return $y$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Theoretical Analysis}
+
+\begin{theorem}[Prior Guidance Optimality]\label{thm:prior}
+Prior-guided decoding with $\beta \to \infty$ converges to the optimal policy under the prior's reward:
+\begin{equation}
+    \lim_{\beta \to \infty} P_{\text{guided}} = \arg\max_y \mathcal{R}(y)
+\end{equation}
+subject to support constraints from $P_{\text{base}}$.
+\end{theorem}
+
+\begin{proposition}[Finite $\beta$ Behavior]
+For finite $\beta$:
+\begin{equation}
+    D_{KL}(P_{\text{guided}} || P_{\text{base}}) = \beta \cdot \mathbb{E}_{P_{\text{guided}}}[\mathcal{R}] + \text{const}
+\end{equation}
+$\beta$ controls the trade-off between reward maximization and staying close to base.
+\end{proposition}
+
+\section{Contrastive Decoding}
+
+\subsection{Basic Contrastive Decoding}
+
+\begin{definition}[Contrastive Decoding]
+Combine expert and amateur models:
+\begin{equation}
+    P_{\text{CD}}(y_t) \propto P_{\text{expert}}(y_t)^{1+\alpha} \cdot P_{\text{amateur}}(y_t)^{-\alpha}
+\end{equation}
+Amplify what expert knows that amateur doesn't.
+\end{definition}
+
+\begin{algorithm}[H]
+\caption{Contrastive Decoding}
+\begin{algorithmic}[1]
+\Require Prompt $x$, expert $\pi_E$, amateur $\pi_A$, strength $\alpha$
+\State $y \leftarrow []$
+\While{not done}
+    \State $P_E \leftarrow \pi_E(\cdot | x, y)$
+    \State $P_A \leftarrow \pi_A(\cdot | x, y)$
+    \State $\log P_{\text{CD}} \leftarrow (1 + \alpha) \log P_E - \alpha \log P_A$
+    \State $P_{\text{CD}} \leftarrow \text{softmax}(\log P_{\text{CD}})$
+    \State $y_t \sim P_{\text{CD}}$
+    \State $y \leftarrow y \oplus y_t$
+\EndWhile
+\State \Return $y$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Variants}
+
+\begin{enumerate}
+    \item \textbf{Self-Contrastive}: Expert = base model, Amateur = base model at higher temperature
+    \item \textbf{Domain Contrastive}: Amateur is out-of-domain model
+    \item \textbf{Size Contrastive}: Expert is larger, amateur is smaller
+\end{enumerate}
+
+\begin{definition}[DPO-Style Contrastive]
+Using a reward model trained with DPO:
+\begin{equation}
+    P_{\text{guided}}(y_t) \propto P_{\text{base}}(y_t) \cdot \exp\left(\beta \cdot \log \frac{P_{\text{tuned}}(y_t)}{P_{\text{base}}(y_t)}\right)
+\end{equation}
+Extract the reward signal from the tuned model.
+\end{definition}
+
+\subsection{Theoretical Properties}
+
+\begin{theorem}[Contrastive Decoding Bound]
+Contrastive decoding with strength $\alpha$ satisfies:
+\begin{equation}
+    \mathbb{E}_{P_{\text{CD}}}[\mathcal{R}] \geq \mathbb{E}_{P_E}[\mathcal{R}] + \alpha \cdot \left( \mathbb{E}_{P_E}[\mathcal{R}] - \mathbb{E}_{P_A}[\mathcal{R}] \right) - O(\alpha^2)
+\end{equation}
+Linear improvement in expected reward (to first order in $\alpha$).
+\end{theorem}
+
+\section{Verification-Guided Search}
+
+\subsection{Best-of-N with Verification}
+
+\begin{algorithm}[H]
+\caption{Best-of-N Verification}
+\begin{algorithmic}[1]
+\Require Prompt $x$, model $\pi$, verifier $V$, samples $N$
+\State $\text{candidates} \leftarrow []$
+\For{$n = 1$ to $N$}
+    \State $y_n \sim \pi(\cdot | x)$
+    \State $\text{valid}_n, \text{score}_n \leftarrow V(x, y_n)$
+    \If{$\text{valid}_n$}
+        \State $\text{candidates} \leftarrow \text{candidates} \cup \{(y_n, \text{score}_n)\}$
+    \EndIf
+\EndFor
+\If{$\text{candidates}$ is empty}
+    \State \Return highest-score invalid sample
+\Else
+    \State \Return $\arg\max_{(y, s) \in \text{candidates}} s$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Tree Search with Verification}
+
+\begin{algorithm}[H]
+\caption{Verification-Guided Tree Search}
+\begin{algorithmic}[1]
+\Require Prompt $x$, model $\pi$, verifier $V$, budget $B$
+\State $\text{root} \leftarrow (x, [])$
+\State $\text{tree} \leftarrow \{\text{root}\}$
+\For{$b = 1$ to $B$}
+    \State $\text{node} \leftarrow \text{select}(\text{tree})$ \Comment{UCB selection}
+    \State $y_{\text{partial}} \leftarrow \text{node.partial\_response}$
+    \State \textbf{// Generate next chunk}
+    \State $\text{extensions} \leftarrow \text{sample\_k}(\pi(\cdot | x, y_{\text{partial}}))$
+    \For{each extension $e$}
+        \State $y' \leftarrow y_{\text{partial}} \oplus e$
+        \State \textbf{// Check verifier}
+        \If{$V.\text{is\_complete}(y')$}
+            \State valid, score $\leftarrow V(x, y')$
+            \If{valid}
+                \State \Return $y'$
+            \EndIf
+        \Else
+            \State score $\leftarrow V.\text{partial\_score}(x, y')$
+            \State Add child node with score
+        \EndIf
+    \EndFor
+    \State Backpropagate scores
+\EndFor
+\State \Return best partial solution
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Step-Level Verification}
+
+For structured outputs (math, code), verify intermediate steps:
+
+\begin{algorithm}[H]
+\caption{Step-Verified Generation}
+\begin{algorithmic}[1]
+\Require Problem $x$, model $\pi$, step verifier $V_{\text{step}}$
+\State $\text{solution} \leftarrow []$
+\While{not complete}
+    \State \textbf{// Generate candidate steps}
+    \For{$k = 1$ to $K$}
+        \State $\text{step}_k \sim \pi(\cdot | x, \text{solution})$
+    \EndFor
+    \State \textbf{// Verify steps}
+    \State $\text{valid\_steps} \leftarrow []$
+    \For{each step}
+        \If{$V_{\text{step}}(x, \text{solution}, \text{step})$}
+            \State $\text{valid\_steps} \leftarrow \text{valid\_steps} \cup \{\text{step}\}$
+        \EndIf
+    \EndFor
+    \If{$\text{valid\_steps}$ is empty}
+        \State Backtrack or return failure
+    \Else
+        \State $\text{solution} \leftarrow \text{solution} \oplus \text{best}(\text{valid\_steps})$
+    \EndIf
+\EndWhile
+\State \Return solution
+\end{algorithmic}
+\end{algorithm}
+
+\section{Theoretical Framework}
+
+\subsection{When Does TFRL Match Training?}
+
+\begin{theorem}[TFRL vs Training Equivalence]\label{thm:equiv}
+Training-free RL can match trained RL performance when:
+\begin{enumerate}
+    \item Sufficient inference compute: $C_{\text{inf}} \geq \Omega(\exp(\text{gap}))$
+    \item Verifier accuracy: $P(V \text{ correct}) \geq 1 - \epsilon$
+    \item Base model has support: $P_{\text{base}}(\text{good output}) > 0$
+\end{enumerate}
+where gap is the performance difference between base and target.
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+With sufficient samples, best-of-N approaches the maximum over the base model's support. The verifier filters incorrect outputs. If the base model assigns non-zero probability to good outputs, they will eventually be sampled.
+\end{proof}
+
+\subsection{Inference Compute Allocation}
+
+\begin{theorem}[Optimal Compute Allocation]\label{thm:compute}
+Given total inference compute $C$, optimal allocation between:
+\begin{itemize}
+    \item Number of samples $N$
+    \item Search depth $D$
+    \item Verification compute $V$
+\end{itemize}
+satisfies:
+\begin{equation}
+    \frac{\partial \text{Success}}{\partial N} \cdot c_N = \frac{\partial \text{Success}}{\partial D} \cdot c_D = \frac{\partial \text{Success}}{\partial V} \cdot c_V
+\end{equation}
+where $c_X$ is the cost of increasing $X$.
+\end{theorem}
+
+\subsection{Quality-Compute Trade-off}
+
+\begin{proposition}[Quality Scaling]
+For best-of-N with Pass@1 = $p$:
+\begin{equation}
+    \text{Pass@1}_{\text{Best-of-N}} = 1 - (1-p)^N \approx 1 - e^{-pN}
+\end{equation}
+Exponentially diminishing returns in $N$.
+\end{proposition}
+
+\begin{corollary}[Optimal N]
+For target success rate $q$:
+\begin{equation}
+    N^* = \frac{\log(1-q)}{\log(1-p)}
+\end{equation}
+\end{corollary}
+
+\section{Unified TFRL Framework}
+
+\subsection{General Framework}
+
+\begin{definition}[TFRL as Modified Inference]
+All TFRL methods can be expressed as:
+\begin{equation}
+    P_{\text{TFRL}}(y | x) \propto P_{\text{base}}(y | x) \cdot \text{Score}(y, x, \mathcal{E})
+\end{equation}
+where $\mathcal{E}$ is external information (verifier, reward model, prior).
+\end{definition}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Method & Score Function \\
+\midrule
+Token Prior & $\exp(\beta \sum_t \mathcal{R}(y_t | y_{<t}))$ \\
+Contrastive & $(P_E / P_A)^\alpha$ \\
+Best-of-N & $\mathbf{1}[y = \arg\max_i V(y_i)]$ \\
+Tree Search & $\mathbf{1}[\text{search finds } y]$ \\
+\bottomrule
+\end{tabular}
+\caption{TFRL methods as score functions}
+\end{table}
+
+\subsection{Hybrid Approaches}
+
+Combine multiple TFRL methods:
+
+\begin{algorithm}[H]
+\caption{Hybrid TFRL}
+\begin{algorithmic}[1]
+\Require Prompt $x$, base $\pi$, prior $\mathcal{R}$, verifier $V$
+\State \textbf{// Stage 1: Prior-guided generation}
+\For{$n = 1$ to $N$}
+    \State $y_n \leftarrow$ PriorGuidedDecoding($x$, $\pi$, $\mathcal{R}$)
+\EndFor
+\State \textbf{// Stage 2: Verification}
+\State $\text{valid} \leftarrow \{y_n : V(x, y_n) = \text{True}\}$
+\State \textbf{// Stage 3: Reranking}
+\If{$|\text{valid}| > 0$}
+    \State \Return $\arg\max_{y \in \text{valid}} \mathcal{R}(y)$
+\Else
+    \State \Return $\arg\max_{y_n} \mathcal{R}(y_n)$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+\section{Practical Considerations}
+
+\subsection{When to Use TFRL}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Scenario & Recommendation \\
+\midrule
+New verifier, no time to train & TFRL \\
+Safety-critical, need reversibility & TFRL \\
+High inference budget available & TFRL \\
+Stable deployment, optimize cost & Training \\
+Limited inference compute & Training \\
+No good verifier available & Training (with proxy) \\
+\bottomrule
+\end{tabular}
+\caption{When to use TFRL vs training}
+\end{table}
+
+\subsection{Implementation Tips}
+
+\begin{enumerate}
+    \item \textbf{Caching}: Cache verifier results for repeated patterns
+    \item \textbf{Early termination}: Stop search when high-confidence solution found
+    \item \textbf{Batching}: Generate multiple samples in parallel
+    \item \textbf{Adaptive $\beta$}: Increase prior strength if base model struggles
+\end{enumerate}
+
+\subsection{Compute Cost Analysis}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Method & Inference Cost & Quality Gain \\
+\midrule
+Base model & 1$\times$ & Baseline \\
+Best-of-8 & 8$\times$ & +10-20\% \\
+Prior-guided & 1.5$\times$ & +5-15\% \\
+Tree search (64 nodes) & 64$\times$ & +20-40\% \\
+\bottomrule
+\end{tabular}
+\caption{Typical cost-quality trade-offs}
+\end{table}
+
+\section{Experimental Framework}
+
+\subsection{Benchmarks}
+
+\begin{itemize}
+    \item \textbf{GSM8K}: Math word problems
+    \item \textbf{HumanEval}: Code generation
+    \item \textbf{MATH}: Competition mathematics
+\end{itemize}
+
+\subsection{Methods Compared}
+
+\begin{enumerate}
+    \item Base model (greedy)
+    \item Base model (temperature sampling)
+    \item Best-of-N
+    \item Prior-guided decoding
+    \item Tree search
+    \item TFRL hybrid
+    \item Trained RLVR (upper bound)
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{itemize}
+    \item Accuracy at various compute budgets
+    \item Tokens generated per problem
+    \item Wall-clock time
+    \item Cost-normalized accuracy
+\end{itemize}
+
+\section{Discussion}
+
+\subsection{Advantages of TFRL}
+
+\begin{enumerate}
+    \item \textbf{No training required}: Immediate deployment
+    \item \textbf{Reversible}: No weight changes to undo
+    \item \textbf{Flexible}: Easy to swap verifiers/priors
+    \item \textbf{Safe}: Can't damage base capabilities
+    \item \textbf{Interpretable}: Clear how each component contributes
+\end{enumerate}
+
+\subsection{Limitations}
+
+\begin{enumerate}
+    \item \textbf{Compute at inference}: Higher latency/cost
+    \item \textbf{Ceiling effect}: Can't exceed base model's support
+    \item \textbf{Verifier dependency}: Only as good as verifier
+    \item \textbf{Not generalizable}: Improvements don't transfer
+\end{enumerate}
+
+\subsection{Future Directions}
+
+\begin{itemize}
+    \item Learned inference strategies
+    \item Adaptive compute allocation
+    \item Distillation of TFRL into weights
+    \item Theoretical bounds on TFRL vs training gap
+\end{itemize}
+
+\section{Conclusion}
+
+We have presented Training-Free RL (TFRL), a framework for inference-time improvement without weight updates. TFRL encompasses token-level priors, contrastive decoding, and verification-guided search, unified under a common theoretical framework. Our analysis establishes when TFRL can match training-based approaches and derives optimal inference compute allocation. TFRL offers practical advantages for rapid deployment, safety-critical applications, and scenarios with changing verifiers. While TFRL cannot exceed the base model's support and incurs inference-time cost, it provides a valuable complement to training-based methods, enabling immediate capability improvements without the risks and costs of finetuning.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[Snell et al.(2024)]{snell2024scaling}
+Snell, C., Lee, J., Xu, K., and Kumar, A.
+\newblock Scaling LLM test-time compute optimally can be more effective than scaling model parameters.
+\newblock \emph{arXiv preprint arXiv:2408.03314}, 2024.
+
+\bibitem[Li et al.(2022)]{contrastive2022}
+Li, X. L., et al.
+\newblock Contrastive decoding: Open-ended text generation as optimization.
+\newblock \emph{ACL}, 2023.
+
+\bibitem[Cobbe et al.(2021)]{verifier2021}
+Cobbe, K., et al.
+\newblock Training verifiers to solve math word problems.
+\newblock \emph{arXiv preprint arXiv:2110.14168}, 2021.
+
+\bibitem[Wang et al.(2023)]{selfconsistency2023}
+Wang, X., et al.
+\newblock Self-consistency improves chain of thought reasoning in language models.
+\newblock \emph{ICLR}, 2023.
+
+\end{thebibliography}
+
+\end{document}

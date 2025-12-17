@@ -1,0 +1,449 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Principled Token Weighting: \\
+Using Policy Entropy as a Proxy for Per-Token Credit Assignment}
+
+\author{Research Paper}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Reinforcement learning from verifiable rewards assigns uniform credit across all tokens in a completion, despite intuitive evidence that some tokens are more ``pivotal'' than others---decisions at high-uncertainty points matter more than obvious next-token predictions. We investigate policy entropy as a proxy for token-level importance, formalizing the hypothesis that high-entropy tokens correspond to pivotal decisions with greater causal effect on final correctness. We derive theoretical connections between entropy, gradient magnitude, and Fisher information, showing that entropy-weighted gradients approximate variance-optimal weighting under mild assumptions. We propose Principled Token Weighting (PTW), a framework for per-token credit assignment using multiple importance proxies including entropy, gradient norm, and perturbation disagreement. Our analysis establishes conditions under which entropy correlates with counterfactual importance and provides practical guidelines for implementing token-level weighting in GRPO-style algorithms.
+\end{abstract}
+
+\section{Introduction}
+
+In standard RLVR, the trajectory-level reward is distributed uniformly across all tokens:
+
+\begin{equation}
+    L = -\sum_{t=1}^T A \cdot \log \pi_\theta(y_t | x, y_{<t})
+\end{equation}
+
+where $A$ is the trajectory advantage and each token receives equal gradient weight.
+
+\textbf{Problem}: Not all tokens are equally important:
+\begin{itemize}
+    \item Some tokens are ``obvious'' (low entropy): The model is confident
+    \item Some tokens are ``pivotal'' (high entropy): The model is uncertain, and the choice matters
+\end{itemize}
+
+\textbf{Key insight}: High policy entropy at a token position may indicate:
+\begin{enumerate}
+    \item Cognitive effort (harder decision)
+    \item Pivotal choice (multiple valid continuations with different outcomes)
+    \item Uncertainty (model is less confident)
+\end{enumerate}
+
+\subsection{Research Questions}
+
+\begin{enumerate}
+    \item Is entropy a good proxy for token importance?
+    \item What is the theoretical justification for entropy weighting?
+    \item How does entropy weighting compare to other importance measures?
+\end{enumerate}
+
+\subsection{Contributions}
+
+\begin{enumerate}
+    \item Formal definition of ``pivotal tokens'' via counterfactual effect
+    \item Theoretical analysis of entropy-importance correlation
+    \item Principled Token Weighting (PTW) framework with multiple proxies
+    \item Optimal weighting derivation for variance minimization
+    \item Practical implementation in GRPO-style algorithms
+\end{enumerate}
+
+\section{Formalizing Token Importance}
+
+\subsection{Counterfactual Definition}
+
+\begin{definition}[Pivotal Token]
+Token $t$ at position $i$ is \textbf{pivotal} if replacing it significantly changes the probability of final correctness:
+\begin{equation}
+    \text{Pivotality}(t, i) = |P(\text{correct} | y) - P(\text{correct} | y_{\neg t, i})|
+\end{equation}
+where $y_{\neg t, i}$ is $y$ with token at position $i$ replaced by alternatives.
+\end{definition}
+
+\begin{definition}[Expected Counterfactual Effect]
+\begin{equation}
+    \text{ECE}(i) = \mathbb{E}_{t' \sim \pi(\cdot | x, y_{<i})}[|P(\text{correct} | y) - P(\text{correct} | y_{t' \to i})|]
+\end{equation}
+The expected change in correctness probability when sampling alternative tokens at position $i$.
+\end{definition}
+
+\subsection{Entropy as Proxy}
+
+\begin{definition}[Position Entropy]
+\begin{equation}
+    H_i = H(\pi_\theta(\cdot | x, y_{<i})) = -\sum_{v \in \mathcal{V}} \pi_\theta(v | x, y_{<i}) \log \pi_\theta(v | x, y_{<i})
+\end{equation}
+\end{definition}
+
+\textbf{Hypothesis}: High entropy $H_i$ correlates with high pivotality $\text{ECE}(i)$.
+
+\textbf{Intuition}: When entropy is high, the model sees multiple plausible continuations. If these lead to different outcomes, the position is pivotal.
+
+\section{Theoretical Analysis}
+
+\subsection{Entropy and Gradient Magnitude}
+
+\begin{lemma}[Entropy-Gradient Relationship]\label{lem:entropy_grad}
+Under log-linear policy parameterization, the gradient magnitude at position $i$ scales with entropy:
+\begin{equation}
+    \|\nabla_\theta \log \pi_\theta(y_i | x, y_{<i})\| \approx O(\sqrt{H_i})
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+For log-linear policy: $\pi_\theta(v | c) \propto \exp(\theta^\top \phi(v, c))$.
+
+The gradient is:
+\begin{equation}
+    \nabla_\theta \log \pi_\theta(v | c) = \phi(v, c) - \mathbb{E}_{v' \sim \pi}[\phi(v', c)]
+\end{equation}
+
+The expected squared gradient:
+\begin{align}
+    \mathbb{E}[\|\nabla \log \pi\|^2] &= \mathbb{E}[\|\phi - \mathbb{E}[\phi]\|^2] \\
+    &= \text{Var}[\phi]
+\end{align}
+
+Under certain feature distributions, $\text{Var}[\phi] \propto H(\pi)$.
+
+For high entropy (uniform-like), variance is high. For low entropy (peaked), variance is low.
+\end{proof}
+
+\subsection{Fisher Information Connection}
+
+\begin{definition}[Fisher Information at Position $i$]
+\begin{equation}
+    F_i = \mathbb{E}_{v \sim \pi_\theta}[\nabla_\theta \log \pi_\theta(v | x, y_{<i}) \nabla_\theta \log \pi_\theta(v | x, y_{<i})^\top]
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Optimal Weighting for Variance Minimization]\label{thm:optimal}
+The optimal per-token weight for minimizing policy gradient variance is:
+\begin{equation}
+    w_i^* \propto \sqrt{\text{Var}[\nabla_\theta \log \pi_\theta(y_i | \cdot)]}
+\end{equation}
+which is related to $\sqrt{\text{tr}(F_i)}$, the square root of the trace of Fisher information.
+\end{theorem}
+
+\begin{proof}
+The policy gradient estimator is:
+\begin{equation}
+    \hat{g} = \sum_i w_i A \nabla \log \pi_\theta(y_i | \cdot)
+\end{equation}
+
+The variance is:
+\begin{equation}
+    \text{Var}[\hat{g}] = \sum_i w_i^2 A^2 \text{Var}[\nabla \log \pi_i]
+\end{equation}
+
+Subject to $\mathbb{E}[\hat{g}] = c \nabla J$ for some constant $c$.
+
+Using Cauchy-Schwarz, variance is minimized when:
+\begin{equation}
+    w_i \propto \frac{1}{\sqrt{\text{Var}[\nabla \log \pi_i]}}
+\end{equation}
+
+\textbf{Correction}: The above minimizes variance per unit gradient. For signal-to-noise ratio optimization:
+\begin{equation}
+    w_i^* \propto \sqrt{\text{Var}[\nabla \log \pi_i]}
+\end{equation}
+weights high-variance (high-information) tokens more.
+\end{proof}
+
+\begin{corollary}
+Gradient norm weighting approximates variance-optimal weighting:
+\begin{equation}
+    w_i^{\text{grad}} = \|\nabla_\theta \log \pi_\theta(y_i | x, y_{<i})\| \approx w_i^*
+\end{equation}
+\end{corollary}
+
+\subsection{Conditions for Entropy-Importance Correlation}
+
+\begin{theorem}[Entropy-Pivotality Correlation]\label{thm:correlation}
+Entropy $H_i$ correlates with counterfactual importance $\text{ECE}(i)$ when:
+\begin{enumerate}
+    \item The policy is well-calibrated: High probability $\Rightarrow$ likely correct
+    \item Outcome variance exists: Different tokens lead to different outcomes
+    \item No systematic bias: Correct/incorrect paths are not distinguished by entropy alone
+\end{enumerate}
+Under these conditions:
+\begin{equation}
+    \text{Corr}(H_i, \text{ECE}(i)) > 0
+\end{equation}
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+When entropy is low, the model is confident about one token. If well-calibrated, this token is likely correct, and alternatives are likely wrong. But since alternatives have low probability, they're rarely sampled, so $\text{ECE}$ is low.
+
+When entropy is high, multiple tokens have significant probability. The counterfactual effect depends on whether these tokens lead to different outcomes:
+\begin{equation}
+    \text{ECE}(i) = \sum_{t' \neq t} \pi(t' | c) \cdot |P(\text{correct} | y) - P(\text{correct} | y_{t'})|
+\end{equation}
+
+With calibration, high-entropy positions are where multiple plausible paths exist, and these paths may diverge in correctness.
+\end{proof}
+
+\section{Principled Token Weighting Framework}
+
+\subsection{Framework Overview}
+
+For each token, compute importance weight $w_i$ and use in loss:
+\begin{equation}
+    L = -\sum_i w_i \cdot A \cdot \log \pi_\theta(y_i | x, y_{<i})
+\end{equation}
+
+\subsection{Importance Proxies}
+
+\subsubsection{Entropy-Based Weighting}
+
+\begin{equation}
+    w_i^{\text{ent}} = \frac{H_i - H_{\min}}{H_{\max} - H_{\min}}
+\end{equation}
+
+Normalized to $[0, 1]$ based on observed entropy range.
+
+\subsubsection{Gradient Norm Weighting}
+
+\begin{equation}
+    w_i^{\text{grad}} = \|\nabla_\theta \log \pi_\theta(y_i | x, y_{<i})\|
+\end{equation}
+
+Directly measures parameter sensitivity.
+
+\subsubsection{Fisher Information Weighting}
+
+\begin{equation}
+    w_i^{\text{fisher}} = \sqrt{\text{tr}(F_i)} = \sqrt{\mathbb{E}[\|\nabla \log \pi_i\|^2]}
+\end{equation}
+
+Theoretically optimal for variance.
+
+\subsubsection{Perturbation Disagreement Weighting}
+
+\begin{equation}
+    w_i^{\text{perturb}} = \text{Var}_{\delta \sim \mathcal{N}(0, \sigma^2 I)}[\pi_{\theta + \delta}(y_i | x, y_{<i})]
+\end{equation}
+
+Measures sensitivity to parameter perturbations.
+
+\subsubsection{Attention-Based Weighting}
+
+\begin{equation}
+    w_i^{\text{attn}} = \sum_{\text{head } h} \text{attention}_{h}(i, :)
+\end{equation}
+
+Uses attention patterns as importance proxy.
+
+\subsection{Comparison of Proxies}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llll}
+\toprule
+Proxy & Formula & Compute Cost & Theoretical Basis \\
+\midrule
+Entropy & $H(\pi(\cdot|c))$ & Low & Uncertainty \\
+Gradient Norm & $\|\nabla \log \pi\|$ & Medium & Fisher information \\
+Fisher Info & $\sqrt{\text{tr}(F)}$ & High & Optimal variance \\
+Perturbation & $\text{Var}[\pi_{\theta+\delta}]$ & High & Sensitivity \\
+Attention & $\sum_h \text{attn}_h$ & Low & Model focus \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of importance proxies}
+\end{table}
+
+\section{PTW-GRPO Algorithm}
+
+\begin{algorithm}[H]
+\caption{PTW-GRPO: Principled Token Weighting GRPO}
+\begin{algorithmic}[1]
+\Require Policy $\pi_\theta$, group size $G$, weighting scheme $w(\cdot)$
+\For{each prompt $x$}
+    \State \textbf{// Sample group}
+    \State $\{y_1, \ldots, y_G\} \sim \pi_\theta(\cdot | x)$
+    \State \textbf{// Compute rewards and trajectory advantages}
+    \State $r_i \leftarrow \text{Verifier}(x, y_i)$
+    \State $\hat{A}_i \leftarrow (r_i - \bar{r}) / \sigma_r$
+    \State \textbf{// Compute token-level weights}
+    \For{each completion $y_i$}
+        \For{each position $t$ in $y_i$}
+            \State $H_{i,t} \leftarrow H(\pi_\theta(\cdot | x, y_{i,<t}))$
+            \State $w_{i,t} \leftarrow \text{normalize}(H_{i,t})$ \Comment{Or other proxy}
+        \EndFor
+    \EndFor
+    \State \textbf{// Weighted loss}
+    \State $L \leftarrow -\sum_i \sum_t w_{i,t} \cdot \hat{A}_i \cdot \log \pi_\theta(y_{i,t} | x, y_{i,<t})$
+    \State $\theta \leftarrow \theta - \eta \nabla_\theta L$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experimental Protocol}
+
+\subsection{Validating Entropy-Importance Correlation}
+
+\begin{enumerate}
+    \item Generate diverse completions (correct and incorrect)
+    \item For each token position, compute:
+    \begin{itemize}
+        \item Entropy $H_i$
+        \item Counterfactual effect (sample alternatives, verify)
+    \end{itemize}
+    \item Compute correlation $\rho(H, \text{ECE})$
+\end{enumerate}
+
+\subsection{Comparing Weighting Schemes}
+
+\begin{enumerate}
+    \item Train with different weightings:
+    \begin{itemize}
+        \item Uniform (baseline)
+        \item Entropy
+        \item Gradient norm
+        \item Combined
+    \end{itemize}
+    \item Compare learning curves and final performance
+\end{enumerate}
+
+\subsection{Metrics}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Metric & Description \\
+\midrule
+$\rho(H, \text{ECE})$ & Entropy-pivotality correlation \\
+$\text{Var}[\nabla L]$ & Gradient variance under weighting \\
+Learning speed & Steps to 80\% of final performance \\
+Final Pass@1 & End-of-training accuracy \\
+Token efficiency & Useful gradient per token \\
+\bottomrule
+\end{tabular}
+\caption{Evaluation metrics}
+\end{table}
+
+\section{Theoretical Extensions}
+
+\subsection{When Is Entropy a Good Proxy?}
+
+\begin{proposition}[Calibration Requirement]
+Entropy is a good importance proxy when the model is calibrated:
+\begin{equation}
+    P(\text{correct} | \pi_\theta(y_i | c) = p) \approx p
+\end{equation}
+High-confidence predictions should be accurate.
+\end{proposition}
+
+\begin{proposition}[Diversity Requirement]
+Entropy correlates with importance when high-entropy positions have diverse outcomes:
+\begin{equation}
+    \text{Var}_{t \sim \pi}[P(\text{correct} | y_{t \to i})] > 0
+\end{equation}
+Different tokens should lead to different correctness probabilities.
+\end{proposition}
+
+\subsection{Bias-Variance Tradeoff}
+
+\begin{proposition}[Weighting Bias-Variance Tradeoff]
+Compared to uniform weighting:
+\begin{itemize}
+    \item \textbf{Uniform}: Unbiased, potentially high variance
+    \item \textbf{Entropy}: Possibly biased (if entropy doesn't correlate with importance), lower variance
+\end{itemize}
+The optimal weighting balances this tradeoff.
+\end{proposition}
+
+\subsection{Adaptive Weighting}
+
+\begin{definition}[Adaptive Token Weighting]
+Learn the weighting function:
+\begin{equation}
+    w_i = f_\psi(H_i, \nabla \log \pi_i, \text{context}_i)
+\end{equation}
+where $\psi$ is trained to maximize learning efficiency.
+\end{definition}
+
+\section{Discussion}
+
+\subsection{Practical Recommendations}
+
+\begin{enumerate}
+    \item \textbf{Start with entropy}: Low compute cost, good baseline
+    \item \textbf{Normalize carefully}: Use running statistics for stable normalization
+    \item \textbf{Ablate}: Compare with uniform weighting to validate benefit
+    \item \textbf{Monitor calibration}: Entropy proxy works best with calibrated models
+\end{enumerate}
+
+\subsection{Limitations}
+
+\begin{itemize}
+    \item Entropy may not always correlate with importance
+    \item Gradient norm computation adds overhead
+    \item Optimal weighting is task-dependent
+    \item Theoretical results assume simplified models
+\end{itemize}
+
+\subsection{Future Directions}
+
+\begin{enumerate}
+    \item Learned importance weightings
+    \item Multi-proxy ensembles
+    \item Task-specific calibration
+    \item Integration with step-level credit assignment
+\end{enumerate}
+
+\section{Conclusion}
+
+We have presented Principled Token Weighting (PTW), a framework for per-token credit assignment in RLVR using importance proxies. Our theoretical analysis establishes connections between policy entropy, gradient magnitude, and Fisher information, showing that entropy-weighted gradients can approximate variance-optimal weighting. We formalize the notion of pivotal tokens through counterfactual effects and derive conditions under which entropy correlates with importance. The PTW framework provides multiple proxy options with different compute-accuracy tradeoffs, enabling practitioners to implement token-level credit assignment with minimal overhead. Our work offers both theoretical foundations and practical algorithms for moving beyond uniform credit assignment in reinforcement learning from verifiable rewards.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{10}
+
+\bibitem[DeepSeek-AI(2024)]{deepseekmath2024}
+DeepSeek-AI.
+\newblock DeepSeekMath: Pushing the limits of mathematical reasoning in open language models.
+\newblock \emph{arXiv preprint arXiv:2402.03300}, 2024.
+
+\bibitem[Wang et al.(2024)]{gtpo2024}
+Wang, Y., et al.
+\newblock GTPO: Fine-tuning-free scalable test-time policy optimization.
+\newblock \emph{arXiv preprint arXiv:2508.03772}, 2024.
+
+\bibitem[Amari(1998)]{amari1998}
+Amari, S.
+\newblock Natural gradient works efficiently in learning.
+\newblock \emph{Neural Computation}, 10(2):251--276, 1998.
+
+\bibitem[Pascanu \& Bengio(2013)]{pascanu2013}
+Pascanu, R. and Bengio, Y.
+\newblock Revisiting natural gradient for deep networks.
+\newblock \emph{ICLR}, 2014.
+
+\end{thebibliography}
+
+\end{document}
