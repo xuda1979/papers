@@ -120,21 +120,39 @@ E-mail: xuda@chinamobile.com}
 
 '@
 
-# Read the main paper
-$mainContent = Get-Content "angular_momentum_penrose_theorem.tex" -Raw
+function Get-FileContentOrThrow([string]$path) {
+    if (-not (Test-Path $path)) {
+        throw "Missing required file: $path"
+    }
+    return Get-Content $path -Raw
+}
 
-# Find the abstract start and bibliography start
-$abstractPattern = "\\begin{abstract}"
-$bibPattern = "\\begin{thebibliography}"
-$endDocPattern = "\\end{document}"
+# Read the main paper. Prefer the base manuscript; fall back to CMP file if needed.
+$mainPath = "angular_momentum_penrose_theorem.tex"
+$mainContent = Get-FileContentOrThrow $mainPath
+
+# Find the abstract start and bibliography start (literal strings, not regex)
+$abstractPattern = "\begin{abstract}"
+$bibPattern = "\begin{thebibliography}"
+$endDocPattern = "\end{document}"
 
 $abstractIdx = $mainContent.IndexOf($abstractPattern)
 $bibIdx = $mainContent.IndexOf($bibPattern)
 $endIdx = $mainContent.IndexOf($endDocPattern)
 
-if ($abstractIdx -lt 0) { throw "Could not find \begin{abstract}" }
-if ($bibIdx -lt 0) { throw "Could not find \begin{thebibliography}" }
-if ($endIdx -lt 0) { throw "Could not find \end{document}" }
+if ($abstractIdx -lt 0 -or $bibIdx -lt 0 -or $endIdx -lt 0) {
+    Write-Host "Warning: Patterns not found in $mainPath; trying angular_momentum_penrose_theorem_CMP.tex" -ForegroundColor Yellow
+    $mainPath = "angular_momentum_penrose_theorem_CMP.tex"
+    $mainContent = Get-FileContentOrThrow $mainPath
+
+    $abstractIdx = $mainContent.IndexOf($abstractPattern)
+    $bibIdx = $mainContent.IndexOf($bibPattern)
+    $endIdx = $mainContent.IndexOf($endDocPattern)
+}
+
+if ($abstractIdx -lt 0) { throw "Could not find \begin{abstract} in $mainPath" }
+if ($bibIdx -lt 0) { throw "Could not find \begin{thebibliography} in $mainPath" }
+if ($endIdx -lt 0) { throw "Could not find \end{document} in $mainPath" }
 
 Write-Host "Found abstract at index: $abstractIdx"
 Write-Host "Found bibliography at index: $bibIdx"

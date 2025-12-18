@@ -1,6 +1,14 @@
 # MATHEMATICAL RIGOR REVIEW: FINAL ASSESSMENT
 
-## Summary
+## ⚠️ UPDATE (December 15, 2025)
+
+**This document contained errors and has been superseded.** See `BLUE_RED_TEAM_ANALYSIS.md` for the corrected analysis.
+
+**Summary of correction:** The Schwarzschild "counterexample" described here is invalid. The paper's Critical Inequality is J-dependent: for $J = 0$, it reduces to $0 \geq 0$, which holds trivially. The proof is fundamentally sound.
+
+---
+
+## Original Summary (Preserved for Reference)
 
 After rigorous analysis, the Angular Momentum Penrose Inequality proof contains a **critical unproven claim**. The paper's status should be **"Conjecture with Significant Progress"** rather than "Proof Complete."
 

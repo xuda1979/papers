@@ -1,5 +1,19 @@
 # Mathematical Rigor Analysis: AM-Penrose Inequality Proof
 
+## ⚠️ UPDATE (December 15, 2025)
+
+**This analysis contained an error.** The original critique was based on a misreading of the paper's Critical Inequality. See `BLUE_RED_TEAM_ANALYSIS.md` for the corrected analysis.
+
+**The key error:** This document incorrectly claimed the paper asserts $\mathcal{R}(t) \geq 1/(16\pi)$. The paper's actual Critical Inequality is:
+
+$$\frac{dm_H^2}{dt} \geq \frac{4\pi J^2}{A^2} \frac{dA}{dt}$$
+
+For $J = 0$ (Schwarzschild), this becomes $0 \geq 0$, which holds trivially. The "Schwarzschild counterexample" described below is **not** a counterexample to the actual theorem.
+
+---
+
+## Original Analysis (Preserved for Reference)
+
 ## Executive Summary
 
 After careful analysis, **the proof contains a critical gap** that has not been rigorously closed. The claimed "Critical Inequality" relies on an unproven ratio bound.
