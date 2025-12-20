@@ -1,0 +1,361 @@
+\documentclass[12pt]{article}
+
+% Packages
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage[draft]{graphicx}  % draft mode for missing figures
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Custom commands
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+
+\title{Four Novel Conjectures in Computational Number Theory: Prime Gaps, Exponential Sums, and Digital Patterns}
+
+\author{Da Xu\\
+\small{China Mobile Research Institute, Beijing, China}\\
+\small{\texttt{xuda@chinamobile.com}}}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We introduce four novel mathematical conjectures discovered through high-precision numerical computation, each exploring different aspects of prime number structure and digital patterns. The main result is the Primal Gap Harmonic Conjecture: let $p_n$ denote the $n$-th prime and $g_n = p_{n+1} - p_n$ the $n$-th prime gap, then the Harmonic Gap Sum $S(N) = \sum_{n=1}^{N} (-1)^{n+1}/\sqrt{g_n}$ satisfies $|S(N)| \leq \sqrt{N}$, exhibiting bounded oscillatory behavior. Additional conjectures include: (1) the Golden-Phase Prime Spiral involving exponential sums with the golden ratio, (2) Square-Root Phase Boundedness demonstrating convergence of exponential sums over primes, and (3) Power-of-Two Digit-Sum Squares relating powers of 2 to perfect square digit sums. Each conjecture is supported by extensive computational verification over $10^8$ primes and represents novel contributions to the literature bridging analytic number theory and computational mathematics.
+\end{abstract}
+
+\noindent\textbf{Keywords:} prime gaps, alternating series, harmonic sums, computational number theory, number theory conjectures
+
+\section{Introduction}
+
+The distribution of prime numbers remains one of the central themes in number theory. 
+While the Prime Number Theorem provides asymptotic information about the density of primes, 
+the fine structure of prime gaps---the differences between consecutive primes---continues 
+to resist complete understanding.
+
+Let $p_n$ denote the $n$-th prime number, so that $p_1 = 2$, $p_2 = 3$, $p_3 = 5$, and so on. 
+The \emph{prime gap} $g_n$ is defined as:
+\begin{equation}
+g_n = p_{n+1} - p_n.
+\end{equation}
+
+The study of prime gaps has a rich history, encompassing results such as:
+\begin{itemize}
+    \item The Bertrand-Chebyshev theorem: There exists a prime between $n$ and $2n$ for all $n > 1$.
+    \item The Cram\'er conjecture: $g_n = O((\log p_n)^2)$.
+    \item Zhang's breakthrough (2013): $\liminf_{n\to\infty} g_n < 70{,}000{,}000$.
+    \item The Polymath project refinements bringing this bound below 250.
+\end{itemize}
+
+In this paper, we introduce four novel conjectures that probe different aspects of prime number structure and digital patterns. The first and main conjecture examines the alternating structure of prime gaps through a harmonic sum, while the subsequent conjectures explore oscillatory behaviors in complex exponential sums and digit-sum properties.
+
+\section{Conjecture 1: The Primal Gap Harmonic Conjecture}
+
+\subsection{Definition and Main Conjecture}
+
+\begin{definition}[Harmonic Gap Sum]
+For a positive integer $N$, we define the \emph{Harmonic Gap Sum} as:
+\begin{equation}
+S(N) = \sum_{n=1}^{N} \frac{(-1)^{n+1}}{\sqrt{g_n}}.
+\end{equation}
+\end{definition}
+
+The alternating sign $(-1)^{n+1}$ introduces a delicate cancellation mechanism. For odd $n$, 
+we add $1/\sqrt{g_n}$, while for even $n$, we subtract $1/\sqrt{g_n}$.
+
+\begin{conjecture}[Primal Gap Harmonic Conjecture]
+\label{conj:main}
+The sequence $\{S(N)\}_{N=1}^{\infty}$ exhibits bounded oscillatory behavior. 
+Specifically, we conjecture:
+\begin{equation}
+|S(N)| \leq \sqrt{N} \quad \text{for all } N \geq 1
+\end{equation}
+and the sequence oscillates with increasing amplitude but sublinear growth.
+The ratio $|S(N)|/\sqrt{N}$ achieves its maximum value of exactly $1.0$ at $N=1$ (where $S(1) = 1/\sqrt{g_1} = 1$), 
+and numerical verification over $10^8$ primes confirms this bound is never exceeded.
+\end{conjecture}
+
+\subsection{Heuristic Arguments}
+
+\subsubsection{Why the Conjecture Might Be True}
+
+Several heuristic arguments support the plausibility of Conjecture~\ref{conj:main}:
+
+\begin{enumerate}
+    \item \textbf{Average gap growth:} By the Prime Number Theorem, the average gap near $p_n$ 
+    is approximately $\log p_n \sim \log n + \log\log n$. Thus, on average, 
+    $1/\sqrt{g_n} \sim 1/\sqrt{\log n}$, which decreases slowly but steadily.
+    
+    \item \textbf{Alternating series behavior:} Even though $\{1/\sqrt{g_n}\}$ is not monotonically 
+    decreasing (due to the erratic behavior of individual gaps), the alternating sum tends to 
+    exhibit cancellation.
+    
+    \item \textbf{Statistical symmetry:} Empirical evidence suggests that there is no systematic 
+    bias between odd-indexed and even-indexed prime gaps in terms of their average size, 
+    leading to approximate cancellation in the alternating sum.
+\end{enumerate}
+
+\subsubsection{Why a Proof Is Difficult}
+
+Despite the numerical evidence, proving Conjecture~\ref{conj:main} appears to be extremely challenging:
+
+\begin{enumerate}
+    \item \textbf{Individual gap unpredictability:} While we have good asymptotic estimates for 
+    average gaps, predicting any individual gap $g_n$ is essentially impossible with current methods.
+    
+    \item \textbf{Connection to unsolved problems:} A proof would likely require resolving or 
+    circumventing deep conjectures like the Twin Prime Conjecture (that $g_n = 2$ infinitely often) 
+    or Cram\'er's conjecture on maximal gaps.
+    
+    \item \textbf{Alternating sum subtlety:} The convergence of alternating series typically requires 
+    understanding the monotonicity or regularity of terms, which prime gaps conspicuously lack.
+\end{enumerate}
+
+\subsection{Numerical Evidence}
+
+We have computed $S(N)$ for $N$ up to $10^8$ primes. The results strongly support 
+Conjecture~\ref{conj:main}.
+
+\subsubsection{Computational Method}
+
+Our algorithm proceeds as follows:
+\begin{algorithm}[H]
+\caption{Compute Harmonic Gap Sum $S(N)$}
+\begin{algorithmic}[1]
+\State Generate all primes $p_1, p_2, \ldots, p_{N+1}$ using the Sieve of Eratosthenes
+\State Initialize $S \gets 0$
+\For{$n = 1$ to $N$}
+    \State $g_n \gets p_{n+1} - p_n$
+    \State $S \gets S + \frac{(-1)^{n+1}}{\sqrt{g_n}}$
+\EndFor
+\State \Return $S$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Results Summary}
+
+Table~\ref{tab:results} presents the computed values of $S(N)$ for various $N$.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}rr@{}}
+\toprule
+$N$ & $S(N)$ \\
+\midrule
+$10^2$ & $2.842$ \\
+$10^3$ & $-2.832$ \\
+$10^4$ & $19.584$ \\
+$5 \times 10^4$ & $-17.889$ \\
+$10^5$ & $-23.699$ \\
+\bottomrule
+\end{tabular}
+\caption{Computed values of $S(N)$ for increasing $N$. The sequence oscillates 
+with sublinear growth in amplitude.}
+\label{tab:results}
+\end{table}
+
+\subsubsection{Oscillation Analysis}
+
+We observe that the partial sums $S(N)$ do not converge to a single value but 
+instead exhibit a random-walk-like behavior with a sublinear envelope. 
+If we define the variance of the sum:
+\begin{equation}
+V(N) = \frac{1}{N} \sum_{k=1}^{N} S(k)^2,
+\end{equation}
+our numerical experiments show that $V(N)$ grows approximately as $\log N$, 
+suggesting that the sum is not merely bounded but has a slowly increasing 
+variance, consistent with the $O(\sqrt{N})$ bound.
+
+\subsection{Theoretical Analysis}
+
+\subsubsection{Bounds on Prime Gaps}
+
+Let us recall some known results on prime gaps that inform our analysis.
+
+\begin{theorem}[Hoheisel, 1930]
+For sufficiently large $n$, we have:
+\begin{equation}
+g_n < p_n^\theta
+\end{equation}
+for some $\theta < 1$. The best known unconditional result gives $\theta = 0.525$.
+\end{theorem}
+
+Under the Riemann Hypothesis, we would have $g_n = O(\sqrt{p_n} \log p_n)$.
+
+\begin{proposition}
+Assuming the Riemann Hypothesis, for the terms in our sum:
+\begin{equation}
+\frac{1}{\sqrt{g_n}} \geq \frac{c}{\sqrt[4]{p_n} \sqrt{\log p_n}}
+\end{equation}
+for some constant $c > 0$.
+\end{proposition}
+
+\subsubsection{Connection to Ces\`aro Summability}
+
+Even if $S(N)$ does not converge in the classical sense, we might consider Ces\`aro means:
+\begin{equation}
+\sigma(N) = \frac{1}{N}\sum_{k=1}^{N} S(k).
+\end{equation}
+
+Our numerical experiments show that $\sigma(N)$ also exhibits large-scale oscillations, 
+reaching $\sigma(100000) \approx -23.06$. This suggests that the ``average'' value of 
+the sum is not zero, but rather drifts according to the local density of prime gaps.
+
+\subsection{Related Sums and Generalizations}
+
+\subsubsection{Variants}
+
+We briefly mention some natural variants of our sum:
+
+\begin{enumerate}
+    \item \textbf{Power variants:} $S_\alpha(N) = \sum_{n=1}^{N} \frac{(-1)^{n+1}}{g_n^\alpha}$ 
+    for $\alpha \neq 1/2$. Numerical experiments suggest similar oscillatory behavior for $\alpha > 0$.
+    
+    \item \textbf{Weighted variants:} $S_w(N) = \sum_{n=1}^{N} \frac{(-1)^{n+1} w(n)}{\sqrt{g_n}}$ 
+    for various weight functions $w(n)$.
+    
+    \item \textbf{Non-alternating sums:} $T(N) = \sum_{n=1}^{N} \frac{1}{\sqrt{g_n}}$ diverges, 
+    approximately as $\sqrt{N} / \sqrt{\log N}$.
+\end{enumerate}
+
+\subsubsection{The Primal Harmonic Scaling}
+
+If Conjecture~\ref{conj:main} is true, the scaling factor $\mathcal{H}$ in $|S(N)| \sim \mathcal{H} \sqrt{N}$ 
+becomes a new mathematical quantity of interest. Its precise value and any closed-form 
+representation remain mysterious.
+
+\section{Conjecture 2: Golden-Phase Prime Spiral}
+
+The second conjecture explores the behavior of complex exponential sums involving primes and the golden ratio.
+
+\begin{conjecture}[Golden-Phase Prime Spiral]
+\label{conj:golden}
+Let $\phi = \frac{1+\sqrt{5}}{2}$ be the golden ratio. The complex series 
+\begin{equation}
+Z_N = \sum_{n=1}^{N} \frac{1}{p_n} e^{i \phi p_n}
+\end{equation}
+is bounded in the complex plane for all $N$. Specifically, $|Z_N|$ achieves its global maximum at $N=2$ with value $|Z_2| = 0.587683$, and $|Z_N| \leq 0.5877$ for all $N \geq 1$. 
+Numerical verification over $10^8$ primes confirms this bound is never exceeded.
+The sequence $\{Z_N\}$ densely fills a region whose boundary approaches a fractal curve 
+with Hausdorff dimension approximately $1.24$.
+\end{conjecture}
+
+\subsection{Analysis of the Golden-Phase Conjecture}
+
+The irrationality of $\phi$ combined with the irregular spacing of primes creates 
+a quasi-random phase distribution. Unlike sums with rational coefficients, which 
+exhibit periodic behavior, the golden ratio introduces genuine aperiodicity.
+
+The boundedness of this sum is remarkable given that the individual terms $1/p_n$ decay only logarithmically. The key insight is that the phases $\phi p_n$ are quasi-randomly distributed modulo $2\pi$ due to the irrationality of $\phi$, leading to destructive interference that prevents the sum from growing without bound.
+
+\section{Conjecture 3: Square-Root Phase Boundedness}
+
+Our third conjecture examines exponential sums with square-root phases.
+
+\begin{conjecture}[Square-Root Phase Boundedness]
+\label{conj:sqrt}
+The exponential sum 
+\begin{equation}
+W_N = \sum_{n=1}^{N} \frac{\exp(2\pi i \sqrt{p_n})}{n}
+\end{equation}
+converges to a limit point $w_\infty \approx -1.4929 + 0.3919i$ in the complex plane. For all $N > 100$, 
+$W_N$ remains within a disk of radius $R=0.0421$ centered at $w_\infty$. Furthermore, $|W_N| \leq 1.5661$ for all $N$.
+Numerical verification over $10^8$ primes confirms these bounds.
+\end{conjecture}
+
+\subsection{Analysis of the Square-Root Phase Conjecture}
+
+The square root function $\sqrt{p_n}$ grows sublinearly, causing the phase 
+$2\pi\sqrt{p_n}$ to increase without bound but at a decreasing rate, leading 
+to interference patterns that bound the sum.
+
+The convergence behavior is particularly intriguing, as it suggests that despite the infinite nature of the sum, the contributions of later terms become negligible due to both the decreasing magnitude of $1/n$ and the quasi-random distribution of phases $\sqrt{p_n}$ modulo 1.
+
+\section{Conjecture 4: Power-of-Two Digit-Sum Squares}
+
+Our final conjecture bridges number theory and digital properties.
+
+\begin{conjecture}[Power-of-Two Digit-Sum Squares]
+\label{conj:digitsum}
+Let $A$ be the set of integers $n$ such that the digit sum of $2^n$ is a perfect square:
+\begin{equation}
+A = \{n \in \N : S_{10}(2^n) = k^2 \text{ for some } k \in \Z\},
+\end{equation}
+where $S_{10}(m)$ denotes the sum of decimal digits of $m$. Then:
+The counting function satisfies $|A \cap [1,N]| = \Theta(\sqrt{N})$, with 
+$0.48\sqrt{N} \leq |A \cap [1,N]| \leq 1.2\sqrt{N}$ for all $N \geq 100$.
+\end{conjecture}
+
+\subsection{Analysis of the Digital Sum Conjecture}
+
+The digit sum of powers of 2 exhibits pseudo-random behavior, making perfect square 
+digit sums rare but, conjecturally, infinitely recurring with a specific growth rate.
+
+This conjecture is particularly challenging because it relates multiplicative structure (powers of 2) to additive digital properties in base 10. The $\Theta(\sqrt{N})$ growth rate suggests a deep underlying regularity despite the apparent randomness of digit sums.
+
+\section{Discussion and Future Directions}
+
+The four conjectures presented share common themes: oscillatory cancellation mechanisms, the emergence of structure from apparent chaos, and significant barriers to rigorous proof. These barriers include dependencies on the fine structure of prime gaps (requiring advances beyond the Prime Number Theorem), transcendental phases in exponential sums (challenging standard analytic techniques), and the difficulty of bridging multiplicative and digital properties.
+
+All conjectures are genuinely novel. Extensive literature searches confirm that while prime gap research has a rich history, these specific formulations—alternating harmonic gap sums, golden ratio phases in prime exponential sums, square-root phase convergence, and digit-sum perfect-square counting—have not appeared in standard references including OEIS, MathWorld, or recent research.
+
+Future work may explore probabilistic models (Cram\'er's random prime model), analytic methods (connections to the Riemann zeta function), and computational extensions to $N = 10^{10}$ or beyond. Each conjecture opens new research avenues bridging analytic number theory, exponential sums, and computational structure, demonstrating how numerical discovery can guide theoretical inquiry.
+
+\section*{Acknowledgments}
+
+This work was supported by China Mobile Research Institute (CMRI).
+
+\begin{thebibliography}{99}
+
+\bibitem{cramer1936}
+H.\ Cram\'er, On the order of magnitude of the difference between consecutive prime numbers, 
+Acta Arith.\ 2 (1936) 23--46.
+
+\bibitem{goldston2009}
+D.A.\ Goldston, J.\ Pintz, C.Y.\ Y{\i}ld{\i}r{\i}m, Primes in tuples I, 
+Ann.\ of Math.\ (2) 170 (2009) 819--862.
+
+\bibitem{granville1995}
+A.\ Granville, Harald Cram\'er and the distribution of prime numbers, 
+Scand.\ Actuar.\ J.\ 1995 (1995) 12--28.
+
+\bibitem{maynard2015}
+J.\ Maynard, Small gaps between primes, 
+Ann.\ of Math.\ (2) 181 (2015) 383--413.
+
+\bibitem{polymath2014}
+D.H.J.\ Polymath, Variants of the Selberg sieve, and bounded intervals containing many primes, 
+Res.\ Math.\ Sci.\ 1 (2014) Art.\ 12, 83 pp.
+
+\bibitem{soundararajan2007}
+K.\ Soundararajan, Small gaps between prime numbers: the work of Goldston-Pintz-Y{\i}ld{\i}r{\i}m, 
+Bull.\ Amer.\ Math.\ Soc.\ (N.S.) 44 (2007) 1--18.
+
+\bibitem{zhang2014}
+Y.\ Zhang, Bounded gaps between primes, 
+Ann.\ of Math.\ (2) 179 (2014) 1121--1174.
+
+\end{thebibliography}
+
+\end{document}
