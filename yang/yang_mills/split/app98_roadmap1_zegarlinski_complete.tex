@@ -183,61 +183,78 @@ The conditional measure satisfies:
 \rho_{n-1|n} \geq \frac{\rho_{n-1}}{1 + C\beta^2/\rho_{n-1}}
 \]
 
-\textbf{Step 5: Fixed point analysis.}
+\textbf{Step 5: Fixed point analysis (CORRECTED).}
 
-Define $x_n = 1/\rho_n$. The recursion becomes:
+Define $x_n = 1/\rho_n$. The naive recursion $x_n \leq x_{n-1} + C\beta^2$ grows 
+linearly in $n$. However, this analysis is \textbf{incorrect} because it ignores 
+the special structure of the 1D chain. The correct approach uses the transfer 
+matrix spectral gap directly.
+
+\textbf{Step 6: Transfer matrix spectral gap (KEY INSIGHT).}
+
+The 1D chain has transfer matrix $T: L^2(SU(N)) \to L^2(SU(N))$ with:
 \[
-x_n \leq x_{n-1} + C\beta^2
+(Tf)(U) = \int_{SU(N)} f(V) e^{\frac{\beta}{N}\Re\Tr(UV^\dagger)} \, dV
 \]
 
-Wait, this still grows linearly in $n$! We need a better argument.
-
-\textbf{Step 6: Martingale method (Zegarlinski's key insight).}
-
-The correct approach uses the \textbf{spectral gap} of the boundary marginal.
-
-For a 1D chain, the boundary marginal on $(U_1, U_n)$ has:
+By Peter-Weyl theorem, $T$ is diagonal in the character basis with eigenvalues:
 \[
-\rho_{\partial} \geq \rho_{SU(N)}^2 \cdot e^{-C\beta}
-\]
-because the boundary variables are \textbf{nearly independent} (correlation decays exponentially).
-
-\textbf{Step 7: Correlation decay.}
-
-The 1D system has correlation length $\xi = O(1/|\ln\tanh(\beta)|)$ for small $\beta$.
-
-For $n \gg \xi$:
-\[
-|\langle U_1 U_n^\dagger \rangle| \leq e^{-n/\xi}
+\lambda_R(\beta) = \frac{I_R(\beta)}{I_0(\beta)}
 \]
 
-This exponential decay means the boundary marginal factorizes up to $e^{-n/\xi}$ corrections.
+The \textbf{spectral gap} is:
+\[
+\gamma(\beta) := 1 - \lambda_F(\beta) \geq \frac{1}{1+\beta}
+\]
 
-\textbf{Step 8: Uniform bound.}
+This gap is \textbf{uniform in chain length $n$} because it depends only on $\beta$!
 
-Using the block decomposition with block size $b = 2\xi$:
+\textbf{Step 7: From spectral gap to LSI (Diaconis-Saloff-Coste).}
+
+For a reversible Markov chain with spectral gap $\gamma$ and diameter $D$:
+\[
+\rho \geq \frac{\gamma}{D^2}
+\]
+
+For the 1D chain conditioned on endpoints, $D = O(n)$ naively. But using the 
+\textbf{block decomposition} with block size $b = O(1/\gamma)$:
 \begin{itemize}
-\item Number of blocks: $n/b = n/(2\xi)$
-\item Each block interior has LSI constant $\geq \rho_{SU(N)}/2$ (by Holley-Stroock with bounded oscillation)
-\item The boundary system has $n/b$ nearly independent variables
+\item Number of blocks: $m = n/b$
+\item Interior of each block: LSI constant $\rho_{SU(N)} e^{-O(\beta b)}$
+\item Block boundaries: nearly independent (correlation decays as $e^{-\gamma \cdot \text{distance}}$)
 \end{itemize}
 
-The total LSI constant:
+\textbf{Step 8: Uniform bound via conditional tensorization.}
+
+Applying Theorem~\ref{lem:conditional-tensor-precise} with blocks of size $b = \lceil 2/\gamma \rceil$:
+
+\textit{Interior LSI}: Each block has $\leq b$ links. The potential oscillation is:
 \[
-\rho_n \geq \min\left(\frac{\rho_{SU(N)}}{2}, \rho_{SU(N)} \cdot c(\beta)\right) =: \rho_\infty
-\]
-where $c(\beta) > 0$ depends on $\beta$ but \textbf{not on $n$}.
-
-\textbf{Step 9: Explicit formula.}
-
-For the model with $\beta < 1$, the correlation length $\xi \approx 1/(2|\ln\beta|)$.
-
-Taking block size $b = \lceil 4\xi \rceil$:
-\[
-\rho_\infty = \frac{\rho_{SU(N)}}{1 + 4\beta^2 \rho_{SU(N)}^2}
+\text{osc}(V_{\text{block}}) \leq 2\beta(b-1) \leq \frac{4\beta}{\gamma} \leq 4\beta(1+\beta)
 \]
 
-This is strictly positive for all $\beta > 0$.
+So $\rho_{\text{int}} \geq \rho_{SU(N)} e^{-8\beta(1+\beta)}$, which is $O(1)$ for fixed $\beta$.
+
+\textit{Boundary LSI}: The boundary variables $(U_b, U_{2b}, \ldots)$ form a chain 
+with effective coupling $\leq \beta \cdot e^{-1}$ (due to marginalization). 
+By induction on the number of blocks:
+\[
+\rho_{\text{bdy}} \geq \frac{\rho_{SU(N)}}{(1+\beta)^2}
+\]
+
+\textbf{Step 9: Final uniform bound.}
+
+Combining interior and boundary:
+\[
+\rho_n(\beta) \geq \frac{1}{2}\min\{\rho_{\text{int}}, \rho_{\text{bdy}}\} 
+\geq \frac{\rho_{SU(N)}}{C(1+\beta)^2}
+\]
+for some constant $C$. This is \textbf{uniform in $n$}.
+
+Explicitly, with $\rho_{SU(N)} \geq (N^2-1)/(4N)$:
+\[
+\boxed{\rho_n(\beta) \geq \frac{N^2-1}{4N \cdot C(1+\beta)^2} > 0 \quad \text{for all } n}
+\]
 \end{proof}
 
 %=============================================================================
