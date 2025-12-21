@@ -6,7 +6,7 @@
 
 **Author:** Da Xu (China Mobile Research Institute)
 
-**Submission Date:** December 2025
+**Submission Date:** December 21, 2025
 
 ---
 
@@ -16,19 +16,28 @@
 
 | File | Description |
 |------|-------------|
-| `angular_momentum_penrose_theorem_CMP.tex` | **Main manuscript** formatted for CMP |
-| `angular_momentum_penrose_theorem.tex` | Full manuscript (amsart format, for reference) |
+| `split/main.tex` | **Main manuscript** (modular format with \input files) |
+| `split/preamble.tex` | Preamble with packages and custom commands |
+| `split/title-abstract.tex` | Title, author info, and abstract |
+| `split/sec01-introduction.tex` - `sec13-conclusion.tex` | Main sections |
+| `split/app01-amo-estimates.tex` - `app05-mars-simon.tex` | Appendices |
+| `split/bibliography.tex` | Embedded bibliography (82 references) |
 | `cover_letter_CMP.tex` | Cover letter to editors |
-| `references.bib` | BibTeX bibliography file |
+
+### Compiled PDFs
+
+| File | Description |
+|------|-------------|
+| `angular_momentum_penrose_theorem_CMP.pdf` | Compiled PDF (305 pages) |
+| `cover_letter_CMP.pdf` | Compiled cover letter |
 
 ### Supporting Documentation
 
 | File | Description |
 |------|-------------|
-| `angular_momentum_penrose_theorem.pdf` | Compiled PDF of main manuscript |
-| `cover_letter_CMP.pdf` | Compiled PDF of cover letter |
-| `paper_review_questions.md` | Self-review documentation |
-| `THEOREM_ANNOUNCEMENT.md` | Summary announcement of results |
+| `paper_review_questions.md` | Self-review documentation (300 questions) |
+| `PRE_SUBMISSION_CHECKLIST.md` | Detailed submission checklist |
+| `REFEREE_RESPONSE.md` | Prepared referee responses |
 
 ---
 
@@ -78,9 +87,9 @@ with equality iff the data is a Kerr slice.
 4. **Complete rigidity**: Equality case fully characterized
 
 ### Paper Statistics
-- Length: ~6,500 lines LaTeX (~120 pages)
-- Theorems/Lemmas: 50+
-- References: 60+
+- Length: ~305 pages (double-spaced, with line numbers)
+- Theorems/Lemmas/Propositions: 50+
+- References: 82
 - Self-contained proofs with explicit estimates
 
 ---
@@ -88,13 +97,14 @@ with equality iff the data is a Kerr slice.
 ## Pre-submission Checklist
 
 - [x] Spell-checked
-- [x] All references defined
+- [x] All references defined (including aronszajn1957)
 - [x] All cross-references resolve
 - [x] Figures/tables properly labeled
 - [x] Notation consistent throughout
 - [x] Acknowledgments included
 - [x] No undefined LaTeX commands
-- [x] Compiles without errors
+- [x] Compiles without errors (pdflatex ×2)
+- [x] Email consistent across all files (xuda@chinamobile.com)
 
 ---
 
@@ -104,8 +114,8 @@ with equality iff the data is a Kerr slice.
 Da Xu  
 China Mobile Research Institute  
 Beijing 100053, China  
-Email: xudayj@chinamobile.com
+Email: xuda@chinamobile.com
 
 ---
 
-*Last updated: December 11, 2025*
+*Last updated: December 21, 2025*

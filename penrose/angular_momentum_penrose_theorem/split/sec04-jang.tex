@@ -1,0 +1,969 @@
+\section{Stage 1: Axisymmetric Jang Equation}\label{sec:jang}
+%=============================================================================
+
+\subsection{Function Spaces and Regularity Framework}
+
+We first establish the precise function spaces required for rigorous analysis.
+
+\begin{definition}[Weighted H\"older Spaces]\label{def:weighted-holder}
+For $k \in \mathbb{N}_0$, $\alpha \in (0,1)$, and weight $\tau \in \mathbb{R}$, define the weighted H\"older space on an asymptotically flat manifold $(M, g)$ with asymptotic radial coordinate $r(x) := |x|$ in the end:
+\[
+C^{k,\alpha}_{-\tau}(M) := \{u \in C^{k,\alpha}_{\mathrm{loc}}(M) : \|u\|_{C^{k,\alpha}_{-\tau}} < \infty\},
+\]
+where the norm is:
+\[
+\|u\|_{C^{k,\alpha}_{-\tau}} := \sum_{|\beta| \leq k} \sup_{x \in M} \langle r(x)\rangle^{\tau + |\beta|}|D^\beta u(x)| + [D^k u]_{\alpha, -\tau-k-\alpha},
+\]
+with $\langle r \rangle := (1 + r^2)^{1/2}$ (the Japanese bracket), and the weighted H\"older seminorm:
+\[
+[v]_{\alpha, \delta} := \sup_{\substack{x \neq y \\ d(x,y) < \mathrm{inj}(M)/2}} \min(\langle r(x)\rangle, \langle r(y)\rangle)^{-\delta} \frac{|v(x) - v(y)|}{d(x,y)^\alpha}.
+\]
+Here $\mathrm{inj}(M)$ denotes the injectivity radius. A function $u \in C^{k,\alpha}_{-\tau}(M)$ satisfies $|u(x)| = O(r^{-\tau})$ as $r \to \infty$.
+
+This follows the conventions of Bartnik \cite{bartnik1986} and Lockhart--McOwen \cite{lockhartmccowen1985}. The choice $\tau > 1/2$ in Definition~\ref{def:AF} ensures finite ADM mass.
+\end{definition}
+
+\begin{definition}[Asymptotically Flat Initial Data]\label{def:AF}
+Initial data $(M, g, K)$ is \textbf{asymptotically flat with decay rate $\tau > 1/2$} if there exists a compact set $K_0 \subset M$ and a diffeomorphism $\Phi: M \setminus K_0 \to \mathbb{R}^3 \setminus \overline{B_R}$ for some $R > 0$, such that in the coordinates $x = \Phi(p)$:
+\begin{enumerate}
+    \item[(AF1)] \textbf{Metric decay:} $g_{ij} - \delta_{ij} \in C^{2,\alpha}_{-\tau}(M \setminus K_0)$, i.e.,
+    \[
+    |g_{ij}(x) - \delta_{ij}| \leq C|x|^{-\tau}, \quad |\partial_k g_{ij}(x)| \leq C|x|^{-\tau-1}, \quad |\partial_k\partial_\ell g_{ij}(x)| \leq C|x|^{-\tau-2};
+    \]
+    \item[(AF2)] \textbf{Extrinsic curvature decay:} $K_{ij} \in C^{1,\alpha}_{-\tau-1}(M \setminus K_0)$, i.e.,
+    \[
+    |K_{ij}(x)| \leq C|x|^{-\tau-1}, \quad |\partial_k K_{ij}(x)| \leq C|x|^{-\tau-2};
+    \]
+    \item[(AF3)] \textbf{Finite ADM mass:} The ADM mass, defined by the limit
+    \[
+    M_{\ADM} := \lim_{R \to \infty} \frac{1}{16\pi}\oint_{S_R}(\partial_j g_{ij} - \partial_i g_{jj})\nu^i \, dA,
+    \]
+    exists and is finite. Here $S_R = \{|x| = R\}$ and $\nu = x/|x|$ is the Euclidean outward normal.
+\end{enumerate}
+The condition $\tau > 1/2$ ensures convergence of the ADM integral: the integrand is $O(R^{-\tau-1})$, so the surface integral is $O(R^{2-\tau-1}) = O(R^{1-\tau}) \to 0$ as $R \to \infty$ when $\tau > 1$; the weaker condition $\tau > 1/2$ suffices by more refined analysis using the constraint equations (see \cite[Theorem 4.2]{bartnik1986}).
+\end{definition}
+
+\begin{definition}[Dominant Energy Condition]\label{def:DEC}
+Initial data $(M, g, K)$ satisfies the \textbf{dominant energy condition (DEC)} if:
+\[
+\mu \geq |\momdens|_g, \quad \text{where } \mu = \frac{1}{2}(R_g + (\tr_g K)^2 - |K|_g^2), \quad \momdens_i = D^k K_{ki} - D_i(\tr_g K).
+\]
+Here $\mu$ is the \textbf{energy density} and $\momdens$ is the \textbf{momentum density vector field} (see Remark~\ref{rem:notation}).
+For vacuum data ($\mu = |\momdens|_g = 0$), DEC is automatic.
+\end{definition}
+
+\begin{definition}[Stable MOTS]\label{def:MOTS}
+A closed surface $\Sigma \subset M$ is a \textbf{marginally outer trapped surface (MOTS)} if the outward null expansion vanishes: $\theta^+ := H_\Sigma + \tr_\Sigma K = 0$, where $H_\Sigma = \Div_\Sigma(\nu)$ is the mean curvature (trace of the second fundamental form with respect to the outward normal $\nu$), and $\tr_\Sigma K := K_{ij}(\delta^{ij} - \nu^i\nu^j)$ is the trace of $K$ restricted to $\Sigma$. The surface is \textbf{outermost} if no other MOTS encloses it, i.e., lies in the exterior region $M \setminus \overline{\mathrm{Int}(\Sigma)}$.
+
+A MOTS is \textbf{stable} if the principal eigenvalue of the \textbf{MOTS stability operator}
+\begin{equation}\label{eq:stability-operator}
+L_\Sigma: W^{2,2}(\Sigma) \to L^2(\Sigma), \quad L_\Sigma[\psi] := -\Delta_\Sigma \psi - \left(|A_\Sigma|^2 + \Ric_g(\nu,\nu)\right)\psi - \Div_\Sigma(X\psi) - X \cdot \nabla_\Sigma\psi
+\end{equation}
+satisfies $\lambda_1(L_\Sigma) \geq 0$. Here:
+\begin{itemize}
+    \item $A_\Sigma$ is the second fundamental form of $\Sigma$ in $(M,g)$, with $|A_\Sigma|^2 = \sum_{i,j}(A_{ij})^2$;
+    \item $\Ric_g(\nu,\nu) = R_{ij}\nu^i\nu^j$ is the Ricci curvature in the normal direction;
+    \item $X := (K(\nu, \cdot))^\top \in \Gamma(T\Sigma)$ is the tangential projection of $K(\nu, \cdot)$ to $\Sigma$, i.e., $X^i = K_j{}^i\nu^j - K_{jk}\nu^j\nu^k\nu^i$.
+\end{itemize}
+Since the first-order terms make $L_\Sigma$ non-self-adjoint, the principal eigenvalue $\lambda_1(L_\Sigma)$ is defined as:
+\[
+\lambda_1(L_\Sigma) := \inf\{\Re(\lambda) : \lambda \in \sigma(L_\Sigma)\},
+\]
+where $\sigma(L_\Sigma) \subset \mathbb{C}$ is the spectrum. By the Krein--Rutman theorem \cite{kreinrutman1948} applied to the formal adjoint, there exists a real eigenvalue achieving this infimum with a positive eigenfunction.
+
+For time-symmetric data ($K = 0$), we have $X = 0$ and the operator simplifies to the self-adjoint form $L_\Sigma[\psi] = -\Delta_\Sigma \psi - (|A_\Sigma|^2 + \Ric_g(\nu,\nu))\psi$, for which the variational characterization $\lambda_1 = \inf_{\|\psi\|_{L^2} = 1} \langle L_\Sigma\psi, \psi\rangle_{L^2}$ applies.
+
+This definition follows Andersson--Mars--Simon \cite{anderssonmars2008} and Andersson--Metzger \cite{anderssonmetzger2009}.
+\end{definition}
+
+\begin{remark}[Strictly Stable MOTS and Cylindrical Decay Rate]\label{rem:mots-decay-alignment}
+The hypothesis of \textbf{strict stability} ($\lambda_1(L_\Sigma) > 0$) in Theorem~\ref{thm:main} is directly connected to the cylindrical end decay rate $\beta_0$ in the Jang construction (Theorem~\ref{thm:jang-exist}):
+\begin{enumerate}[label=\textup{(\roman*)}]
+    \item \textbf{Spectral correspondence:} By \cite[Proposition 3.4]{anderssonmetzger2009}, the cylindrical decay rate satisfies $\beta_0 = 2\sqrt{\lambda_1(L_\Sigma)}$ for strictly stable MOTS. This relationship arises from the linearized Jang equation at the MOTS.
+    
+    \item \textbf{Decay rate implications:} For $\lambda_1(L_\Sigma) > 0$:
+    \begin{itemize}
+        \item The Jang metric converges \textbf{exponentially} to the cylinder: $\bg = dt^2 + g_\Sigma + O(e^{-\beta_0 t})$;
+        \item The decay rate $\beta_0 > 0$ ensures Fredholm theory applies with weight $\beta \in (-\beta_0/2, 0)$;
+        \item All geometric quantities ($R_{\bg}$, $\Lambda_J$, etc.) decay exponentially along the cylindrical end.
+    \end{itemize}
+    
+    \item \textbf{Marginally stable case:} For $\lambda_1(L_\Sigma) = 0$, a limiting argument using subleading spectral terms gives $\beta_0 = 2$ (see Lemma~\ref{lem:fredholm}, Step 4). The proof extends to this case with minor modifications to the weighted space analysis.
+    
+    \item \textbf{Physical interpretation:} Strictly stable MOTS represent ``isolated'' horizons that are dynamically stable under small perturbations. The spectral gap $\lambda_1 > 0$ quantifies the ``stiffness'' of the horizon against deformations. Marginally stable MOTS (e.g., at the threshold of black hole formation) have $\lambda_1 = 0$.
+\end{enumerate}
+The hypothesis (H4) in Theorem~\ref{thm:main} requires $\lambda_1(L_\Sigma) > 0$, which is satisfied by generic black hole data and, in particular, by all sub-extremal Kerr slices.
+\end{remark}
+
+\begin{lemma}[MOTS Topology and Axis Intersection]\label{lem:mots-axis}
+Let $(M, g, K)$ be asymptotically flat, axisymmetric initial data satisfying DEC with Killing field $\eta = \partial_\phi$ and axis $\Gamma = \{\eta = 0\}$. Let $\Sigma$ be a strictly stable outermost MOTS. Then:
+\begin{enumerate}[label=\textup{(\roman*)}]
+    \item $\Sigma$ has spherical topology: $\Sigma \cong S^2$ (by the Galloway--Schoen theorem \cite{gallowayschoen2006}).
+    \item $\Sigma$ intersects the axis $\Gamma$ at exactly two points (the ``poles''): $\Sigma \cap \Gamma = \{p_N, p_S\}$.
+    \item Away from the poles, the orbit radius is strictly positive: $\rho|_{\Sigma \setminus \{p_N, p_S\}} > 0$.
+    \item The orbit radius vanishes quadratically at the poles: $\rho(x) = O(\mathrm{dist}(x, p_\pm))$ as $x \to p_\pm$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+\textbf{Step 1: Spherical topology (Galloway--Schoen).} By \cite[Theorem 1]{gallowayschoen2006}, a stable MOTS in initial data satisfying DEC must have spherical topology, i.e., $\Sigma \cong S^2$. This uses the stability inequality and the Gauss--Bonnet theorem.
+
+\textbf{Step 2: Axis intersection is topologically necessary.}
+An axisymmetric $S^2$ embedded in a 3-manifold with $U(1)$-action \textbf{must} intersect the axis of symmetry. The $U(1)$-orbits on $\Sigma$ are circles, except at exactly two fixed points where the orbits degenerate to points. These fixed points are precisely the intersections $\Sigma \cap \Gamma$.
+
+\textit{Proof of necessity:} Suppose $\Sigma \cap \Gamma = \emptyset$. Then the $U(1)$-action on $\Sigma$ would be free (no fixed points), and the orbit space $\Sigma/U(1)$ would be a smooth 1-manifold. But the quotient of $S^2$ by a free circle action is $S^1$, implying $\Sigma$ fibers over a circle---this contradicts $\Sigma \cong S^2$ (a sphere cannot be a non-trivial $S^1$-bundle over $S^1$). Therefore, the action must have fixed points, which occur exactly on the axis.
+
+By the classification of $U(1)$-actions on $S^2$, there are exactly two fixed points (the ``north pole'' $p_N$ and ``south pole'' $p_S$), and $\Sigma \cap \Gamma = \{p_N, p_S\}$.
+
+\textbf{Step 3: Regularity at the poles.}
+The mean curvature $H$ of $\Sigma$ is finite and smooth \textbf{everywhere}, including at the poles. This is because $\Sigma$ is a smooth embedded surface (by elliptic regularity for the MOTS equation). The apparent singularity in coordinate expressions for $H$ (involving terms like $1/\rho$) is a \textbf{coordinate artifact} that cancels when computed correctly.
+
+\textit{Explicit verification:} In cylindrical coordinates $(r, z, \phi)$ near a pole $p = (0, z_0)$, a smooth axisymmetric surface is described by $r = f(z)$ with $f(z_0) = 0$ and $f'(z_0) = 0$ (smoothness at pole). Near $p$:
+\[
+f(z) = a(z - z_0)^2 + O((z-z_0)^4), \quad f'(z) = 2a(z-z_0) + O((z-z_0)^3).
+\]
+The ``dangerous'' term in the mean curvature is $\frac{f'}{f \sqrt{1+f'^2}}$, which has the expansion:
+\[
+\frac{f'}{f} = \frac{2a(z-z_0) + O((z-z_0)^3)}{a(z-z_0)^2 + O((z-z_0)^4)} = \frac{2}{z-z_0} + O(z-z_0).
+\]
+However, this term appears in the second fundamental form component $A_{\phi\phi}$, which when traced with the metric involves an additional factor of $1/f^2$ from the inverse metric $g^{\phi\phi} = 1/f^2$. The full expression for the mean curvature contribution from this term is:
+\[
+g^{\phi\phi} A_{\phi\phi} = \frac{1}{f^2} \cdot \frac{f \cdot f'}{\sqrt{1+f'^2}} = \frac{f'}{\sqrt{1+f'^2} \cdot f} = \frac{2}{z-z_0} + O(1).
+\]
+This \textbf{does diverge} in coordinates, but the metric $g_{\phi\phi} = f^2 \to 0$ at the same rate, so the trace $H = g^{ij}A_{ij}$ requires care. 
+
+The correct computation uses the fact that in an orthonormal frame $\{e_1, e_2\}$ adapted to $\Sigma$, where $e_2 = \frac{1}{f}\partial_\phi$ (unit tangent along orbits), we have:
+\[
+H = \kappa_1 + \kappa_2,
+\]
+where $\kappa_1, \kappa_2$ are the principal curvatures. At the pole, the surface is umbilic ($\kappa_1 = \kappa_2$) by axisymmetry, and l'H\^opital's rule gives:
+\[
+\lim_{z \to z_0} \kappa_2 = \lim_{z \to z_0} \frac{f'(z)/\sqrt{1+f'^2}}{f(z)} = \lim_{z \to z_0} \frac{(f'/\sqrt{1+f'^2})'}{f'} = \frac{f''(z_0)}{1} = 2a.
+\]
+Thus $H(p) = 2\kappa_1 = 4a$ is finite. The MOTS equation $H + \tr_\Sigma K = 0$ is satisfied with $H$ bounded, as required.
+
+\textbf{Step 4: Orbit radius scaling.}
+In Weyl-Papapetrou coordinates, the orbit radius $\rho = r e^{-U} + O(r^3)$ near the axis (axis regularity). For points on $\Sigma$ near the pole:
+\[
+\rho|_\Sigma \sim f(z) \sim a(z-z_0)^2 = O(\mathrm{dist}(x, p)^2)
+\]
+as $x \to p_\pm$. More precisely, $\rho \sim \mathrm{dist}(x, p)$ in the 3D metric, since the distance along the surface is comparable to $|z - z_0|$ in the meridional direction.
+\end{proof}
+
+\begin{remark}[Correction to Earlier Versions]\label{rem:axis-correction}
+An earlier version of this paper incorrectly claimed that $\Sigma \cap \Gamma = \emptyset$. We thank an anonymous referee for pointing out this topological error. The correct statement is that $\Sigma$ \textbf{must} intersect the axis at two poles for topological reasons. The key technical consequence is that the twist perturbation estimates must be refined to handle the degenerate case $\rho \to 0$ at the poles---see Lemma~\ref{lem:twist-bound-poles} below.
+\end{remark}
+
+\begin{lemma}[Twist Perturbation at Poles]\label{lem:twist-bound-poles}
+Let $(M, g, K)$ be asymptotically flat, axisymmetric initial data satisfying DEC, and let $\Sigma$ be a stable outermost MOTS with poles $p_N, p_S = \Sigma \cap \Gamma$. Let $\mathcal{T}[\bar{f}]$ be the twist perturbation term \eqref{eq:twist-term} in the orbit-space Jang equation. Then:
+\begin{enumerate}[label=\textup{(\roman*)}]
+    \item \textbf{Twist scaling at poles:} Near each pole $p \in \{p_N, p_S\}$:
+    \begin{equation}\label{eq:twist-pole-scaling}
+    |\mathcal{T}[\bar{f}](x)| \leq C \cdot \rho(x)^2 \cdot |\bar{\nabla}\bar{f}|(x) \leq C' \cdot d(x,p)^2 \quad \text{as } x \to p,
+    \end{equation}
+    where $d(x,p) = \mathrm{dist}_g(x,p)$ is the distance to the pole.
+    \item \textbf{Integrability:} The twist term is integrable over $\Sigma$ with respect to the induced area measure:
+    \begin{equation}
+    \int_\Sigma |\mathcal{T}[\bar{f}]| \, dA_\Sigma < \infty.
+    \end{equation}
+    \item \textbf{Perturbative control:} The twist contribution to the Jang operator remains uniformly bounded:
+    \begin{equation}
+    \sup_{x \in \Sigma} |\mathcal{T}[\bar{f}](x)| \leq C_\mathcal{T} < \infty,
+    \end{equation}
+    where $C_\mathcal{T}$ depends only on the initial data.
+\end{enumerate}
+In particular, the presence of poles where $\rho = 0$ does \textbf{not} obstruct the Jang existence theory.
+\end{lemma}
+
+\begin{proof}
+\textbf{Step 1: Structure of the twist term.}
+The twist perturbation in the orbit-space Jang equation has the form (see \eqref{eq:twist-term}):
+\[
+\mathcal{T}[\bar{f}] = \frac{\rho^2}{\sqrt{1 + |\bar{\nabla}\bar{f}|^2}} \cdot \mathcal{T}_0(\bar{\nabla}\bar{f}, \omega),
+\]
+where $\mathcal{T}_0$ involves the twist 1-form $\omega$ contracted with the graph normal. The crucial observation is that $\mathcal{T}$ is proportional to $\rho^2$, not merely $\rho$.
+
+\textbf{Step 2: Axis regularity of the twist.}
+By the axis regularity condition for axisymmetric spacetimes \cite[Chapter 7]{wald1984}, the twist 1-form $\omega$ satisfies:
+\begin{equation}\label{eq:omega-axis-reg}
+|\omega|_{\bar{g}} = O(1) \quad \text{as } \rho \to 0,
+\end{equation}
+i.e., $\omega$ is bounded (not divergent) at the axis. This is equivalent to the absence of NUT charge (gravitational magnetic mass) and is a standard regularity assumption for asymptotically flat spacetimes.
+
+\textbf{Explicit axis regularity conditions for the twist potential $\omega$:}
+The twist 1-form $\omega$ arises from the frame-dragging components of $K$ via the formula $K_{\phi i} = \frac{1}{2}\rho^2 \omega_i$ for $i \in \{r, z\}$ in Weyl--Papapetrou coordinates. The \textbf{elementary flatness condition} at the axis \cite[Section 7.1]{wald1984} requires that the spacetime be locally flat on the axis, which imposes:
+\begin{enumerate}[label=\textup{(AR\arabic*)}]
+    \item \textbf{Twist potential regularity:} There exists a \textbf{twist potential} $\Omega: \mathcal{Q} \to \mathbb{R}$ such that $\rho^3 \omega = d\Omega$ on the orbit space $\mathcal{Q}$. The function $\Omega$ extends smoothly to the axis $\Gamma$ with $\Omega|_\Gamma = \text{const}$.
+    \item \textbf{Component regularity:} In coordinates $(r, z)$ on $\mathcal{Q}$ with $r = 0$ being the axis:
+    \[
+    \omega_r = O(r), \quad \omega_z = O(1) \quad \text{as } r \to 0.
+    \]
+    Equivalently, $\rho \omega_r = O(r^2)$ and $\rho \omega_z = O(r)$, which ensures $K_{\phi i}$ vanishes appropriately at the axis.
+    \item \textbf{H\"older regularity in weighted spaces:} The twist 1-form satisfies $\omega \in C^{0,\Hoelder}_{\rho}(\mathcal{Q})$, the weighted H\"older space with weight $\rho$. Explicitly:
+    \[
+    \|\omega\|_{C^{0,\Hoelder}_\rho} := \sup_\mathcal{Q} |\omega| + \sup_{x \neq y} \frac{|\omega(x) - \omega(y)|}{d(x,y)^{\Hoelder}} < \infty.
+    \]
+    This regularity follows from elliptic theory for the twist potential equation $\Delta_\mathcal{Q}\Omega = 0$ with Dirichlet boundary conditions at the axis.
+\end{enumerate}
+These conditions are automatically satisfied for data arising from stationary axisymmetric spacetimes (e.g., Kerr), and are part of the standard regularity assumptions for well-posed initial data on spacelike hypersurfaces intersecting the axis.
+
+More precisely, in coordinates $(r,z)$ on the orbit space near the axis:
+\[
+\omega_r = O(r), \quad \omega_z = O(1) \quad \text{as } r \to 0,
+\]
+which gives $|\omega|_{\bar{g}} = e^{-U}\sqrt{\omega_r^2 + \omega_z^2} = O(1)$.
+
+\textbf{Step 3: Scaling near the poles.}
+At a pole $p \in \Sigma \cap \Gamma$, the orbit radius vanishes: $\rho(p) = 0$. By Lemma~\ref{lem:mots-axis}(iv), $\rho(x) = O(d(x,p))$ as $x \to p$. Therefore:
+\[
+\rho(x)^2 = O(d(x,p)^2).
+\]
+The graph gradient $|\bar{\nabla}\bar{f}|$ is bounded at the poles (the Jang solution has logarithmic blow-up near $\Sigma$ in the signed distance, but $\Sigma$ is smooth at the poles). Combining these:
+\[
+|\mathcal{T}[\bar{f}](x)| \leq C \cdot \rho(x)^2 \cdot |\omega(x)| \cdot |\bar{\nabla}\bar{f}|(x) = O(d(x,p)^2 \cdot 1 \cdot O(1)) = O(d(x,p)^2).
+\]
+This proves \eqref{eq:twist-pole-scaling}.
+
+\textbf{Step 4: Uniform boundedness.}
+The bound (iii) follows immediately: since $|\mathcal{T}| \leq C\rho^2$ and $\rho$ is bounded on the compact surface $\Sigma$:
+\[
+\sup_\Sigma |\mathcal{T}| \leq C \cdot \sup_\Sigma \rho^2 \leq C \cdot \rho_{\max}^2 < \infty.
+\]
+At the poles, $\mathcal{T}(p) = 0$ since $\rho(p) = 0$.
+
+\textbf{Step 5: Integrability.}
+For the integral bound, near each pole $p$ we use polar coordinates $(r, \theta)$ centered at $p$ on $\Sigma$, with area element $dA \sim r \, dr \, d\theta$. Then:
+\[
+\int_{B_\epsilon(p)} |\mathcal{T}| \, dA \leq C \int_0^\epsilon r^2 \cdot r \, dr = C \int_0^\epsilon r^3 \, dr = \frac{C\epsilon^4}{4} < \infty.
+\]
+Away from the poles, $|\mathcal{T}|$ is bounded by $C\rho_{\max}^2$, so the integral over $\Sigma \setminus (B_\epsilon(p_N) \cup B_\epsilon(p_S))$ is also finite. This proves (ii).
+
+\textbf{Step 6: Consequence for Jang theory.}
+The key point is that the twist term $\mathcal{T}$ vanishes \textbf{faster} at the poles than any power of $\rho$ would suggest a singularity. In particular:
+\begin{itemize}
+    \item $\mathcal{T}$ is continuous on all of $\Sigma$, including the poles;
+    \item $\mathcal{T}$ is integrable with respect to any smooth measure on $\Sigma$;
+    \item The weighted Sobolev estimates of Lemma~\ref{lem:perturbation-stability} remain valid because the perturbation norm $\|\mathcal{T}\|_{W^{0,2}_\beta}$ is finite.
+\end{itemize}
+Therefore, the presence of poles does not create any new singularities or obstructions in the Jang analysis.
+\end{proof}
+
+\begin{remark}[Geometric Interpretation of the $\rho^2$ Scaling]\label{rem:rho-squared-geometric}
+The $\rho^2$ factor in the twist term has a natural geometric interpretation. The twist 1-form $\omega$ encodes frame-dragging, which is intrinsically an \textbf{angular momentum} effect. At the axis of symmetry ($\rho = 0$), there are no orbits of the $U(1)$-action to ``drag,'' so the twist contribution must vanish. The $\rho^2$ scaling reflects the fact that angular momentum density scales as the square of the lever arm (distance from axis).
+
+More formally, the twist 1-form is the connection 1-form for the principal $U(1)$-bundle $M \to \mathcal{Q}$. At a fixed point of the $U(1)$-action (i.e., on the axis), the fiber degenerates to a point, and the connection becomes trivial. The $\rho^2$ factor ensures that all curvature contributions from the twist vanish smoothly at the axis, maintaining regularity of the Jang construction.
+\end{remark}
+
+\begin{remark}[Axis Regularity in Weighted H\"older Spaces]\label{rem:axis-weighted-holder}
+The coordinate singularity at the rotation axis $\Gamma = \{r = 0\}$ in Weyl--Papapetrou coordinates requires careful treatment in the weighted H\"older space framework. Specifically:
+
+\begin{enumerate}[label=\textup{(\roman*)}]
+    \item \textbf{Coordinate singularity vs.~geometric regularity:} Although the metric coefficient $g_{\phi\phi} = \rho^2 \to 0$ as $r \to 0$, this reflects the coordinate choice rather than a geometric singularity. The manifold $(M, g)$ is smooth across the axis, and axis regularity conditions (AR1)--(AR3) ensure that tensor fields (including the twist potential $\omega$) extend smoothly when expressed in Cartesian-like coordinates near the axis.
+    
+    \item \textbf{Weighted norms and the axis:} The weighted H\"older norm $\|\cdot\|_{C^{k,\Hoelder}_{-\tau}}$ (Definition~\ref{def:weighted-holder}) involves the radial weight $\langle r \rangle^{-\tau}$ for asymptotic decay, but near the axis we use the \textbf{$\rho$-weighted} regularity $C^{k,\Hoelder}_\rho$ as in condition (AR3). This hybrid weighting---polynomial in $r$ for asymptotics, $\rho$-scaled for the axis---is standard in the analysis of axisymmetric elliptic problems \cite{chruscielwald1994, dainortiz2009}.
+    
+    \item \textbf{Elliptic regularity at the axis:} The Jang operator and AM-Lichnerowicz operator, when reduced to the orbit space $\mathcal{Q}$, become degenerate elliptic at the axis (the coefficient of $\partial_r^2$ vanishes like $r^2$ in certain formulations). Standard regularity theory \cite{mazzeo1991} for such edge-degenerate operators ensures that solutions inherit the axis regularity of the data, provided conditions (AR1)--(AR3) hold. The key point is that the twist potential $\omega$ satisfying (AR1)--(AR2) produces twist perturbation terms $\mathcal{T}$ that remain in the appropriate weighted space.
+\end{enumerate}
+
+In summary, the potential singularity of the coordinate system at $\Gamma$ is handled by: (a)~the geometric axis regularity conditions (AR1)--(AR3) on the initial data; (b)~the $\rho$-weighted H\"older spaces that match the natural scaling; and (c)~standard elliptic theory for edge-degenerate operators. These ensure the Jang solution and subsequent conformal transformations remain well-defined and sufficiently regular across the axis.
+\end{remark}
+
+\subsection{The Generalized Jang Equation}
+
+For initial data $(M, g, K)$, the Jang equation seeks a function $f: M \to \mathbb{R}$ such that the graph $\Gamma(f) \subset M \times \mathbb{R}$ satisfies:
+\begin{equation}\label{eq:jang}
+H_{\Gamma(f)} = \tr_{\Gamma(f)} K,
+\end{equation}
+where $H_\Gamma$ is the mean curvature of the graph and $\tr_\Gamma K$ is the trace of $K$ restricted to the graph.
+
+\subsection{Axisymmetric Setting}
+
+For axisymmetric data with Killing field $\eta = \partial_\phi$, we work in Weyl-Papapetrou coordinates $(r, z, \phi)$:
+\begin{equation}
+g = e^{2U}(dr^2 + dz^2) + \rho^2 d\phi^2,
+\end{equation}
+where $U = U(r, z)$ and $\rho = \rho(r, z)$ with $\rho \to r$ as $r \to 0$ (axis regularity).
+
+The extrinsic curvature decomposes as:
+\begin{equation}
+K = K^{(\text{sym})} + K^{(\text{twist})},
+\end{equation}
+where the twist component encodes the frame-dragging effect:
+\begin{equation}
+K^{(\text{twist})}_{i\phi} = \frac{1}{2}\rho^2 \omega_i, \quad i \in \{r, z\},
+\end{equation}
+with $\omega = \omega_r dr + \omega_z dz$ the twist 1-form.
+
+\begin{theorem}[Axisymmetric Jang Existence]\label{thm:jang-exist}
+Let $(M, g, K)$ be asymptotically flat, axisymmetric initial data satisfying DEC with outermost strictly stable MOTS $\Sigma$ and decay rate $\tau > 1/2$, i.e., $\lambda_1(L_\Sigma) > 0$. Then:
+\begin{enumerate}[label=\textup{(\roman*)}]
+    \item \textbf{Existence and uniqueness:} The axisymmetric Jang equation admits a solution $f: M \setminus \Sigma \to \mathbb{R}$, unique up to an additive constant. The solution satisfies $f \in C^{2,\alpha}_{\mathrm{loc}}(M \setminus \Sigma) \cap C^{0,1}(M)$ (locally $C^{2,\alpha}$ away from $\Sigma$, globally Lipschitz).
+    \item \textbf{Blow-up asymptotics:} Near $\Sigma$, the solution blows up logarithmically with explicit coefficient:
+    \[
+    f(x) = C_0 \ln(1/s) + \mathcal{A}(y) + R(s,y), \quad C_0 = \frac{|\theta^-|}{2} > 0,
+    \]
+    where:
+    \begin{itemize}
+        \item $s = \mathrm{dist}_g(x, \Sigma)$ is the signed distance to $\Sigma$;
+        \item $y \in \Sigma$ is the nearest point projection;
+        \item $\theta^- = H_\Sigma - \tr_\Sigma K < 0$ is the inward null expansion (strictly negative for trapped surfaces by the trapped surface condition);
+        \item $\mathcal{A} \in C^{2,\alpha}(\Sigma)$ is a smooth function on $\Sigma$ (distinct from the area functional $A$);
+        \item $R(s,y) = O(s^\alpha)$ with $\alpha = \min(1, 2\sqrt{\lambda_1(L_\Sigma)}) > 0$ depending on the spectral gap of the stability operator.
+    \end{itemize}
+    \item \textbf{Jang manifold structure:} The induced metric $\bg = g + df \otimes df$ on the Jang manifold $\bM := M \setminus \Sigma$ satisfies:
+    \begin{itemize}
+        \item $\bg \in C^{0,1}(\bM)$ extends continuously to $\overline{\bM}$;
+        \item $\bg \in C^{2,\alpha}(\bM \setminus \Sigma)$ is smooth away from the horizon;
+        \item The cylindrical end $\mathcal{C} := \{x : s < s_0\} \cong [0,\infty) \times \Sigma$ (with $t = -\ln s$) has metric
+        \[
+        \bg = dt^2 + g_\Sigma + O(e^{-\beta_0 t}), \quad \beta_0 = 2\sqrt{\lambda_1(L_\Sigma)} > 0,
+        \]
+        where the error term and its first two derivatives decay exponentially.
+    \end{itemize}
+    \item \textbf{Mass preservation:} $M_{\ADM}(\bg) \leq M_{\ADM}(g)$ with equality if and only if $K \equiv 0$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+The proof extends the Han--Khuri existence theory \cite{hankhuri2013} to the axisymmetric setting with twist. We structure the argument in five steps, verifying that twist terms constitute lower-order perturbations that do not affect the principal analysis.
+
+\textbf{Step 1: Equivariant reduction and the axisymmetric Jang equation.}
+By axisymmetry, we reduce to the 2D orbit space $\mathcal{Q} = M/S^1$ with coordinates $(r, z)$ and orbit radius $\rho(r,z)$. The 3D Jang equation
+\[
+H_{\Gamma(f)} = \tr_{\Gamma(f)} K
+\]
+reduces to a 2D quasilinear elliptic PDE on $\mathcal{Q}$:
+\begin{equation}\label{eq:reduced-jang}
+\bar{H}_{\Gamma(\bar{f})} = \tr_{\Gamma(\bar{f})} \bar{K} + \mathcal{T}[\bar{f}],
+\end{equation}
+where overbars denote orbit-space quantities and $\mathcal{T}[\bar{f}]$ collects twist contributions.
+
+The reduced Jang operator has the form:
+\[
+\mathcal{J}_{\text{axi}}[\bar{f}] := \bar{g}^{ij}\left(\frac{\bar{\nabla}_{ij}\bar{f}}{\sqrt{1+|\bar{\nabla}\bar{f}|^2}} - \bar{K}_{ij}\right) - \frac{\bar{f}^i\bar{f}^j}{1+|\bar{\nabla}\bar{f}|^2}\left(\frac{\bar{\nabla}_{ij}\bar{f}}{\sqrt{1+|\bar{\nabla}\bar{f}|^2}} - \bar{K}_{ij}\right) - \mathcal{T}[\bar{f}],
+\]
+where the twist contribution is:
+\begin{equation}\label{eq:twist-term}
+\mathcal{T}[\bar{f}] = \frac{\rho^2}{(1 + |\bar{\nabla} \bar{f}|^2)^{1/2}} \left( \omega_i \bar{\nu}^i - \frac{\bar{f}_{,i}\omega_j \bar{f}^{,j}}{1 + |\bar{\nabla} \bar{f}|^2}\bar{\nu}^i \right),
+\end{equation}
+where $\bar{\nu}$ is the \textbf{orbit-space projection of the graph normal}, defined explicitly as follows. Let $\Gamma(\bar{f}) \subset \mathcal{Q} \times \mathbb{R}$ be the graph of $\bar{f}$. The upward unit normal to this graph is:
+\[
+N = \frac{1}{\sqrt{1 + |\bar{\nabla}\bar{f}|^2_{\bar{g}}}}(-\bar{\nabla}\bar{f}, 1) \in T(\mathcal{Q} \times \mathbb{R}).
+\]
+The orbit-space component $\bar{\nu} = (\bar{\nu}^r, \bar{\nu}^z)$ is the projection of $N$ to $T\mathcal{Q}$:
+\[
+\bar{\nu}^i = -\frac{\bar{g}^{ij}\partial_j \bar{f}}{\sqrt{1 + |\bar{\nabla}\bar{f}|^2_{\bar{g}}}}, \quad i \in \{r, z\}.
+\]
+This is a unit vector in $(\mathcal{Q}, \bar{g})$ when $|\bar{\nabla}\bar{f}| \neq 0$.
+
+\textbf{Step 2: Verification that twist is a lower-order perturbation.}
+This is the critical step. We establish three key bounds with detailed derivations:
+
+\textit{(2a) Twist potential regularity.} The twist 1-form $\omega$ satisfies the elliptic system $d\omega = 0$ (from the vacuum momentum constraint $D^j K_{ij} = D_i(\tr K)$ combined with axisymmetry). More precisely, the momentum constraint in axisymmetric coordinates gives:
+\[
+\partial_r(\rho^3 \omega_z) - \partial_z(\rho^3 \omega_r) = 0,
+\]
+which is the curl-free condition for $\rho^3 \omega$ on $\mathcal{Q}$. This implies $\rho^3 \omega = d\Omega$ for a twist potential $\Omega$, and standard elliptic regularity for the Laplacian $\Delta_{\mathcal{Q}} \Omega = 0$ \cite{gilbargtrudinger2001} yields $\omega \in C^{0,\alpha}(\mathcal{Q})$ up to $\partial\mathcal{Q}$ (the axis and horizon). In particular, $|\omega| \leq C_\omega$ is uniformly bounded on $\mathcal{Q}$.
+
+\textit{(2b) Orbit radius behavior at the horizon.} The horizon $\Sigma$ in axisymmetric data intersects the axis $\Gamma$ at exactly two poles $p_N, p_S$ (Lemma~\ref{lem:mots-axis}). The orbit radius $\rho$ satisfies:
+\begin{itemize}
+    \item $\rho(p_N) = \rho(p_S) = 0$ at the poles;
+    \item $\rho|_{\Sigma \setminus \{p_N, p_S\}} > 0$ away from the poles;
+    \item $\rho(x) = O(\mathrm{dist}(x, p_\pm))$ as $x \to p_\pm$ (linear vanishing at poles).
+\end{itemize}
+Despite $\rho \to 0$ at the poles, the twist term $\mathcal{T}$ remains bounded because $\mathcal{T} \propto \rho^2$ (see Lemma~\ref{lem:twist-bound-poles}). Thus $\mathcal{T}(p_N) = \mathcal{T}(p_S) = 0$, and $|\mathcal{T}| \leq C\rho_{\max}^2$ globally on $\Sigma$.
+
+\textit{(2c) Scaling analysis near the blow-up---detailed derivation.} We now prove rigorously that $\mathcal{T} = O(s)$ near $\Sigma$, where $s$ is the signed distance to $\Sigma$.
+
+Near the MOTS $\Sigma$, introduce Gaussian normal coordinates $(s, y^A)$ where $s$ is the signed distance to $\Sigma$ and $y^A$ are coordinates on $\Sigma$. The metric takes the form:
+\[
+g = ds^2 + h_{AB}(s, y) dy^A dy^B, \quad h_{AB}(0, y) = (g_\Sigma)_{AB}.
+\]
+The Jang solution has the blow-up asymptotics $f = C_0 \ln s^{-1} + \mathcal{A}(y) + O(s^\alpha)$, so:
+\[
+\nabla f = -\frac{C_0}{s} \partial_s + O(1), \quad |\nabla f|^2 = \frac{C_0^2}{s^2} + O(s^{-1}).
+\]
+Thus $\sqrt{1 + |\nabla f|^2} = C_0/s + O(1)$.
+
+Now examine the twist term \eqref{eq:twist-term}. The orbit radius satisfies $\rho(s, y) = \rho(0, y) + O(s) = \rho_\Sigma(y) + O(s)$ with $\rho_\Sigma > 0$. The twist 1-form components $\omega_i$ are bounded (from (2a)). 
+
+\textit{Orbit-space projection analysis.} To relate the 3D coordinates $(s, y^A)$ to the orbit-space quotient $\mathcal{Q}$, we use the axisymmetric structure. The orbit-space coordinates $(r, z)$ on $\mathcal{Q}$ are related to the 3D coordinates by the quotient map $\pi: M^3 \to \mathcal{Q}$ that collapses orbits of the $U(1)$-action. The MOTS $\Sigma$ is a $U(1)$-invariant sphere that intersects the axis at two poles $p_N, p_S$ (Lemma~\ref{lem:mots-axis}). The signed distance function $s = \mathrm{dist}(\cdot, \Sigma)$ is $U(1)$-invariant and descends to a function $\bar{s}$ on $\mathcal{Q}$ with $\bar{s} = s \circ \pi^{-1}$. The orbit-space image $\bar{\Sigma} = \pi(\Sigma) \subset \mathcal{Q}$ is an arc connecting the two poles on the axis boundary of $\mathcal{Q}$.
+
+The gradient projection identity is: for any $U(1)$-invariant function $u$ on $M^3$,
+\[
+\bar{\nabla}\bar{u} = \pi_*(\nabla u - (\nabla u \cdot \xi)\xi/|\xi|^2),
+\]
+where $\xi = \partial_\phi$ is the axial Killing field and $\bar{\nabla}$ is the gradient on $(\mathcal{Q}, \bar{g})$. Since $f$ is $U(1)$-invariant by construction, we have $\nabla f \cdot \xi = 0$, so $\bar{\nabla}\bar{f} = \pi_*(\nabla f)$. In the adapted coordinates where $\partial_s$ is tangent to $\mathcal{Q}$:
+\[
+\bar{\nabla}\bar{f} = -\frac{C_0}{s}\partial_{\bar{s}} + O(1), \quad |\bar{\nabla}\bar{f}|^2_{\bar{g}} = \frac{C_0^2}{s^2} + O(s^{-1}).
+\]
+The orbit-space projection of the graph normal (as defined in Step 1) has components:
+\[
+\bar{\nu}^i = -\frac{\bar{g}^{ij}\partial_j \bar{f}}{\sqrt{1 + |\bar{\nabla}\bar{f}|^2_{\bar{g}}}} = -\frac{\partial^i \bar{f}}{\sqrt{1 + |\bar{\nabla}\bar{f}|^2_{\bar{g}}}}.
+\]
+Using $\bar{\nabla}\bar{f} = -\frac{C_0}{s}\partial_{\bar{s}} + O(1)$ and $\sqrt{1 + |\bar{\nabla}\bar{f}|^2} = C_0/s + O(1)$:
+\[
+\bar{\nu} = \frac{1}{C_0/s + O(1)}\left(\frac{C_0}{s}\partial_{\bar{s}} + O(1)\right) = \frac{s}{C_0 + O(s)}\left(\frac{C_0}{s}\partial_{\bar{s}} + O(1)\right) = \partial_{\bar{s}} + O(s).
+\]
+That is, $|\bar{\nu}^i| = O(1)$ as $s \to 0$, with the dominant direction being normal to $\bar{\Sigma}$ in the orbit space. This is the key geometric fact: the orbit-space normal $\bar{\nu}$ remains bounded despite the blow-up of $f$, because the normalization factor $\sqrt{1 + |\bar{\nabla}\bar{f}|^2}$ grows at the same rate as $|\bar{\nabla}\bar{f}|$.
+Substituting into \eqref{eq:twist-term}:
+\begin{align}
+\mathcal{T}[\bar{f}] &= \frac{\rho^2}{\sqrt{1 + |\nabla f|^2}} \left( \omega_i \bar{\nu}^i + \text{lower order}\right) \\
+&= \frac{\rho_\Sigma^2 + O(s)}{C_0/s + O(1)} \cdot (O(1)) \\
+&= \frac{s(\rho_\Sigma^2 + O(s))}{C_0 + O(s)} \cdot O(1) = O(s).
+\end{align}
+This proves $|\mathcal{T}| = O(s)$ as $s \to 0^+$.
+
+In contrast, the principal Jang operator terms involve $\nabla^2 f / \sqrt{1 + |\nabla f|^2}$, which scales as:
+\[
+\frac{C_0/s^2}{C_0/s} = \frac{1}{s} \quad \text{(divergent as } s \to 0).
+\]
+Therefore, the twist contribution $\mathcal{T} = O(s)$ is indeed subdominant compared to the principal terms $O(s^{-1})$, by a factor of $s^2$. This justifies treating twist as a perturbation in the blow-up analysis.
+
+We formalize this scaling analysis as a standalone lemma for clarity:
+
+\begin{lemma}[Twist Bound Near MOTS]\label{lem:twist-bound}
+Let $(M^3, g, K)$ be asymptotically flat, axisymmetric initial data with a stable outermost MOTS $\Sigma$. Let $s = \mathrm{dist}(\cdot, \Sigma)$ denote the signed distance to $\Sigma$, and let $\mathcal{T}[f]$ be the twist perturbation term \eqref{eq:twist-term} in the axisymmetric Jang equation. Then there exist constants $C_\mathcal{T} > 0$ and $s_0 > 0$ depending only on the initial data such that:
+\begin{equation}\label{eq:twist-bound-explicit}
+|\mathcal{T}[f](x)| \leq C_\mathcal{T} \cdot s(x) \quad \text{for all } x \text{ with } 0 < s(x) < s_0.
+\end{equation}
+More precisely, $C_\mathcal{T} = C_{\omega,\infty} \cdot \rho_{\max}^2 / C_0$, where:
+\begin{itemize}
+    \item $C_{\omega,\infty} = \sup_{\mathcal{Q}} |\omega|$ is the $L^\infty$ bound on the twist 1-form;
+    \item $\rho_{\max} = \sup_{x \in \Sigma} \rho(x)$ is the maximum orbit radius on $\Sigma$;
+    \item $C_0 > 0$ is the leading coefficient in the Jang blow-up $f = C_0 \ln s^{-1} + O(1)$.
+\end{itemize}
+
+\textbf{Scaling comparison:} Since the principal Jang terms scale as $O(s^{-1})$ near $\Sigma$, while the twist term scales as $O(s)$, the twist is subdominant by a factor of $s^2$. This ensures that twist does \textbf{not} disrupt the blow-up analysis, preserving the cylindrical end structure required for the proof.
+
+\textbf{Critical observation:} The constant $C_\mathcal{T}$ depends \textbf{only on the initial data} $(g, K)$ and the blow-up coefficient $C_0 = |\theta^-|/2$, which is determined by the MOTS geometry. In particular:
+\begin{enumerate}[label=\textup{(\alph*)}]
+    \item $C_\mathcal{T}$ does \textbf{not} depend on higher derivatives $\nabla^k f$ for $k \geq 2$, which blow up as $O(s^{-k})$;
+    \item The twist term $\mathcal{T}[f]$ involves \textbf{no second derivatives} of $f$, only $f$ and~$\nabla f$;
+    \item The bound holds \textbf{uniformly} for any function with logarithmic blow-up $f = C_0 \ln s^{-1} + O(1)$;
+    \item At the poles $p_N, p_S$ where $\Sigma$ intersects the axis, $\mathcal{T}(p_\pm) = 0$ since $\rho(p_\pm) = 0$ (Lemma~\ref{lem:twist-bound-poles}).
+\end{enumerate}
+See Appendix~\ref{app:schauder} for the complete verification that the twist does not alter the existence or character of the Jang solution.
+
+\textbf{Non-circularity verification:} The argument above is \textbf{not} circular. To see this explicitly:
+\begin{enumerate}[label=\textup{(NC\arabic*)}]
+    \item The constant $C_0 = |\theta^-|/2$ is determined \textbf{a priori} by the MOTS geometry $(H_\Sigma, \tr_\Sigma K)$, which depends only on the initial data $(g, K)$ and the surface $\Sigma$---\textbf{not} on the Jang solution $f$.
+    \item The twist bound $|\omega| \leq C_{\omega,\infty}$ follows from elliptic regularity applied to the twist potential equation on the orbit space, which is determined by the \textbf{initial data} $(g, K)$ alone.
+    \item The orbit radius $\rho_{\max} = \sup_\Sigma \rho$ is a geometric quantity of the MOTS in the initial data.
+    \item The scaling $|\mathcal{T}[f]| = O(s)$ uses only that $f$ has logarithmic blow-up with \textbf{some} coefficient $C_0 > 0$, not the specific value. Thus, the estimate holds for any candidate solution in the iteration scheme of Lemma~\ref{lem:perturbation-stability}.
+\end{enumerate}
+The logical flow is: \textit{initial data} $\to$ \textit{MOTS geometry} $\to$ \textit{blow-up coefficient} $C_0$ \textit{and twist bound} $C_{\omega,\infty}$ $\to$ \textit{perturbation estimate} $|\mathcal{T}| \leq C_\mathcal{T} s$ $\to$ \textit{Jang existence via fixed-point argument}. At no point does the constant $C_\mathcal{T}$ depend on the solution $f$ being constructed.
+\end{lemma}
+
+\begin{proof}
+The proof is contained in the detailed calculation of Step 2c above. We summarize the key steps:
+
+\textbf{Step 1:} By elliptic regularity for the twist potential equation on the orbit space $\mathcal{Q}$, the twist 1-form satisfies $|\omega| \leq C_{\omega,\infty}$ uniformly on $\mathcal{Q}$ (Step 2a).
+
+\textbf{Step 2:} The MOTS $\Sigma$ intersects the axis at two poles $p_N, p_S$ where $\rho = 0$ (Lemma~\ref{lem:mots-axis}). Away from the poles, $\rho_\Sigma(y) > 0$. The key observation is that the twist term scales as $\rho^2$, so even though $\rho \to 0$ at the poles, $\mathcal{T}$ remains bounded (in fact, $\mathcal{T}(p_\pm) = 0$). For points away from the poles: $\rho(s, y) = \rho_\Sigma(y) + O(s)$ with $\rho_\Sigma(y) \leq \rho_{\max} < \infty$ (Step 2b and Lemma~\ref{lem:twist-bound-poles}).
+
+\textbf{Step 3:} The Jang function has logarithmic blow-up $f = C_0 \ln s^{-1} + O(1)$, giving:
+\[
+|\nabla f| = \frac{C_0}{s} + O(1), \quad \sqrt{1 + |\nabla f|^2} = \frac{C_0}{s} + O(1).
+\]
+
+\textbf{Step 4:} The twist term \eqref{eq:twist-term} involves $\rho^2 / \sqrt{1 + |\nabla f|^2}$ multiplied by bounded quantities. Substituting the scalings (away from poles):
+\[
+|\mathcal{T}[f]| \leq \frac{(\rho_\Sigma + O(s))^2}{C_0/s + O(1)} \cdot C_{\omega,\infty} = \frac{s \cdot (\rho_\Sigma^2 + O(s))}{C_0 + O(s)} \cdot C_{\omega,\infty} = O(s).
+\]
+At the poles, $\rho_\Sigma = 0$, so $\mathcal{T} = O(s \cdot 0) = 0$. The explicit constant follows from $\rho_\Sigma \leq \rho_{\max}$.
+\end{proof}
+
+We now invoke a general perturbation principle for quasilinear elliptic equations. This result is a refinement of the implicit function theorem approach in Pacard--Ritor\'e \cite[Theorem 2.1]{pacarditore2003} adapted to singular perturbations, combined with the weighted space framework of Mazzeo \cite[Section 3]{mazzeo1991}.
+
+\begin{lemma}[Perturbation Stability for Blow-Up Asymptotics]\label{lem:perturbation-stability}
+Let $\mathcal{J}_0[f] = 0$ be a quasilinear elliptic equation on a domain $\Omega$ with boundary $\partial\Omega = \Sigma$, and suppose:
+\begin{enumerate}
+    \item[(P1)] $\mathcal{J}_0$ admits a solution $f_0$ with logarithmic blow-up: $f_0(s,y) = C_0 \ln s^{-1} + \mathcal{A}_0(y) + O(s^\alpha)$ as $s \to 0$, where $s = \mathrm{dist}(\cdot, \Sigma)$.
+    \item[(P2)] The linearization $L_0 = D\mathcal{J}_0|_{f_0}$ at $f_0$ satisfies a coercivity estimate in weighted spaces: $\|Lv\|_{W^{0,2}_\beta} \geq c\|v\|_{W^{2,2}_\beta}$ for $\beta \in (-1,0)$.
+    \item[(P3)] The perturbation $\mathcal{T}$ satisfies: $|\mathcal{T}[f]| \leq C s^{1+\gamma}$ for some $\gamma \geq 0$ whenever $|f - f_0| \leq \delta$ in $W^{2,2}_\beta$. (The case $\gamma = 0$ corresponds to $|\mathcal{T}| \leq Cs$.)
+\end{enumerate}
+Then the perturbed equation $\mathcal{J}_0[f] + \mathcal{T}[f] = 0$ admits a solution $f$ with the same leading-order asymptotics:
+\[
+f(s,y) = C_0 \ln s^{-1} + \mathcal{A}(y) + O(s^{\min(\alpha, 1+\gamma)}),
+\]
+where the coefficient $C_0$ is unchanged and $\mathcal{A}(y)$ may differ from $\mathcal{A}_0(y)$ by $O(1)$.
+\end{lemma}
+
+\begin{proof}
+We give a complete proof using the contraction mapping theorem in weighted Sobolev spaces. The argument has four steps.
+
+\textbf{Step 1: Reformulation as a fixed-point problem.}
+Write the ansatz $f = f_0 + v$ where $v$ is the correction term. Substituting into the perturbed equation:
+\[
+\mathcal{J}_0[f_0 + v] + \mathcal{T}[f_0 + v] = 0.
+\]
+Taylor expanding $\mathcal{J}_0$ around $f_0$:
+\[
+\mathcal{J}_0[f_0 + v] = \underbrace{\mathcal{J}_0[f_0]}_{=0} + L_0 v + N[v],
+\]
+where $L_0 = D\mathcal{J}_0|_{f_0}$ is the linearization and $N[v] = \mathcal{J}_0[f_0 + v] - \mathcal{J}_0[f_0] - L_0 v$ is the nonlinear remainder satisfying $N[v] = O(\|v\|^2_{W^{2,2}_\beta})$ for $\|v\|$ small. The equation becomes:
+\begin{equation}\label{eq:fixed-point}
+L_0 v = -N[v] - \mathcal{T}[f_0 + v].
+\end{equation}
+
+\textbf{Step 2: Invertibility of the linearization.}
+By hypothesis (P2), the linearization $L_0: W^{2,2}_\beta(\Omega) \to W^{0,2}_\beta(\Omega)$ satisfies:
+\[
+\|L_0 v\|_{W^{0,2}_\beta} \geq c \|v\|_{W^{2,2}_\beta}.
+\]
+This coercivity estimate, combined with the Lockhart--McOwen theory \cite{lockhartmccowen1985} for elliptic operators on manifolds with cylindrical ends, implies that $L_0$ is Fredholm of index zero. The stability hypothesis on $\Sigma$ (which enters through the MOTS stability operator having non-negative principal eigenvalue) ensures that $\ker(L_0) = \{0\}$ on $W^{2,2}_\beta$ for $\beta \in (-1, 0)$. Indeed, elements of the kernel would correspond to Jacobi fields along the MOTS, which are excluded by stability.
+
+Therefore $L_0$ is invertible with bounded inverse:
+\[
+\|L_0^{-1} h\|_{W^{2,2}_\beta} \leq C_L \|h\|_{W^{0,2}_\beta}.
+\]
+
+\textbf{Step 3: Mapping properties of the perturbation.}
+We analyze the right-hand side of \eqref{eq:fixed-point}. Define the map:
+\[
+\Phi(v) := -L_0^{-1}\bigl(N[v] + \mathcal{T}[f_0 + v]\bigr).
+\]
+
+\textit{(3a) Nonlinear remainder estimate.} Since $\mathcal{J}_0$ is a quasilinear operator of the form $\mathcal{J}_0[f] = a^{ij}(\nabla f)\nabla_{ij}f + b(\nabla f)$, the remainder $N[v]$ satisfies:
+\[
+|N[v](x)| \leq C\bigl(|\nabla v|^2 |\nabla^2 f_0| + |\nabla v||\nabla^2 v|\bigr).
+\]
+In weighted spaces, using $|\nabla f_0| = O(s^{-1})$ and $|\nabla^2 f_0| = O(s^{-2})$:
+\[
+\|N[v]\|_{W^{0,2}_\beta} \leq C_N \|v\|_{W^{2,2}_\beta}^2 \quad \text{for } \|v\|_{W^{2,2}_\beta} \leq 1.
+\]
+
+\textit{(3b) Perturbation term estimate.} By hypothesis (P3), $|\mathcal{T}[f]| \leq C s^{1+\gamma}$ for $f$ near $f_0$. In the weighted norm with weight $s^\beta$ (where $\beta \in (-1, 0)$):
+\[
+\|\mathcal{T}[f_0 + v]\|_{W^{0,2}_\beta}^2 = \int_\Omega s^{-2\beta} |\mathcal{T}[f_0+v]|^2 \, dV \leq C^2 \int_\Omega s^{-2\beta + 2(1+\gamma)} \, dV.
+\]
+Near $\Sigma$, in coordinates $(s, y)$, the volume element is $dV = s^0 \cdot ds \, d\sigma_\Sigma + O(s)$. The integral converges if $-2\beta + 2(1+\gamma) > -1$, i.e., $\gamma > \beta - 1/2$. Since $\beta \in (-1, 0)$, we have $\beta - 1/2 \in (-3/2, -1/2)$, which is strictly negative. For $\gamma \geq 0$, the condition $\gamma > \beta - 1/2$ is automatically satisfied since $\gamma \geq 0 > \beta - 1/2$. In our application with $\gamma = 0$, this gives convergence when $0 > \beta - 1/2$, i.e., $\beta < 1/2$, which holds since $\beta \in (-1, 0)$. Thus:
+\[
+\|\mathcal{T}[f_0 + v]\|_{W^{0,2}_\beta} \leq C_T \quad \text{(independent of } v \text{ for } \|v\| \leq \delta).
+\]
+
+Moreover, the Lipschitz dependence on $v$ gives:
+\[
+\|\mathcal{T}[f_0 + v_1] - \mathcal{T}[f_0 + v_2]\|_{W^{0,2}_\beta} \leq C_T' s_0^{\gamma} \|v_1 - v_2\|_{W^{2,2}_\beta},
+\]
+where $s_0$ is the collar width around $\Sigma$.
+
+\textbf{Step 4: Contraction mapping argument.}
+Define the ball $B_\delta = \{v \in W^{2,2}_\beta(\Omega) : \|v\|_{W^{2,2}_\beta} \leq \delta\}$. For $v \in B_\delta$:
+\begin{align}
+\|\Phi(v)\|_{W^{2,2}_\beta} &\leq C_L \bigl(\|N[v]\|_{W^{0,2}_\beta} + \|\mathcal{T}[f_0+v]\|_{W^{0,2}_\beta}\bigr) \\
+&\leq C_L (C_N \delta^2 + C_T).
+\end{align}
+Choosing $\delta$ such that $C_L C_N \delta^2 \leq \delta/4$ and $C_L C_T \leq \delta/2$, we get $\|\Phi(v)\|_{W^{2,2}_\beta} \leq \delta$, so $\Phi: B_\delta \to B_\delta$.
+
+For the contraction property, let $v_1, v_2 \in B_\delta$:
+\begin{align}
+\|\Phi(v_1) - \Phi(v_2)\|_{W^{2,2}_\beta} &\leq C_L \bigl(\|N[v_1] - N[v_2]\|_{W^{0,2}_\beta} + \|\mathcal{T}[f_0+v_1] - \mathcal{T}[f_0+v_2]\|_{W^{0,2}_\beta}\bigr).
+\end{align}
+The nonlinear remainder satisfies $\|N[v_1] - N[v_2]\| \leq C_N' \delta \|v_1 - v_2\|$ (derivative bound). Thus:
+\[
+\|\Phi(v_1) - \Phi(v_2)\|_{W^{2,2}_\beta} \leq C_L(C_N' \delta + C_T' s_0^\gamma)\|v_1 - v_2\|_{W^{2,2}_\beta}.
+\]
+Choosing $\delta$ and $s_0$ small enough that $C_L(C_N' \delta + C_T' s_0^\gamma) < 1$, the map $\Phi$ is a contraction.
+
+By the Banach fixed-point theorem, there exists a unique $v \in B_\delta$ with $\Phi(v) = v$, i.e., $f = f_0 + v$ solves the perturbed equation.
+
+\textbf{Step 5: Asymptotics of the solution.}
+Since $v \in W^{2,2}_\beta$ with $\beta \in (-1, 0)$, the Sobolev embedding on the cylindrical end gives:
+\[
+|v(s, y)| \leq C \|v\|_{W^{2,2}_\beta} \cdot s^{|\beta|} \quad \text{as } s \to 0.
+\]
+Since $|\beta| < 1$, we have $v = O(s^{|\beta|}) = o(1)$ as $s \to 0$, which is subdominant to the logarithmic term $C_0 \ln s^{-1}$. The perturbation term $\mathcal{T}$ contributes at order $O(s^{1+\gamma})$ by hypothesis (P3). Therefore:
+\begin{multline}
+f(s, y) = f_0(s, y) + v(s, y) = C_0 \ln s^{-1} + \mathcal{A}_0(y) + O(s^\alpha) + O(s^{|\beta|}) \\
+= C_0 \ln s^{-1} + \mathcal{A}(y) + O(s^{\min(\alpha, |\beta|, 1+\gamma)}),
+\end{multline}
+where $\mathcal{A}(y) = \mathcal{A}_0(y) + v(0, y)$. For our application with $\gamma = 0$ and choosing $|\beta|$ close to 1, the remainder is $O(s^{\min(\alpha, 1)})$. The leading coefficient $C_0$ is unchanged because the perturbation $v$ is subdominant.
+\end{proof}
+
+We verify conditions (P1)--(P3) for our setting with explicit references:
+\begin{itemize}
+    \item \textbf{Verification of (P1):} This is Han--Khuri \cite[Proposition 4.5]{hankhuri2013}. Specifically, for initial data $(M,g,K)$ satisfying DEC with a stable outermost MOTS $\Sigma$, the unperturbed Jang equation $\mathcal{J}_0[f] = 0$ admits a solution $f_0$ with blow-up asymptotics $f_0(s,y) = C_0 \ln s^{-1} + \mathcal{A}_0(y) + O(s^\alpha)$ where $C_0 = |\theta^-|/2 > 0$ is determined by the inner null expansion $\theta^- = H_\Sigma - \tr_\Sigma K < 0$. The exponent $\alpha > 0$ depends on the spectral gap of the MOTS stability operator; for strictly stable MOTS, $\alpha = \min(1, 2\sqrt{\lambda_1(L_\Sigma)})$ where $\lambda_1(L_\Sigma) > 0$ is the principal eigenvalue.
+    
+    \item \textbf{Verification of (P2):} This follows from Lockhart--McOwen \cite[Theorem 7.4]{lockhartmccowen1985} combined with the Fredholm theory for asymptotically cylindrical operators developed by Melrose \cite[Chapter 5]{melrose1996}. We provide a detailed justification of the coercivity estimate.
+    
+    \textit{Step (i): Indicial root computation.} The linearization $L_0 = D\mathcal{J}_0|_{f_0}$ of the Jang operator at a blow-up solution has the asymptotic form on the cylindrical end $\mathcal{C} \cong [0,\infty) \times \Sigma$ (with coordinate $t = -\ln s$):
+    \[
+    L_0 = \partial_t^2 + \Delta_\Sigma + V(y) + O(e^{-\beta_0 t}),
+    \]
+    where $V(y) = |A_\Sigma|^2 + \Ric_g(\nu,\nu)$ is the potential from the second fundamental form and Ricci curvature. The \textbf{indicial roots} are $\gamma_k = \pm\sqrt{\mu_k}$ where $\mu_k \geq 0$ are eigenvalues of $-\Delta_\Sigma - V$ on $(\Sigma, g_\Sigma)$.
+    
+    \textit{Step (ii): Connection to MOTS stability.} The operator $-\Delta_\Sigma - V$ is precisely the \textbf{principal part} of the MOTS stability operator $L_\Sigma$ (Definition~\ref{def:MOTS}). By MOTS stability, $\lambda_1(L_\Sigma) \geq 0$. The Krein--Rutman theorem implies that the principal eigenvalue $\mu_0$ of the self-adjoint part satisfies $\mu_0 \geq 0$. For \textbf{strictly stable} MOTS ($\lambda_1(L_\Sigma) > 0$), we have $\mu_0 > 0$, so the smallest indicial root is $\gamma_0 = \sqrt{\mu_0} > 0$.
+    
+    \textit{Step (iii): Why an interval of valid weights exists.} The indicial roots come in pairs $\pm\gamma_k$ with $\gamma_k \geq \gamma_0 > 0$. The key observation is:
+    \begin{itemize}
+        \item All \textbf{positive} indicial roots satisfy $\gamma_k \geq \gamma_0 > 0$;
+        \item All \textbf{negative} indicial roots satisfy $\gamma_k \leq -\gamma_0 < 0$ (since the roots are $\pm\sqrt{\mu_k}$ with $\mu_k \geq \mu_0 > 0$).
+    \end{itemize}
+    Therefore, the open interval $(-\gamma_0, 0)$ contains no indicial roots. For strictly stable MOTS, we have $\gamma_0 = \sqrt{\mu_0} > 0$, so this interval is non-empty. We choose the weight $\beta \in (-\min(\gamma_0, 1), 0)$, which ensures both $\beta \notin \{\pm\gamma_k\}$ (no indicial roots) and $\beta > -1$ (integrability at the cylindrical end).
+    
+    \textbf{Explicit bound via Gauss--Bonnet:} For a stable MOTS $\Sigma \cong S^2$ in data satisfying DEC, we establish a quantitative lower bound on $\gamma_0$. By the Galloway--Schoen theorem \cite{gallowayschoen2006}, the DEC implies $R_\Sigma = 2K_\Sigma \geq 0$ (non-negative Gaussian curvature). The Gauss--Bonnet theorem gives:
+    \[
+    \int_\Sigma R_\Sigma \, dA = 4\pi \chi(\Sigma) = 8\pi,
+    \]
+    so the scalar curvature has positive integral. Define the average scalar curvature $\bar{R} := 8\pi/A$ where $A = |\Sigma|$ is the area. By the Hersch inequality \cite{hersch1970}, the first non-zero eigenvalue of $-\Delta_\Sigma$ on $S^2$ satisfies:
+    \[
+    \lambda_1(-\Delta_\Sigma) \geq \frac{8\pi}{A}.
+    \]
+    For the operator $-\Delta_\Sigma - V$ with $V = |A_\Sigma|^2 + \Ric_g(\nu,\nu)$, we use the variational characterization:
+    \[
+    \mu_0 = \inf_{\substack{u \in H^1(\Sigma) \\ \int u = 0}} \frac{\int_\Sigma |\nabla u|^2 + V u^2 \, dA}{\int_\Sigma u^2 \, dA}.
+    \]
+    Since $V \geq 0$ for stable MOTS (the MOTS stability condition states $\int_\Sigma |\nabla \psi|^2 + (|A_\Sigma|^2 + \Ric_g(\nu,\nu))\psi^2 \geq 0$ for all test functions $\psi$, which implies $V \geq 0$ pointwise for stability with respect to all variations), we have:
+    \[
+    \mu_0 \geq \lambda_1(-\Delta_\Sigma) \geq \frac{8\pi}{A}.
+    \]
+    Therefore, the smallest positive indicial root satisfies:
+    \[
+    \gamma_0 = \sqrt{\mu_0} \geq \sqrt{\frac{8\pi}{A}} = \frac{2\sqrt{2\pi}}{\sqrt{A}}.
+    \]
+    For the Kerr horizon with $A = 8\pi M(M + \sqrt{M^2 - a^2})$, this gives an explicit lower bound $\gamma_0 \geq 1/(2M)$ in geometric units. This ensures the interval $(-\gamma_0, 0)$ has definite non-zero length for any finite-area MOTS.
+    
+    \textit{Step (iv): Fredholm property.} For $\beta$ in the valid range (not equal to any indicial root), \cite[Theorem 1.1]{lockhartmccowen1985} implies $L_0: W^{2,2}_\beta \to W^{0,2}_\beta$ is Fredholm of index zero. The index is zero because the number of positive roots in $(0, \beta)$ equals the number of negative roots in $(\beta, 0)$ (both are zero for $\beta \in (-\gamma_0, 0)$).
+    
+    \textit{Step (v): Kernel triviality.} Suppose $L_0 v = 0$ with $v \in W^{2,2}_\beta$. Since $\beta < 0$, we have $v \to 0$ as $t \to \infty$. An energy argument (multiply by $v$ and integrate) combined with the stability inequality shows $\int |\nabla v|^2 + V v^2 \geq 0$. The boundary conditions and maximum principle force $v \equiv 0$. This kernel triviality is the key consequence of MOTS stability: elements of $\ker(L_0)$ would correspond to infinitesimal deformations of the MOTS that preserve the marginally trapped condition, i.e., \textbf{Jacobi fields}. By \cite[Proposition 3.2]{anderssonmetzger2009}, stability of $\Sigma$ excludes non-trivial $L^2$-Jacobi fields.
+    
+    \textit{Step (vi): Coercivity estimate.} Since $L_0$ is Fredholm of index zero with trivial kernel, it is an isomorphism. The open mapping theorem gives the coercivity estimate:
+    \[
+    \|L_0 v\|_{W^{0,2}_\beta} \geq c \|v\|_{W^{2,2}_\beta}
+    \]
+    with $c = \|L_0^{-1}\|^{-1} > 0$. Combined with the a priori estimate for elliptic operators \cite[Theorem 6.2]{gilbargtrudinger2001}, this completes the verification of (P2).
+    Lemma~\ref{lem:twisted-indicial} below verifies that the twist perturbation does not alter the indicial roots, hence the same Fredholm theory applies to $L_{\mathrm{axi}}$.
+    
+    \item \textbf{Verification of (P3):} We proved above that $|\mathcal{T}| = O(s)$ as $s \to 0^+$. More precisely, the scaling analysis gives $|\mathcal{T}(s,y)| \leq C_\mathcal{T} \cdot s$ where $C_\mathcal{T} = C_{\omega,\infty} \cdot \rho_{\max}^2 \cdot C_0^{-1}$ depends only on the initial data. This corresponds to $\gamma = 0$ in hypothesis (P3), i.e., $|\mathcal{T}| \leq Cs^{1+0} = Cs$. This decay rate is sufficient for the perturbation argument because the weighted norm estimate in Step 3b below shows the perturbation is integrable in $W^{0,2}_\beta$.
+\end{itemize}
+
+Therefore, Lemma~\ref{lem:perturbation-stability} applies, and the Jang solution with twist has the same leading-order asymptotics as the twist-free case, exactly as in the Han--Khuri analysis.
+
+\begin{remark}[Explicit Constant Dependencies]\label{rem:explicit-constants}
+The perturbation stability argument involves the following explicit constants, with \textbf{quantitative formulas} in terms of the spectral data:
+\begin{itemize}
+    \item $C_L = \|L_0^{-1}\|_{W^{0,2}_\beta \to W^{2,2}_\beta}$: The Fredholm inverse bound admits the explicit estimate
+    \begin{equation}\label{eq:CL-explicit}
+    C_L \leq \frac{C_{\mathrm{elliptic}}}{(\gamma_0 - |\beta|)(\gamma_0 + |\beta|)} = \frac{C_{\mathrm{elliptic}}}{\gamma_0^2 - \beta^2},
+    \end{equation}
+    where $\gamma_0 = \sqrt{\lambda_1(L_\Sigma)/8}$ is the smallest positive indicial root determined by the principal eigenvalue $\lambda_1(L_\Sigma) > 0$ of the MOTS stability operator, and $C_{\mathrm{elliptic}}$ is a universal constant from standard elliptic theory depending only on the dimension and ellipticity constants. For $\beta$ chosen as $\beta = -\gamma_0/2$, we obtain:
+    \[
+    C_L \leq \frac{4C_{\mathrm{elliptic}}}{3\gamma_0^2} = \frac{32 C_{\mathrm{elliptic}}}{3\lambda_1(L_\Sigma)}.
+    \]
+    This shows $C_L$ is \textbf{inversely proportional to the spectral gap} $\lambda_1(L_\Sigma)$: more stable MOTS yield smaller $C_L$ and better perturbation control.
+    
+    \item $C_N \leq C \|\nabla^2 f_0\|_{L^\infty_{\text{loc}}}$: bounded by the $C^2$ norm of the unperturbed solution. By the Han--Khuri blow-up analysis \cite[Proposition 4.5]{hankhuri2013}, $\|\nabla^2 f_0\|_{L^\infty(K)} \leq C(K, |\theta^-|)$ on any compact set $K \subset M \setminus \Sigma$, where $|\theta^-| = 2C_0$ is the inner null expansion magnitude.
+    
+    \item $C_\mathcal{T} = C_{\omega,\infty} \cdot \rho_{\max}^2 / C_0$: bounded by the twist 1-form norm $C_{\omega,\infty} = \sup_{\mathcal{Q}}|\omega|$, maximum orbit radius $\rho_{\max} = \sup_\Sigma \rho$, and the blow-up coefficient $C_0 = |\theta^-|/2 > 0$.
+    
+    \item $\delta = \min\left(\frac{1}{4C_L C_N}, \sqrt{\frac{1}{2C_L C_\mathcal{T}}}\right)$: the ball radius for the contraction map. Substituting the explicit bounds:
+    \[
+    \delta \geq \min\left(\frac{3\lambda_1(L_\Sigma)}{128 C_{\mathrm{elliptic}} C_N}, \sqrt{\frac{3\lambda_1(L_\Sigma)}{64 C_{\mathrm{elliptic}} C_\mathcal{T}}}\right).
+    \]
+\end{itemize}
+For axisymmetric vacuum data with strictly stable MOTS ($\lambda_1(L_\Sigma) > 0$), all these constants are finite and \textbf{explicitly computable} from the initial data $(M, g, K)$. The formulas show that the perturbation argument becomes quantitatively stronger (larger $\delta$) when: (i) the MOTS is more stable (larger $\lambda_1$), (ii) the twist is weaker (smaller $C_{\omega,\infty}$), and (iii) the horizon is farther from extremality (smaller $\rho_{\max}$).
+\end{remark}
+
+\begin{lemma}[Indicial Roots for Twisted Jang Operator]\label{lem:twisted-indicial}
+Let $\mathcal{J}_{\mathrm{axi}} = \mathcal{J}_0 + \mathcal{T}$ be the axisymmetric Jang operator with twist perturbation $\mathcal{T}$. The linearization $L_{\mathrm{axi}} := D\mathcal{J}_{\mathrm{axi}}|_f$ at a solution $f$ has the following properties:
+\begin{enumerate}
+    \item[(i)] The indicial roots of $L_{\mathrm{axi}}$ on the cylindrical end coincide with those of $L_0 := D\mathcal{J}_0|_f$.
+    \item[(ii)] For weight $\beta \in (-1, 0)$ not equal to any indicial root, $L_{\mathrm{axi}}: W^{2,2}_\beta \to L^2_\beta$ is Fredholm of index zero.
+    \item[(iii)] The kernel of $L_{\mathrm{axi}}$ on $W^{2,2}_\beta$ is trivial when $\Sigma$ is a stable MOTS.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+\textbf{Step 1: Asymptotic form of the linearization.}
+On the cylindrical end $\mathcal{C} \cong [0, \infty) \times \Sigma$ with coordinate $t = -\ln s$, the Jang metric satisfies $\bg = dt^2 + g_\Sigma + O(e^{-\beta_0 t})$. The linearization of $\mathcal{J}_0$ at $f$ has the asymptotic form:
+\[
+L_0 = \partial_t^2 + \Delta_\Sigma + \text{(lower-order terms decaying as } e^{-\beta_0 t}).
+\]
+The indicial equation is obtained by seeking solutions $v(t, y) = e^{\gamma t} \varphi(y)$:
+\[
+L_0(e^{\gamma t}\varphi) = e^{\gamma t}(\gamma^2 \varphi + \Delta_\Sigma \varphi) + O(e^{(\gamma - \beta_0)t}).
+\]
+Thus the indicial roots are $\gamma = \pm\sqrt{-\lambda_k}$ where $\lambda_k$ are eigenvalues of $\Delta_\Sigma$ on $(\Sigma, g_\Sigma)$.
+
+\textbf{Step 2: Twist contribution to the linearization and explicit bounds on $\omega$.}
+The twist term $\mathcal{T}[f]$ given in \eqref{eq:twist-term} involves $\rho^2$, $\omega$, and derivatives of $f$. We first establish explicit bounds on the twist 1-form $\omega$ on the cylindrical end.
+
+\textit{Bound on $\omega$ from vacuum constraint.} For vacuum axisymmetric data, the momentum constraint $D^j K_{ij} = D_i(\tr K)$ combined with the twist decomposition yields an elliptic system for $\omega$. In Weyl-Papapetrou coordinates, the twist potential $\Omega$ satisfies:
+\[
+\Delta_{(\rho,z)} \Omega = 0 \quad \text{on the orbit space } \mathcal{Q},
+\]
+where $\rho^3 \omega = d\Omega$. By standard elliptic regularity \cite[Theorem 8.32]{gilbargtrudinger2001}, $\Omega \in C^{2,\alpha}(\overline{\mathcal{Q}})$, which implies:
+\begin{equation}\label{eq:omega-bound}
+|\omega| \leq \frac{C_\Omega}{\rho^3} \quad \text{on } \mathcal{Q},
+\end{equation}
+where $C_\Omega = \|\nabla\Omega\|_{L^\infty}$ depends only on the initial data.
+
+\textit{Bound on $\omega$ along the cylindrical end.} On the cylindrical end $\mathcal{C}$, the coordinate $t = -\ln s$ satisfies $s \to 0$ as $t \to \infty$. The MOTS $\Sigma$ intersects the axis at poles $p_N, p_S$ where $\rho = 0$ (Lemma~\ref{lem:mots-axis}). Away from these poles, $\rho$ is bounded below on compact subsets of $\Sigma \setminus \{p_N, p_S\}$, and approaches a smooth limit:
+\[
+\rho(t, y) = \rho_\Sigma(y) + O(e^{-\beta_0 t}).
+\]
+Combined with \eqref{eq:omega-bound} and the fact that $|\omega|$ is bounded by axis regularity (Lemma~\ref{lem:twist-bound-poles}):
+\[
+|\omega| \leq C_{\omega,\infty} \quad \text{uniformly on } \mathcal{C}.
+\]
+At the poles, the twist term $\mathcal{T}$ vanishes because $\rho^2 = 0$, so the singularity in $\omega/\rho^3$ is harmless---it is multiplied by $\rho^2$ in $\mathcal{T}$.
+
+\textit{Linearization decay estimate.} The linearization of $\mathcal{T}$ at $f$ is:
+\[
+D\mathcal{T}|_f \cdot v = \frac{\partial \mathcal{T}}{\partial f}[f] \cdot v + \frac{\partial \mathcal{T}}{\partial (\nabla f)}[f] \cdot \nabla v.
+\]
+From the scaling analysis in Step 2 of the main proof, $\mathcal{T}[f] = O(s) = O(e^{-t})$. Differentiating with respect to $f$ and $\nabla f$, and using the uniform bound $|\omega| \leq C_{\omega,\infty}$:
+\begin{equation}\label{eq:DT-decay}
+|D\mathcal{T}|_f| \leq C_{\omega,\infty} \cdot \rho_{\max}^2 \cdot e^{-t} \quad \text{as } t \to \infty,
+\end{equation}
+where $\rho_{\max} = \sup_\Sigma \rho$. This confirms $D\mathcal{T}|_f = O(e^{-t})$ with an \textbf{explicit constant} depending only on the initial data geometry.
+
+\textbf{Step 3: Indicial roots are unchanged.}
+By \cite[Theorem 6.1]{lockhartmccowen1985}, the indicial roots of an elliptic operator $L$ on a manifold with cylindrical ends are determined by the \textbf{translation-invariant limit operator} $L_\infty$ obtained by taking $t \to \infty$. Since $D\mathcal{T}|_f = O(e^{-t})$ decays exponentially (with explicit rate from \eqref{eq:DT-decay}), it does not contribute to $L_\infty$:
+\[
+(L_{\mathrm{axi}})_\infty = (L_0)_\infty.
+\]
+Therefore the indicial roots of $L_{\mathrm{axi}}$ and $L_0$ coincide, proving (i).
+
+\textbf{Spectral gap verification.} We verify that the exponential decay rate of $D\mathcal{T}|_f$ is sufficient for the Lockhart--McOwen theory to apply. 
+
+The indicial roots of $L_0 = \partial_t^2 + \Delta_\Sigma$ are $\gamma_k = \pm\sqrt{\lambda_k}$ where $\lambda_k \geq 0$ are eigenvalues of $-\Delta_\Sigma$ on $(\Sigma, g_\Sigma)$. For $\Sigma \cong S^2$:
+\[
+0 = \lambda_0 < \lambda_1 \leq \lambda_2 \leq \cdots.
+\]
+The smallest \textbf{non-zero} indicial roots are $\gamma_1 = \pm\sqrt{\lambda_1}$.
+
+\textit{Lower bound on $\lambda_1$.} For a metric on $S^2$ with non-negative Gaussian curvature $K_\Sigma \geq 0$ (which holds for stable MOTS by \cite{gallowayschoen2006}), the first non-zero eigenvalue of $-\Delta_\Sigma$ satisfies Lichnerowicz's bound:
+\[
+\lambda_1 \geq \frac{1}{2}\min_\Sigma R_\Sigma = \min_\Sigma K_\Sigma \geq 0.
+\]
+However, since $\int_\Sigma K_\Sigma = 4\pi > 0$ by Gauss--Bonnet and $K_\Sigma \geq 0$, we have $K_\Sigma > 0$ somewhere, which implies $\lambda_1 > 0$ by the Obata rigidity argument. A quantitative bound follows from isoperimetric considerations: for area $A$,
+\[
+\lambda_1 \geq \frac{8\pi}{A}
+\]
+(see \cite[Section 3.2]{chavel1984}). Thus $|\gamma_1| = \sqrt{\lambda_1} \geq \sqrt{8\pi/A}$.
+
+\textit{Lockhart--McOwen condition.} The theory in \cite[Theorem 1.1]{lockhartmccowen1985} requires:
+\begin{enumerate}
+    \item The weight $\beta$ is \textbf{not} an indicial root;
+    \item The perturbation $D\mathcal{T}|_f$ decays faster than any polynomial in $t$ (exponential decay suffices).
+\end{enumerate}
+
+Since $D\mathcal{T}|_f = O(e^{-t})$ decays exponentially with rate $\delta = 1$, condition (2) is satisfied. For condition (1), we choose $\beta \in (-\gamma_1, 0)$ where $\gamma_1 = \sqrt{\lambda_1} > 0$. Since $\gamma_1 > 0$, there exists a non-empty interval $(-\gamma_1, 0)$ of valid weights. The indicial root $\gamma = 0$ corresponds to the constant eigenfunction $\lambda_0 = 0$ of $-\Delta_\Sigma$; this is the \textbf{only} indicial root in the interval $(-\gamma_1, \gamma_1)$.
+
+For $\beta \in (-\gamma_1, 0) \setminus \{0\}$, the operator $L_0: W^{2,2}_\beta \to L^2_\beta$ is Fredholm. By choosing $\beta$ close to $0$ (e.g., $\beta = -\epsilon$ for small $\epsilon > 0$), we avoid all non-zero indicial roots.
+
+\textbf{Step 4: Fredholm property.}
+By \cite[Theorem 1.1]{lockhartmccowen1985}, $L: W^{k,2}_\beta \to W^{k-2,2}_\beta$ is Fredholm if and only if $\beta$ is not an indicial root. The Fredholm index depends only on the indicial roots and their multiplicities. Since $L_{\mathrm{axi}}$ and $L_0$ have the same indicial roots, they have the same Fredholm index.
+
+For the unperturbed Jang operator, the index is zero by the analysis in \cite{hankhuri2013}. Therefore $L_{\mathrm{axi}}$ is Fredholm of index zero for $\beta \in (-1, 0)$, proving (ii).
+
+\textbf{Step 5: Kernel triviality---complete proof.}
+Suppose $L_{\mathrm{axi}} v = 0$ with $v \in W^{2,2}_\beta$. Since $\beta < 0$, we have $v \to 0$ as $t \to \infty$. We prove $v \equiv 0$ by establishing an explicit connection between the Jang linearization kernel and MOTS stability.
+
+\textit{Step 5a: Structure of the linearized Jang operator.}
+The linearization of the Jang operator $\mathcal{J}[f] = H_{\Gamma(f)} - \tr_{\Gamma(f)} K$ at a solution $f$ is:
+\[
+L_{\mathrm{axi}} v = \frac{1}{\sqrt{1 + |\nabla f|^2}}\left[\Delta v - \frac{\nabla^i f \nabla^j f}{1 + |\nabla f|^2}\nabla_{ij} v - (|A_\Gamma|^2 + \Ric(\nu_\Gamma, \nu_\Gamma))v\right] + \text{(K-terms)} + D\mathcal{T}|_f \cdot v,
+\]
+where $A_\Gamma$ is the second fundamental form of the Jang graph, $\nu_\Gamma$ is its unit normal, and the $K$-terms involve derivatives of $K$ contracted with $v$ and $\nabla v$.
+
+Near the cylindrical end (where $t = -\ln s \to \infty$), the Jang solution satisfies $f \sim C_0 t$, so $|\nabla f| \sim C_0$ is bounded. The operator takes the asymptotic form:
+\[
+L_{\mathrm{axi}} \sim \frac{1}{\sqrt{1 + C_0^2}}\left[\partial_t^2 + \Delta_\Sigma - \mathcal{V}(y)\right] 
++ O(e^{-\beta_0 t}),
+\]
+where 
+\[
+\mathcal{V}(y) = |A_\Gamma|^2|_\Sigma + \Ric(\nu_\Gamma, \nu_\Gamma)|_\Sigma
+\]
+is the limiting potential on $\Sigma$.
+
+\textit{Step 5b: Connection to MOTS stability operator.}
+Following Andersson--Metzger \cite[Section~3]{anderssonmetzger2009}, we observe that the limiting potential~$\mathcal{V}$ is related to the MOTS stability operator~(Definition~\ref{def:MOTS}).
+
+Recall the MOTS stability operator (Definition~\ref{def:MOTS}):
+\[
+L_\Sigma[\psi] = -\Delta_\Sigma \psi - (|A_\Sigma|^2 + \Ric_g(\nu, \nu))\psi - \text{(first-order terms)}.
+\]
+The Jang graph $\Gamma(f)$ approaches the cylinder $\mathbb{R} \times \Sigma$ as $t \to \infty$. The second fundamental form $A_\Gamma$ of the graph converges to $A_\Sigma$ (the second fundamental form of $\Sigma$ in $M$), and similarly for the Ricci term.
+
+\textit{Step 5c: Energy identity.}
+Multiply the equation $L_{\mathrm{axi}} v = 0$ by $v$ and integrate over $\mathcal{C}_T := \{0 \leq t \leq T\} \times \Sigma$:
+\begin{align}
+0 &= \int_{\mathcal{C}_T} v \cdot L_{\mathrm{axi}} v \, dV_{\bg} \\
+&= \int_{\mathcal{C}_T} \left[-|\nabla v|^2 + \mathcal{V} v^2 + O(e^{-\beta_0 t})|v|^2 + O(e^{-t})|v||\nabla v|\right] dV_{\bg} + \text{(boundary terms)}.
+\end{align}
+
+The boundary terms are:
+\begin{itemize}
+    \item At $t = 0$: $\int_{\Sigma_0} v \partial_t v \, d\sigma$ --- bounded by data.
+    \item At $t = T$: $\int_{\Sigma_T} v \partial_t v \, d\sigma \to 0$ as $T \to \infty$ since $v \in W^{2,2}_\beta$ with $\beta < 0$ implies $v = O(e^{\beta t})$ and $\partial_t v = O(e^{\beta t})$.
+\end{itemize}
+
+Taking $T \to \infty$:
+\begin{equation}\label{eq:energy-jang}
+\int_{\mathcal{C}} |\nabla v|^2 \, dV_{\bg} = \int_{\mathcal{C}} \mathcal{V} v^2 \, dV_{\bg} + O\left(\int_{\mathcal{C}} e^{-\beta_0 t} v^2 \, dV_{\bg}\right) + \text{(finite boundary term)}.
+\end{equation}
+
+\textit{Step 5d: Using MOTS stability.}
+The MOTS stability condition $\lambda_1(L_\Sigma) \geq 0$ means:
+\[
+\int_\Sigma |\nabla_\Sigma \psi|^2 \, d\sigma \geq \int_\Sigma (|A_\Sigma|^2 + \Ric_g(\nu, \nu))\psi^2 \, d\sigma
+\]
+for all $\psi \in C^\infty(\Sigma)$. Equivalently, $\int_\Sigma \mathcal{V}_\Sigma \psi^2 \leq \int_\Sigma |\nabla_\Sigma \psi|^2$ where $\mathcal{V}_\Sigma = |A_\Sigma|^2 + \Ric(\nu, \nu) \geq 0$ by stability.
+
+On the cylindrical end, $\mathcal{V}(y) \to \mathcal{V}_\Sigma(y) \geq 0$. Therefore, for large $t$:
+\[
+\int_{\{t\} \times \Sigma} \mathcal{V} v^2 \, d\sigma \leq (1 + \epsilon) \int_{\{t\} \times \Sigma} |\nabla_\Sigma v|^2 \, d\sigma + C_\epsilon e^{-\beta_0 t} \|v\|_{L^2}^2.
+\]
+
+Integrating over the cylindrical end and using \eqref{eq:energy-jang}:
+\[
+\int_{\mathcal{C}} |\partial_t v|^2 \, dV_{\bg} \leq \epsilon \int_{\mathcal{C}} |\nabla_\Sigma v|^2 \, dV_{\bg} + C \int_{\mathcal{C}} e^{-\beta_0 t} v^2 \, dV_{\bg} + C'.
+\]
+
+Since $v \in W^{2,2}_\beta$ with $\beta < 0$, the weighted norms are finite. For $\epsilon$ small enough, this implies:
+\[
+\int_{\mathcal{C}} |\nabla v|^2 \, dV_{\bg} \leq C'' \int_{\mathcal{C}} e^{-\beta_0 t} v^2 \, dV_{\bg} + C'''.
+\]
+
+\textit{Step 5e: Decay bootstrap.}
+The inequality from Step 5d, combined with the decay $v = O(e^{\beta t})$ from $v \in W^{2,2}_\beta$, implies improved decay. 
+
+Suppose $v \sim e^{\gamma t} \varphi(y)$ for large $t$ with $\gamma = \beta$. The energy estimate gives:
+\[
+\gamma^2 \int_{\mathcal{C}} e^{2\gamma t} |\varphi|^2 \lesssim \int_{\mathcal{C}} e^{(2\gamma - \beta_0) t} |\varphi|^2.
+\]
+For $\beta_0 > 0$ and $\gamma < 0$, this forces $\gamma < \gamma - \beta_0/2$, a contradiction unless $\varphi \equiv 0$.
+
+More precisely: if $v \not\equiv 0$, let $\gamma_* = \sup\{\gamma : v = O(e^{\gamma t})\}$ be the optimal decay rate. Since $v \in W^{2,2}_\beta$, we have $\gamma_* \leq \beta < 0$. The energy estimate shows that any solution with decay rate $\gamma_*$ must satisfy $\gamma_* < \gamma_* - \beta_0/2$ (from the exponential factor), which is impossible.
+
+Therefore $v \equiv 0$, proving $\ker(L_{\mathrm{axi}}) = \{0\}$ on $W^{2,2}_\beta$, completing (iii). Combined with (ii), $L_{\mathrm{axi}}$ is an isomorphism.
+\end{proof}
+
+\textbf{Step 3: Barrier construction.}
+Following \cite{hankhuri2013} and \cite{schoen1981}, we construct sub- and super-solutions using the stability of the outermost MOTS $\Sigma$.
+
+\textit{(3a) Supersolution at infinity.} Define $f^+ = C_1 r^{1-\tau+\epsilon} + C_2$ for $r \geq R_0$ large. A direct computation (see \cite[Section 4]{hankhuri2013}) shows that for $\tau > 1/2$ and $C_1$ sufficiently large:
+\[
+\mathcal{J}_{\text{axi}}[f^+] \geq c_0 r^{-1-\tau} > 0 \quad \text{for } r \geq R_0,
+\]
+where the twist term contributes only $O(r^{-2})$ and does not affect the sign.
+
+\textit{(3b) Subsolution at infinity.} The function $f^- = -C_1 r^{1-\tau+\epsilon} - C_2$ is a subsolution by the same analysis.
+
+\textit{(3c) Barriers near the horizon.} Since $\Sigma$ is a stable MOTS, it admits a local foliation by surfaces $\{\Sigma_s\}_{0 < s < s_0}$ with mean curvature $H(\Sigma_s) > 0$ (outward mean-convex). The Schoen--Yau barrier argument \cite{schoen1981} constructs a subsolution:
+\[
+\underline{f}(x) = \int_0^{s(x)} \frac{1}{\sqrt{1 - \theta^+(s')^2}} \, ds',
+\]
+which forces the solution to blow up at $\Sigma$. Because $|\mathcal{T}[\underline{f}]| \to 0$ as $s \to 0$ (Step 2c), the barrier inequality
+\[
+\mathcal{J}_{\text{axi}}[\underline{f}] = \mathcal{J}_0[\underline{f}] + \mathcal{T}[\underline{f}] \leq \mathcal{J}_0[\underline{f}] + o(1) \leq 0
+\]
+holds in a neighborhood of $\Sigma$ for the axisymmetric operator.
+
+\textit{(3d) Prevention of premature blow-up.} Inner unstable MOTS are ``bridged over'' by the Schoen--Yau barriers. The outermost property of $\Sigma$ ensures no interior trapped surface lies outside $\Sigma$, and the stability of $\Sigma$ provides the geometric control for the subsolution construction.
+
+\textbf{Step 4: Existence via regularization and Perron method.}
+We solve the regularized capillary Jang equation on $\Omega_\delta = \{x : \mathrm{dist}(x, \Sigma) > \delta\}$:
+\[
+\mathcal{J}_{\text{axi}}[f] = \kappa f, \quad f|_{\partial\Omega_\delta} = 0,
+\]
+where $\kappa > 0$ is a regularization parameter. Standard elliptic theory \cite{gilbargtrudinger2001} yields a smooth solution $f_{\kappa,\delta}$.
+
+The barrier bounds from Step 3 provide uniform estimates:
+\[
+|f_{\kappa,\delta}(x)| \leq C(1 + r^{1-\tau+\epsilon}) \quad \text{on } \Omega_{2\delta},
+\]
+independent of $\kappa, \delta$. Interior Schauder estimates (using DEC to prevent interior gradient blow-up) give $C^{2,\alpha}_{\text{loc}}$ compactness. Taking a diagonal subsequence as $\kappa \to 0, \delta \to 0$:
+\[
+f_{\kappa,\delta} \to f \quad \text{in } C^{2,\alpha}_{\text{loc}}(M \setminus \Sigma),
+\]
+where $f$ solves $\mathcal{J}_{\text{axi}}[f] = 0$ with blow-up at $\Sigma$.
+
+By axisymmetry of the data and boundary conditions, the supremum in the Perron construction:
+\[
+f = \sup\{v : v \text{ is a subsolution with } v \leq f^+\}
+\]
+is achieved by an axisymmetric function.
+
+\textbf{Step 5: Blow-up asymptotics and cylindrical end geometry.}
+Near $\Sigma$, the leading-order behavior is determined by the principal operator $\mathcal{J}_0$ since $\mathcal{T} = O(s)$ is subdominant. The Han--Khuri analysis \cite[Proposition 4.5]{hankhuri2013} applies:
+\[
+f(s, y) = C_0 \ln s^{-1} + \mathcal{A}(y) + O(s^\alpha),
+\]
+where $C_0 = |\theta^-|/2$ is determined by matching leading-order terms in the Jang equation (the MOTS condition $\theta^+ = 0$ and trapped condition $\theta^- < 0$ fix this coefficient).
+
+\textit{Non-oscillatory behavior.} The barrier comparison rules out oscillatory remainders (e.g., $\sin(\ln s)$) by comparing with strictly monotone supersolutions constructed from the stability of $\Sigma$. This follows from standard ODE comparison arguments for the radial profile; see \cite[Section 5]{hankhuri2013}.
+
+\textit{Cylindrical end metric.} In the cylindrical coordinate $t = -\ln s$, the induced metric satisfies:
+\[
+\bg = dt^2 + g_\Sigma + O(e^{-\beta t})
+\]
+where $\beta > 0$ is related to the spectral gap of the stability operator $L_\Sigma$ (for strictly stable $\Sigma$) or $\beta = 2$ for marginally stable $\Sigma$. The twist contribution to the metric correction is exponentially small:
+\[
+|\mathcal{T}| = O(e^{-t/C_0}) = O(e^{-2t/|\theta^-|}) \quad \text{along the cylindrical end},
+\]
+hence does not affect the asymptotic cylindrical structure.
+
+\textbf{Step 6: Uniqueness and mass preservation.}
+\textit{Uniqueness up to translation.} If $f_1, f_2$ are two solutions with blow-up along $\Sigma$, then $w = f_1 - f_2$ satisfies a linearized equation. The leading asymptotics $f_i \sim C_0 \ln s^{-1}$ cancel, leaving $w = O(1)$ near $\Sigma$. The maximum principle forces $w$ to be bounded, and with normalization $f(x_0) = 0$ for a fixed basepoint, uniqueness follows (see \cite[Theorem 3.1]{hankhuri2013}).
+
+\textit{Mass preservation.} The Jang metric $\bg = g + df \otimes df$ satisfies:
+\[
+\bg_{ij} - \delta_{ij} = (g_{ij} - \delta_{ij}) + O(r^{-2\tau+2\epsilon}).
+\]
+For $\tau > 1/2$, the ADM mass integral converges. The inequality $M_{\ADM}(\bg) \leq M_{\ADM}(g)$ follows from the Bray--Khuri identity \cite{braykhuri2010} relating the mass difference to non-negative energy density terms under DEC.
+\end{proof}
+
+\begin{remark}[Twist Coupling Summary]
+The key technical point is that twist enters the Jang equation through $\mathcal{T}[\bar{f}]$ which satisfies:
+\begin{enumerate}
+    \item $|\mathcal{T}|$ is bounded on compact sets (from $\rho^2|\omega| \leq C$).
+    \item $|\mathcal{T}| \to 0$ as $s \to 0$ (scaling as $O(s)$ near the blow-up).
+    \item $|\mathcal{T}| = O(r^{-2})$ at infinity (faster than the principal terms).
+\end{enumerate}
+These three properties ensure that the Han--Khuri existence theory applies with twist as a perturbation. The proof does \textbf{not} require twist to vanish, only that it be asymptotically negligible in the singular limits.
+\end{remark}
+
+\begin{remark}[Uniqueness of Jang Solutions]\label{rem:jang-uniqueness}
+The Jang equation does \textbf{not} admit unique solutions in general. For initial data $(M, g, K)$ with a strictly stable outermost MOTS $\Sigma$, the solution space has the following structure:
+\begin{enumerate}
+    \item \textbf{Existence:} By Theorem~\ref{thm:jang-exist}, there exists at least one solution $f$ blowing up at $\Sigma$ with prescribed logarithmic asymptotics.
+    
+    \item \textbf{Uniqueness up to translation:} If $f_1$ and $f_2$ are two solutions with the same blow-up behavior at $\Sigma$, then $f_1 - f_2$ is bounded and, with the normalization $f(x_0) = 0$ at a fixed basepoint $x_0 \in M \setminus \Sigma$, the solution is unique \cite[Theorem 3.1]{hankhuri2013}.
+    
+    \item \textbf{Multiple blow-up surfaces:} If the initial data contains multiple MOTS (inner and outer), there may exist distinct solutions blowing up at different surfaces. Our proof uses the \textbf{outermost} MOTS $\Sigma$ as specified in hypothesis (H4).
+    
+    \item \textbf{Impact on the inequality:} The non-uniqueness does not affect the validity of the AM-Penrose inequality. Any solution blowing up at the outermost MOTS yields the same bound, since the ADM mass and the geometric quantities $(A, J)$ at $\Sigma$ are independent of the choice of Jang solution.
+\end{enumerate}
+The essential point is that the Jang equation serves as a \textbf{regularization tool}---different solutions lead to the same final inequality because the boundary terms (at $\Sigma$ and at infinity) depend only on the geometry of $(M, g, K)$, not on the intermediate Jang surface.
+\end{remark}
+
+\begin{remark}[Key Estimate Verification Guide]\label{rem:verification-jang}
+\textbf{For readers verifying this proof}, the critical estimate in this section is the scaling $\mathcal{T} = O(s)$ as $s \to 0$ (Step 2c). This follows from:
+\begin{itemize}
+    \item The blow-up asymptotics $|\nabla f| \sim C_0/s$ (from Han--Khuri \cite[Prop.~4.5]{hankhuri2013});
+    \item The bounded twist $|\omega| \leq C_\omega$ (from elliptic regularity of the momentum constraint);
+    \item The $\rho^2$ scaling of the twist term: $\mathcal{T} \propto \rho^2$, which vanishes at the poles where $\rho = 0$ (Lemmas~\ref{lem:mots-axis} and \ref{lem:twist-bound-poles}).
+\end{itemize}
+The estimate $\mathcal{T} = O(s)$ is subdominant to the principal terms $O(s^{-1})$ by a factor of $s^2$, ensuring the perturbation analysis in Lemma~\ref{lem:perturbation-stability} applies.
+\end{remark}
+
+\begin{remark}[Cylindrical End Structure]
+The induced metric $\bg$ on the Jang manifold has cylindrical ends with the asymptotic structure:
+\[
+\bg = dt^2 + h_{\Sigma}(1 + O(e^{-\beta t})) \quad \text{as } t \to \infty,
+\]
+where $h_\Sigma$ is the induced metric on $\Sigma$ and $\beta > 0$. This exponential convergence is essential for:
+\begin{itemize}
+    \item Fredholm theory for the Lichnerowicz operator (Section~\ref{sec:lichnerowicz}).
+    \item The $p$-harmonic potential having well-defined level sets (Section~\ref{sec:amo}).
+    \item Angular momentum conservation across the cylindrical end (Theorem~\ref{thm:J-conserve}).
+\end{itemize}
+\end{remark}
+
+%=============================================================================

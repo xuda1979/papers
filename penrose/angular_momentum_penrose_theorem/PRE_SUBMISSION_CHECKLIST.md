@@ -1,8 +1,8 @@
 # Pre-Submission Checklist
 ## Angular Momentum Penrose Inequality - Communications in Mathematical Physics
 
-**Date:** December 11, 2025  
-**Main File:** `angular_momentum_penrose_theorem_CMP.tex`  
+**Date:** December 21, 2025  
+**Main File:** `split/main.tex`  
 **Target Journal:** Communications in Mathematical Physics (CMP)
 
 ---
@@ -11,26 +11,29 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
-| LaTeX compiles without errors | ✅ PASS | Compiles to 236 pages PDF |
-| Cross-references resolve | ✅ PASS | "Labels may have changed" warning (normal - run twice) |
-| Bibliography embedded | ✅ PASS | Uses `thebibliography` (81 references) |
+| LaTeX compiles without errors | ✅ PASS | Compiles to 305 pages PDF |
+| Cross-references resolve | ✅ PASS | All labels resolved (run pdflatex twice) |
+| Bibliography embedded | ✅ PASS | Uses `thebibliography` (82 references) |
 | No undefined commands | ✅ PASS | No errors in log |
 | No TODO/FIXME markers | ✅ PASS | Clean |
 
 ---
 
-## ⚠️ ISSUES FOUND - ACTION REQUIRED
+## ✅ ISSUES RESOLVED
 
-### 1. EMAIL INCONSISTENCY (HIGH PRIORITY)
+### 1. EMAIL CONSISTENCY (FIXED)
 | File | Email Used |
 |------|------------|
-| `angular_momentum_penrose_theorem_CMP.tex` (main) | `xudayj@chinamobile.com` |
+| `split/title-abstract.tex` | `xuda@chinamobile.com` |
 | `cover_letter_CMP.tex` | `xuda@chinamobile.com` |
 | `SUBMISSION_README.md` | `xuda@chinamobile.com` |
 
-**⚠️ ACTION:** Ensure consistent email address across all submission files.
+**✅ ACTION COMPLETED:** All files now use consistent email address.
 
-### 2. OVERFULL HBOXES (MEDIUM PRIORITY)
+### 2. MISSING CITATION (FIXED)
+- Added `aronszajn1957` reference to `split/bibliography.tex`
+
+### 3. OVERFULL HBOXES (MEDIUM PRIORITY)
 The compilation log shows ~25 overfull hbox warnings:
 - Most are minor (< 15pt overfull)
 - Some are larger (up to 66pt on line 2961)
@@ -84,7 +87,7 @@ Several underfull warnings in comparison tables (lines 724-735, 909-912).
 ### References
 | Item | Status |
 |------|--------|
-| Total citations | 81 |
+| Total citations | 82 |
 | Key prior work cited | ✅ Huisken-Ilmanen, Bray, AMO, Dain-Reiris |
 | No undefined citations | ✅ |
 
@@ -134,13 +137,15 @@ Several underfull warnings in comparison tables (lines 724-735, 909-912).
 ### Files to Submit
 - [ ] `angular_momentum_penrose_theorem_CMP.tex` (main source)
 - [ ] `angular_momentum_penrose_theorem_CMP.pdf` (compiled PDF)
-- [ ] `cover_letter_CMP.pdf` (cover letter)
+- [x] `angular_momentum_penrose_theorem_CMP.pdf` (compiled from split/main.tex)
+- [x] `cover_letter_CMP.pdf` (cover letter)
 
 ### Pre-Upload Actions
-- [ ] **FIX EMAIL CONSISTENCY** across all files
-- [ ] Run LaTeX twice to resolve all cross-references
+- [x] **FIX EMAIL CONSISTENCY** across all files ✅
+- [x] Run LaTeX twice to resolve all cross-references ✅
+- [x] Add missing aronszajn1957 citation ✅
 - [ ] Review overfull hbox warnings (optional polish)
-- [ ] Verify PDF renders correctly
+- [x] Verify PDF renders correctly ✅
 - [ ] Check hyperlinks work in PDF
 
 ### Submission Portal Information
@@ -165,23 +170,25 @@ Statement included in manuscript:
 
 ## ✅ CONFLICT OF INTEREST
 
-Statement included in manuscript (line ~6670):
+Statement included in manuscript:
 > "The author declares no conflicts of interest."
 
 ---
 
 ## Summary
 
-**Overall Status: ⚠️ ALMOST READY**
+**Overall Status: ✅ READY FOR SUBMISSION**
 
-**Critical Action Required:**
-1. ⚠️ Fix email inconsistency (`xudayj` vs `xuda`)
+All critical issues have been resolved:
+1. ✅ Email consistency fixed (xuda@chinamobile.com)
+2. ✅ Missing citation aronszajn1957 added
+3. ✅ Paper compiles without errors (305 pages)
+4. ✅ Cover letter compiles successfully
 
-**Recommended (Optional):**
-2. Review worst overfull hbox warnings
-3. Recompile PDF after any fixes
-4. Final visual check of PDF
+**Optional polish (minor):**
+- Review worst overfull hbox warnings
+- Final visual check of PDF hyperlinks
 
 ---
 
-*Checklist generated: December 11, 2025*
+*Checklist last updated: December 21, 2025*
