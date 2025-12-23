@@ -52,20 +52,6 @@ def setup_device(use_npu: bool = False):
 
 DEVICE_TYPE = "cpu"
 DEVICE_COUNT = 1
-DEVICE = torch.device("cpu")
-
-
-def init_device(use_npu: bool = False):
-    """Initialize device globally."""
-    global DEVICE_TYPE, DEVICE_COUNT, DEVICE
-    DEVICE_TYPE, DEVICE_COUNT = setup_device(use_npu)
-    if DEVICE_TYPE == "npu":
-        DEVICE = torch.device("npu:0")
-    elif DEVICE_TYPE == "cuda":
-        DEVICE = torch.device("cuda:0")
-    else:
-        DEVICE = torch.device("cpu")
-    return DEVICE
 
 
 # ============================================
@@ -78,38 +64,26 @@ PAULI_Y = torch.tensor([[0, -1j], [1j, 0]], dtype=torch.complex128)
 PAULI_Z = torch.tensor([[1, 0], [0, -1]], dtype=torch.complex128)
 
 
-def get_pauli_on_device():
-    """Get Pauli matrices on current device."""
-    return (
-        PAULI_I.to(DEVICE),
-        PAULI_X.to(DEVICE),
-        PAULI_Y.to(DEVICE),
-        PAULI_Z.to(DEVICE)
-    )
-
-
 def kron_n(matrices: List[torch.Tensor]) -> torch.Tensor:
     """Compute Kronecker product of multiple matrices."""
-    result = matrices[0].to(DEVICE)
+    result = matrices[0]
     for m in matrices[1:]:
-        result = torch.kron(result, m.to(DEVICE))
+        result = torch.kron(result, m)
     return result
 
 
 def identity_except(n: int, i: int, op: torch.Tensor) -> torch.Tensor:
     """Create operator acting on site i in n-site system."""
-    I = PAULI_I.to(DEVICE)
-    ops = [I] * n
-    ops[i] = op.to(DEVICE)
+    ops = [PAULI_I] * n
+    ops[i] = op
     return kron_n(ops)
 
 
 def two_site_operator(n: int, i: int, j: int, op_i: torch.Tensor, op_j: torch.Tensor) -> torch.Tensor:
     """Create two-site operator acting on sites i and j."""
-    I = PAULI_I.to(DEVICE)
-    ops = [I] * n
-    ops[i] = op_i.to(DEVICE)
-    ops[j] = op_j.to(DEVICE)
+    ops = [PAULI_I] * n
+    ops[i] = op_i
+    ops[j] = op_j
     return kron_n(ops)
 
 
@@ -126,17 +100,16 @@ class TransverseFieldIsing:
         self.h = h
         self.periodic = periodic
         self.dim = 2 ** n_sites
-        self.H = self._build_hamiltonian().to(DEVICE)
+        self.H = self._build_hamiltonian()
     
     def _build_hamiltonian(self) -> torch.Tensor:
-        H = torch.zeros(self.dim, self.dim, dtype=torch.complex128, device=DEVICE)
+        H = torch.zeros(self.dim, self.dim, dtype=torch.complex128)
         n_bonds = self.n_sites if self.periodic else self.n_sites - 1
-        I, X, Y, Z = get_pauli_on_device()
         for i in range(n_bonds):
             j = (i + 1) % self.n_sites
-            H -= self.J * two_site_operator(self.n_sites, i, j, Z, Z)
+            H -= self.J * two_site_operator(self.n_sites, i, j, PAULI_Z, PAULI_Z)
         for i in range(self.n_sites):
-            H -= self.h * identity_except(self.n_sites, i, X)
+            H -= self.h * identity_except(self.n_sites, i, PAULI_X)
         return H
     
     def ground_state(self) -> Tuple[float, torch.Tensor]:
@@ -145,21 +118,20 @@ class TransverseFieldIsing:
     
     def time_evolution(self, psi0: torch.Tensor, t: float) -> torch.Tensor:
         U = torch.linalg.matrix_exp(-1j * self.H * t)
-        return U @ psi0.to(DEVICE)
+        return U @ psi0
     
     def magnetization_z(self, psi: torch.Tensor) -> float:
-        Z = PAULI_Z.to(DEVICE)
         mag = 0.0
         for i in range(self.n_sites):
-            op = identity_except(self.n_sites, i, Z)
+            op = identity_except(self.n_sites, i, PAULI_Z)
             mag += (psi.conj() @ op @ psi).real.item()
         return mag / self.n_sites
 
 
 def random_state(n_qubits: int) -> torch.Tensor:
     """Create random normalized quantum state."""
-    real = torch.randn(2 ** n_qubits, dtype=torch.float64, device=DEVICE)
-    imag = torch.randn(2 ** n_qubits, dtype=torch.float64, device=DEVICE)
+    real = torch.randn(2 ** n_qubits, dtype=torch.float64)
+    imag = torch.randn(2 ** n_qubits, dtype=torch.float64)
     psi = real + 1j * imag
     return psi / torch.norm(psi)
 
@@ -550,44 +522,5 @@ def main():
     return all_results
 
 
-def parse_args():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Neural Flow Dynamics Benchmark Suite",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python run_benchmark.py                # Run on CPU
-  python run_benchmark.py --npu          # Use all available NPUs
-  python run_benchmark.py --fast         # Quick test run
-        """
-    )
-    parser.add_argument(
-        "--npu", 
-        action="store_true", 
-        help="Use NPU acceleration (falls back to CUDA/CPU)"
-    )
-    parser.add_argument(
-        "--fast",
-        action="store_true",
-        help="Run faster with smaller system sizes (for testing)"
-    )
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_args()
-    
-    # Initialize device
-    device = init_device(use_npu=args.npu)
-    print(f"\n[Device] Running on: {DEVICE_TYPE.upper()} ({device})")
-    
-    if DEVICE_TYPE in ("npu", "cuda"):
-        # Sync and warmup
-        if DEVICE_TYPE == "npu":
-            torch.npu.synchronize()
-        else:
-            torch.cuda.synchronize()
-        print(f"[Device] Warmed up accelerator")
-    
     results = main()

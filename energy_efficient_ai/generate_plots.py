@@ -39,22 +39,16 @@ def plot_scalability():
     ssa_time = [42.8, 209.5, 331.8, 1983.5, 6172.1, 25498.0]
     local_time = [20.7, 76.8, 299.8, 257.1, 607.7, 1187.1]
     
-    # For GPU/optimized implementation (projected based on FLOP reduction)
-    # SSA should be faster than dense at large N due to O(N^1.5) vs O(N^2)
-    ssa_projected_gpu = [t * 0.5 for t in dense_time[:4]] + [dense_time[4] * 0.35, dense_time[5] * 0.25]
-    
     ax.plot(seq_lengths, dense_time, 'o-', label='Dense $O(N^2)$', 
             linewidth=2.5, markersize=8, color='#1f77b4')
-    ax.plot(seq_lengths, ssa_time, 's--', label='SSA (NumPy ref.)', 
-            linewidth=2, markersize=7, color='#ff7f0e', alpha=0.7)
-    ax.plot(seq_lengths, ssa_projected_gpu, '^-', label='SSA (proj. GPU)', 
-            linewidth=2.5, markersize=8, color='#2ca02c')
-    ax.plot(seq_lengths, local_time, 'd:', label='Local-256', 
-            linewidth=2, markersize=6, color='#d62728', alpha=0.7)
+    ax.plot(seq_lengths, ssa_time, 's-', label='SSA (NumPy ref.)', 
+            linewidth=2, markersize=7, color='#ff7f0e')
+    ax.plot(seq_lengths, local_time, 'd-', label='Local-256', 
+            linewidth=2, markersize=6, color='#d62728')
     
     ax.set_xlabel('Sequence Length $N$')
     ax.set_ylabel('Time (ms)')
-    ax.set_title('Attention Computation Time')
+    ax.set_title('Attention Computation Time (CPU Reference Implementation)')
     ax.legend(loc='upper left')
     ax.set_xscale('log', base=2)
     ax.set_yscale('log')
@@ -63,7 +57,7 @@ def plot_scalability():
     ax.set_xticklabels([str(n) for n in seq_lengths])
     
     # Add annotation about NumPy overhead
-    ax.annotate('NumPy overhead\ndominates at small $N$', 
+    ax.annotate('NumPy overhead\\ndominates at small $N$', 
                 xy=(512, 209), xytext=(200, 500),
                 fontsize=10, ha='center',
                 arrowprops=dict(arrowstyle='->', color='gray', alpha=0.5))
@@ -358,9 +352,10 @@ def plot_pareto():
 if __name__ == "__main__":
     print("Generating publication plots...")
     plot_scalability()
-    plot_spectral()
+    # plot_spectral()  # Removed: uses simulated data
     plot_long_range()
-    plot_energy()
+    # plot_energy()  # Removed: uses analytic proxy, not measured
     plot_ablation()
-    plot_pareto()
+    # plot_pareto()  # Removed: uses made-up proxy values
     print("\nAll plots generated successfully!")
+
