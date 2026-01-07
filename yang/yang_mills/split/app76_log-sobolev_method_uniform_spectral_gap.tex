@@ -332,32 +332,11 @@ Apply the hierarchical method again to the boundary network $\Sigma$:
 \item The boundary-of-boundary $\partial \sigma_i$ is $(d-2)$-dimensional
 \end{enumerate}
 
-\textbf{Step 4: Iterative LSI via dimensional reduction.}
+\textbf{Step 4 (Retracted): Iterative Dimensional Reduction.}
+The proposed strategy of iterating the Zegarlinski-tensorization from $d \to (d-1) \to \dots \to 1$ is \textbf{invalid} for this problem.
+Renormalization Group scaling implies that the effective couplings on the lower-dimensional boundaries do not remain small or local. The problem cannot be reduced to a 1D chain without creating non-local effective interactions that violate the assumptions of the 1D LSI Lemma.
 
-Apply the Zegarlinski-tensorization argument iteratively:
-
-\textit{Level 0 (full system):} $d$-dimensional, blocks of size $\ell^d$
-
-\textit{Level 1 (boundary):} $(d-1)$-dimensional, boundary blocks of size $m^{d-1}$
-
-\textit{Level 2 (boundary-of-boundary):} $(d-2)$-dimensional, blocks of size $m^{d-2}$
-
-Continue until reaching dimension 1.
-
-\textbf{Step 5: 1-dimensional base case.}
-
-At dimension 1, the system is a 1-dimensional chain of $SU(N)$ variables with 
-nearest-neighbor interactions. For such systems:
-
-\begin{lemma}[1D LSI]
-A 1-dimensional lattice system with:
-\begin{itemize}
-\item Single-site measure $\mu_0 \in \mathrm{LSI}(\rho_0)$
-\item Bounded nearest-neighbor interaction $\|h_{i,i+1}\|_\infty \leq J$
-\end{itemize}
-satisfies $\mathrm{LSI}(\rho_1)$ with $\rho_1 \geq \rho_0 \cdot e^{-4J/\rho_0}$, 
-\textbf{independent of chain length}.
-\end{lemma}
+\textbf{Correction:} The proof must stop at the conditional tensorization step (Level 1) and use \textbf{Cluster Expansion} for the effective boundary action, establishing weak coupling via high-temperature methods directly in the $(d-1)$-dimensional boundary, rather than reducing to 1D.
 
 \begin{proof}[Proof of Lemma]
 Apply Zegarlinski directly: each site has at most 2 neighbors, so the criterion 
@@ -600,112 +579,98 @@ $\infty$ & $0.5$ & $\approx 1.0$ & $\approx 0.067$ \\
 \label{subsec:conditional-tensorization-complete}
 %-----------------------------------------------------------------------------
 
-The conditional tensorization theorem is the key tool bypassing the restrictive 
-Zegarlinski criterion. We provide the complete proof without heuristic arguments.
+The conditional tensorization theorem is the key tool bypassing the restrictive Zegarlinski criterion. We replace the heuristic argument with a two-scale LSI with explicit influence correction.
 
-\begin{theorem}[Conditional Tensorization --- Complete Proof]
-\label{thm:conditional-tensorization-complete}
-Let $\mu$ be a probability measure on a product space $\mathcal{X} = \mathcal{X}_1 \times \mathcal{X}_2$ 
-with marginal $\mu_1$ on $\mathcal{X}_1$ and conditional measures $\mu_{2|x_1}$ on $\mathcal{X}_2$ 
-for each $x_1 \in \mathcal{X}_1$.
+Let the full configuration split as $(x,y)\in \Omega_\Sigma\times \Omega_{\mathrm{int}}$. Let
+\[
+\mu(dx,dy)=\mu_\Sigma(dx)\mu(dy|x).
+\]
 
+\begin{definition}[Boundary force variance]
+For a boundary coordinate direction $v$ (a unit tangent vector at $x$ in the Riemannian metric on $\Omega_\Sigma$), define the \emph{centered boundary force} under the interior conditional:
+\[
+F_v(x,y) := \langle v,\nabla_x H(x,y)\rangle - \mu(\langle v,\nabla_x H(x,Y)\rangle\mid x),
+\]
+and define the uniform variance proxy
+\[
+\sigma^2
+:=\sup_{x}\sup_{|v|=1}\mathrm{Var}_{\mu(\cdot|x)}\bigl(F_v(x,Y)\bigr).
+\]
+\end{definition}
+
+\begin{theorem}[Two-scale LSI with explicit influence correction]
+\label{thm:conditional-tensorization-corrected}
 Assume:
-\begin{enumerate}[label=(\alph*)]
-\item $\mu_1 \in \mathrm{LSI}(\rho_1)$
-\item $\mu_{2|x_1} \in \mathrm{LSI}(\rho_2)$ uniformly in $x_1 \in \mathcal{X}_1$
+\begin{enumerate}
+\item \textbf{Uniform interior conditional LSI}: for all $x$, the conditional $\mu(dy|x)$ satisfies LSI with constant $\rho_{\mathrm{int}}>0$ (uniform in $x$).
+\item \textbf{Boundary marginal LSI}: $\mu_\Sigma$ satisfies LSI with constant $\rho_\Sigma>0$.
+\item The influence proxy $\sigma^2$ is finite.
 \end{enumerate}
 
-Then $\mu \in \mathrm{LSI}(\rho)$ with:
+Then the full measure $\mu$ satisfies an LSI with constant
 \[
-\rho \geq \min(\rho_1, \rho_2)
+\rho_{\mathrm{full}}
+\ge
+\min\Bigl\{\frac{\rho_\Sigma}{1+\eta}, \frac{\rho_{\mathrm{int}}}{1+\frac{\sigma^2}{\eta\rho_\Sigma}}\Bigr\}
+\quad\text{for every }\eta>0.
 \]
+In particular, choosing $\eta:=\sigma/\sqrt{\rho_\Sigma\rho_{\mathrm{int}}}$ (or $\eta=1$) yields an explicit strictly-positive bound whenever $\sigma^2<\infty$.
 \end{theorem}
 
 \begin{proof}
-The proof is a careful application of the entropy decomposition formula.
-
-\textbf{Step 1: Entropy decomposition.}
-
-For any function $f: \mathcal{X}_1 \times \mathcal{X}_2 \to \mathbb{R}_+$, the relative 
-entropy decomposes as:
+Let $h=h(x,y)$ be smooth. Let $g(x):=|h(x,\cdot)|_{L^2(\mu(\cdot|x))}=\Bigl(\int h^2 d\mu(\cdot|x)\Bigr)^{1/2}$. Then
 \[
-\mathrm{Ent}_\mu(f) = \mathrm{Ent}_{\mu_1}(\mathbb{E}_{2|1}[f]) + \mathbb{E}_{\mu_1}[\mathrm{Ent}_{\mu_{2|1}}(f)]
+\mathrm{Ent}_\mu(h^2)
+=
+\mathbb E_{\mu_\Sigma}\bigl[\mathrm{Ent}_{\mu(\cdot|x)}(h^2)\bigr]
++
+\mathrm{Ent}_{\mu_\Sigma}(g^2).
 \]
-where $\mathbb{E}_{2|1}[f](x_1) := \int f(x_1, x_2) \, d\mu_{2|x_1}(x_2)$.
-
-This is the \textbf{chain rule for entropy}, which follows from the definition 
-$\mathrm{Ent}_\mu(f) = \mathbb{E}_\mu[f \log f] - \mathbb{E}_\mu[f] \log \mathbb{E}_\mu[f]$.
-
-\textbf{Step 2: Apply LSI to conditional term.}
-
-By assumption (b), for each $x_1$:
+By uniform interior LSI:
 \[
-\mathrm{Ent}_{\mu_{2|x_1}}(f(x_1, \cdot)) \leq \frac{1}{\rho_2} \int_{\mathcal{X}_2} |\nabla_2 f|^2 \, d\mu_{2|x_1}
+\mathbb E_{\mu_\Sigma}\bigl[\mathrm{Ent}_{\mu(\cdot|x)}(h^2)\bigr] \le \frac{2}{\rho_{\mathrm{int}}}\int |\nabla_y h|^2 d\mu.
 \]
-
-Taking $\mathbb{E}_{\mu_1}$ and using Fubini:
+By boundary LSI:
 \[
-\mathbb{E}_{\mu_1}[\mathrm{Ent}_{\mu_{2|1}}(f)] \leq \frac{1}{\rho_2} \mathbb{E}_\mu[|\nabla_2 f|^2]
+\mathrm{Ent}_{\mu_\Sigma}(g^2) \le \frac{2}{\rho_\Sigma}\int |\nabla_x g|^2 d\mu_\Sigma.
 \]
-
-\textbf{Step 3: Apply LSI to marginal term.}
-
-Define $g(x_1) := \mathbb{E}_{2|1}[f](x_1)$. By assumption (a):
+We control $|\nabla_x g|^2$. Fix $x$ and unit tangent $v$. Differentiating $g^2(x)=\int h^2 d\mu(\cdot|x)$:
 \[
-\mathrm{Ent}_{\mu_1}(g) \leq \frac{1}{\rho_1} \int_{\mathcal{X}_1} |\nabla_1 g|^2 \, d\mu_1
+\partial_v g^2(x)
+=
+2\int h \partial_v h d\mu(\cdot|x)
+-\mathrm{Cov}_{\mu(\cdot|x)}(h^2,F_v).
 \]
-
-The key step is bounding $|\nabla_1 g|^2$. We use the \textbf{Leibniz rule for 
-conditional expectations}:
+Using $\partial_v g=(\partial_v g^2)/(2g)$ and Cauchy-Schwarz:
 \[
-\nabla_1 g(x_1) = \nabla_1 \mathbb{E}_{2|1}[f] = \mathbb{E}_{2|1}[\nabla_1 f] + \mathrm{Cov}_{2|1}(f, \nabla_1 \log \mu_{2|x_1})
+|\partial_v g|
+\le
+\Bigl|\int \frac{h}{g}\partial_v h d\mu(\cdot|x)\Bigr|
++
+\frac{1}{2g}|\mathrm{Cov}(h^2,F_v)|.
 \]
-
-For the specific case of Gibbs measures with Hamiltonian $H = H_1(x_1) + H_2(x_2) + H_{12}(x_1, x_2)$:
+The first term squared is $\le \int|\partial_v h|^2 d\mu(\cdot|x)$ by Cauchy-Schwarz.
+For the second term, use conditional Poincaré (implied by LSI):
 \[
-\nabla_1 \log \mu_{2|x_1} = -\nabla_1 H_{12}
+\mathrm{Var}_{\mu(\cdot|x)}(h^2) \le \frac{4}{\rho_{\mathrm{int}}}\int h^2|\nabla_y h|^2 d\mu(\cdot|x).
 \]
-
-\textbf{Step 4: Covariance bound via Poincaré.}
-
-The covariance term is bounded using the Poincaré inequality (which is weaker than LSI):
+Thus
 \[
-|\mathrm{Cov}_{\mu_{2|x_1}}(f, \nabla_1 H_{12})|^2 \leq \mathrm{Var}_{\mu_{2|x_1}}(f) \cdot \mathrm{Var}_{\mu_{2|x_1}}(\nabla_1 H_{12})
+|\mathrm{Cov}(h^2,F_v)|^2 \le \mathrm{Var}(h^2)\sigma^2 \le \frac{4\sigma^2}{\rho_{\mathrm{int}}}g^2\int|\nabla_y h|^2 d\mu(\cdot|x).
 \]
-
-By LSI$(\rho_2)$: $\mathrm{Var}_{\mu_{2|x_1}}(f) \leq \frac{1}{\rho_2} \mathbb{E}_{2|x_1}[|\nabla_2 f|^2]$
-
-For bounded interactions: $\mathrm{Var}_{\mu_{2|x_1}}(\nabla_1 H_{12}) \leq \|\nabla_1 H_{12}\|_\infty^2$
-
-\textbf{Step 5: Combine bounds.}
-
-Using Cauchy-Schwarz and the previous estimates:
-\begin{align*}
-|\nabla_1 g|^2 &\leq 2|\mathbb{E}_{2|1}[\nabla_1 f]|^2 + 2|\mathrm{Cov}|^2 \\
-&\leq 2\mathbb{E}_{2|1}[|\nabla_1 f|^2] + \frac{2}{\rho_2}\|\nabla_1 H_{12}\|_\infty^2 \mathbb{E}_{2|x_1}[|\nabla_2 f|^2]
-\end{align*}
-
-For the hierarchical block decomposition with $\|\nabla_1 H_{12}\|_\infty = O(\beta \ell^{d-1})$ 
-and $\rho_2 = O(1)$, the second term is controlled.
-
-\textbf{Step 6: Final assembly.}
-
-Combining Steps 1-5:
-\begin{align*}
-\mathrm{Ent}_\mu(f) &\leq \frac{1}{\rho_1} \mathbb{E}_\mu[|\nabla_1 f|^2] + \frac{1}{\rho_2} \mathbb{E}_\mu[|\nabla_2 f|^2] \\
-&\quad + \text{(cross term from Step 5)}
-\end{align*}
-
-When the cross term is controlled (which holds when $\|\nabla_1 H_{12}\|_\infty \ll \sqrt{\rho_1 \rho_2}$), 
-we obtain:
+Combining and using $(a+b)^2 \le (1+\eta)a^2 + (1+\eta^{-1})b^2$:
 \[
-\mathrm{Ent}_\mu(f) \leq \frac{1}{\min(\rho_1, \rho_2)} \mathbb{E}_\mu[|\nabla f|^2]
+|\nabla_x g|^2
+\le
+(1+\eta)\int|\nabla_x h|^2 d\mu(\cdot|x)
++
+(1+\eta^{-1})\frac{\sigma^2}{\rho_{\mathrm{int}}}\int|\nabla_y h|^2 d\mu(\cdot|x).
 \]
-
-For the hierarchical decomposition with blocks of size $\ell \sim \beta^{-1/4}$, the 
-cross term is $O(\beta^{(d-1)/4}) = O(\beta^{3/4}) = O(1)$ for $\beta \leq \beta_G$, 
-ensuring the bound holds.
+Integrating and substituting back gives the result.
 \end{proof}
+
+\textbf{Explicit evaluation of $\sigma^2$:}
+For the Wilson gauge action, $\nabla_x H$ is a sum of a bounded number of plaquette forces. For the fermion determinant, the derivative with respect to a boundary link is uniformly bounded for $M>2d$. Thus $\sigma^2 < \infty$ uniformly in volume.
 
 \begin{remark}[Why This Bypasses Zegarlinski's Criterion]
 \label{rem:bypass-zegarlinski}
@@ -902,23 +867,36 @@ per step ($O(1/\beta^2)$ at weak coupling).
 \label{sec:variance-transport-app76}
 %-----------------------------------------------------------------------------
 
-The variance-based transport method provides an alternative to oscillation-based 
-bounds (Holley-Stroock), avoiding exponential degradation when gluing conditional 
-LSI constants. The key insight is that variance bounds are more stable under 
-conditioning than oscillation bounds.
+We replace the oscillation-based Holley-Stroock bounds with a variance-based argument that avoids exponential degradation with boundary size.
 
-\begin{theorem}[Variance Transport for LSI]
-\label{thm:variance-transport}
-Let $\mu$ be a probability measure on a product space $\mathcal{X} = \mathcal{X}_1 \times \mathcal{X}_2$ 
-with marginal $\mu_1$ on $\mathcal{X}_1$ and conditional $\mu_{2|1}$ on $\mathcal{X}_2$ given $\mathcal{X}_1$. 
-If $\mu_1$ satisfies LSI$(\rho_1)$ and $\mu_{2|1}$ satisfies LSI$(\rho_2)$ uniformly, then 
-$\mu$ satisfies LSI with constant:
+\begin{lemma}[Variance-based transport bound via Poincaré]
+\label{lem:variance-transport}
+Let $(\mathcal M,g)$ be a compact Riemannian manifold and let $\{\mu_t\}_{t\in[0,1]}$ be a smooth path of probability measures with densities $\mu_t(dz)=\frac{1}{Z_t}e^{-H_t(z)}dz$.
+Assume each $\mu_t$ satisfies a Poincaré inequality with a uniform constant $\lambda>0$.
+Then for every 1-Lipschitz $f$ on $(\mathcal M,g)$,
 \[
-\rho \geq \frac{\rho_1 \rho_2}{\rho_1 + \rho_2 + C \cdot \mathrm{Var}_{\mu_1}[\rho_{2|1}]}
+W_1(\mu_0,\mu_1)
+\le
+\frac{1}{\sqrt{\lambda}}\int_0^1 \sqrt{\mathrm{Var}_{\mu_t}(\dot H_t)} \,\mathrm{d}t.
 \]
-where C is a universal constant and $\mathrm{Var}_{\mu_1}[\rho_{2|1}]$ is the variance of 
-the conditional LSI constant over the first marginal.
-\end{theorem}
+\end{lemma}
+
+\begin{proof}
+Differentiate $\mu_t(f)$: $\frac{d}{dt}\mu_t(f)=-\mathrm{Cov}_{\mu_t}(f,\dot H_t)$.
+Then $|\mathrm{Cov}(f,\dot H_t)| \le \frac{1}{\sqrt{\lambda}}\|\nabla f\|_{L^2(\mu_t)}\sqrt{\mathrm{Var}(\dot H_t)} \le \frac{1}{\sqrt{\lambda}}\sqrt{\mathrm{Var}(\dot H_t)}$ since $|\nabla f|\le 1$. Integrate in $t$.
+\end{proof}
+
+\begin{corollary}[Explicit Lipschitz dependence on boundary conditions]
+Apply Lemma~\ref{lem:variance-transport} to conditional interior measures $\mu(\cdot|x)$ when $x$ varies along a geodesic $x_t$. Then
+\[
+W_1\bigl(\mu(\cdot|x_0),\mu(\cdot|x_1)\bigr)
+\le
+\frac{\sigma}{\sqrt{\lambda_{\mathrm{int}}}} d(x_0,x_1),
+\]
+where $\sigma$ is the boundary-force variance proxy and $\lambda_{\mathrm{int}}$ is the interior conditional spectral gap.
+\end{corollary}
+
+This gives a clean quantitative bound on how the conditional interior law changes when boundary conditions change, paying only a quadratic price in the variance proxy rather than an exponential oscillation penalty.
 
 %-----------------------------------------------------------------------------
 \subsection{Quantitative Weak Coupling Control}
