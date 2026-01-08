@@ -11,6 +11,7 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{multirow}
+\usepackage{colortbl}  % 表格颜色支持
 \usepackage{hyperref}
 \usepackage{tikz}
 \usepackage{pgfplots}
@@ -36,11 +37,21 @@
     backgroundcolor=\color{gray!10}
 }
 
+% Part页面样式设置
+\AtBeginPart{
+    \begin{frame}
+        \centering
+        \begin{beamercolorbox}[sep=16pt,center,shadow=true,rounded=true]{title}
+            \usebeamerfont{title}\insertpart\par
+        \end{beamercolorbox}
+    \end{frame}
+}
+
 % 标题信息
 \title[AI大模型与编程工具]{大模型及其驱动的编程工具\\——科研与开发的实用指南}
-\subtitle{2025年12月10日更新版}
-\author{技术分享}
-\institute{团队技术培训}
+\subtitle{2026年1月更新版}
+\author{许达}
+\institute{未来院三室}
 \date{\today}
 
 \begin{document}
@@ -52,8 +63,63 @@
 
 % 目录
 \begin{frame}{内容大纲}
-    \tableofcontents
+    \small
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \textbf{第一部分：大模型基础与评测}
+            \begin{itemize}
+                \item 大模型发展概览
+                \item 科研能力评测（HLE/FrontierMath）
+                \item 软件开发评测（SWE-bench）
+                \item AI vs 人类程序员
+                \item 技术原理（MoE/推理时计算）
+                \item 主流AI大模型详解
+                \item 大模型的核心问题
+                \item \textcolor{blue}{\textbf{Lost in the Middle现象}}
+            \end{itemize}
+            
+            \textbf{第二部分：模型深入解析}
+            \begin{itemize}
+                \item 校准误差与可信度
+                \item DeepSeek/Gemini详解
+                \item 科研模型选择指南
+                \item \textcolor{blue}{\textbf{多模态能力对比}}
+                \item \textcolor{blue}{\textbf{Prompt Engineering}}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{第三部分：AI编程工具}
+            \begin{itemize}
+                \item \textcolor{blue}{\textbf{Agent工作流简介}}
+                \item AI编程工具实战
+            \end{itemize}
+            
+            \textbf{第四部分：科研应用实践}
+            \begin{itemize}
+                \item 科研场景应用
+                \item 实用技巧与最佳实践
+            \end{itemize}
+            
+            \textbf{第五部分：高级技巧}
+            \begin{itemize}
+                \item 高级技巧与前沿话题
+                \item API省钱与数据安全
+            \end{itemize}
+            
+            \textbf{第六部分：风险与规范}
+            \begin{itemize}
+                \item AI论文检测与学术诚信
+                \item 科研LLM应用风险
+            \end{itemize}
+            
+            \textbf{第七部分：总结与展望}
+        \end{column}
+    \end{columns}
 \end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\part{第一部分：大模型基础与评测}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %========================================
 \section{大模型发展概览}
@@ -71,93 +137,205 @@
             \vspace{0.5cm}
             \textbf{中国优秀模型：}
             \begin{itemize}
-                \item \textcolor{deepseekblue}{\faBrain\ DeepSeek} - V3.2 (中文能力最强)
-                \item 智谱AI - GLM-5
+                \item \textcolor{deepseekblue}{\faBrain\ DeepSeek} - V3.2 (开源最强)
                 \item 阿里云 - Qwen 3.0
+                \item 月之暗面 - Kimi K2
             \end{itemize}
         \end{column}
         \begin{column}{0.5\textwidth}
-            \begin{tikzpicture}[scale=0.8]
-                \begin{axis}[
-                    ybar,
-                    symbolic x coords={GPT-5.2,Claude 4.5,Gemini 3P,DeepSeek},
-                    xtick=data,
-                    ylabel={基准测试得分},
-                    ymin=80,ymax=100,
-                    bar width=20pt,
-                    nodes near coords,
-                    title={2025.12 主流模型性能对比}
-                ]
-                \addplot coordinates {(GPT-5.2,98) (Claude 4.5,97) (Gemini 3P,96) (DeepSeek,95)};
-                \end{axis}
-            \end{tikzpicture}
+            \begin{alertblock}{重要提示}
+                不同任务适合不同模型，详细评测数据和模型选择建议见后续章节。
+            \end{alertblock}
         \end{column}
     \end{columns}
 \end{frame}
 
-\begin{frame}{最新动态（2025年12月）}
-    \begin{alertblock}{重要更新（本周！）}
-        \begin{itemize}
-            \item \textbf{12月10日}：Anthropic将MCP协议捐赠给Agentic AI Foundation
-            \item \textbf{12月9日}：OpenAI成立Agentic AI Foundation，发布AGENTS.md标准
-            \item \textbf{12月9日}：OpenAI发布首批官方认证课程
-            \item \textbf{12月8日}：Copilot Coding Agent支持模型选择（Pro/Pro+用户）
-            \item \textbf{12月4日}：GPT-5.1-Codex-Max在GitHub Copilot公测
-            \item \textbf{12月3日}：Claude Opus 4.5登陆VS/JetBrains/Xcode/Eclipse
-            \item \textbf{12月3日}：Anthropic收购Bun，Claude Code达\$10亿收入
-        \end{itemize}
-    \end{alertblock}
+%----------------------------------------
+% 模型架构：MoE vs Dense
+%----------------------------------------
+
+\begin{frame}{模型架构解析：MoE（混合专家）vs Dense（密集）}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{什么是MoE？}
+                \small
+                \textbf{Mixture of Experts}（混合专家）
+                \begin{itemize}
+                    \item 模型包含多个"专家"子网络
+                    \item 每次推理只激活\textbf{部分专家}
+                    \item 路由器决定使用哪些专家
+                    \item 总参数量大，但计算量小
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{MoE优势}
+                \scriptsize
+                \begin{itemize}
+                    \item \textcolor{green!70!black}{\faCheck} 训练效率高（同算力训更大模型）
+                    \item \textcolor{green!70!black}{\faCheck} 推理计算少（只用部分参数）
+                    \item \textcolor{green!70!black}{\faCheck} 成本更低
+                \end{itemize}
+            \end{exampleblock}
+            
+            \begin{alertblock}{MoE劣势}
+                \scriptsize
+                \begin{itemize}
+                    \item \textcolor{red}{\faTimes} 显存占用大（需加载所有专家）
+                    \item \textcolor{red}{\faTimes} 微调容易过拟合
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{主流模型架构对比}
+                \centering
+                \scriptsize
+                \begin{tabular}{l|c|l}
+                    \toprule
+                    \textbf{模型} & \textbf{架构} & \textbf{MoE规格} \\
+                    \midrule
+                    \multicolumn{3}{c}{\textbf{--- MoE架构 ---}} \\
+                    \rowcolor{blue!10}
+                    DeepSeek V3.2 & MoE & 671B/37B激活 \\
+                    Gemini 3系列 & MoE & 未公开 \\
+                    Mixtral 8x7B & MoE & 47B/12B激活 \\
+                    Grok 4 & MoE & 推测 \\
+                    Qwen3-MoE & MoE & 多版本 \\
+                    \midrule
+                    \multicolumn{3}{c}{\textbf{--- Dense架构 ---}} \\
+                    GPT-5.2 & Dense & -- \\
+                    Claude 4.5 & Dense & -- \\
+                    Llama 4 & Dense & -- \\
+                    \bottomrule
+                \end{tabular}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{block}{DeepSeek MoE详解}
+                \scriptsize
+                \begin{itemize}
+                    \item \textbf{总参数}：671B（6710亿）
+                    \item \textbf{激活参数}：仅37B（5.5\%）
+                    \item \textbf{专家数}：256个路由专家 + 1个共享专家
+                    \item \textbf{每次激活}：8个专家
+                    \item 这解释了DeepSeek的\textbf{超低价格}！
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{推理时计算扩展：成本倒挂现象}
+    \begin{columns}
+        \begin{column}{0.48\textwidth}
+            \begin{block}{两种扩展范式}
+                \textbf{传统：训练时扩展}
+                \begin{itemize}
+                    \item 更大模型 + 更多数据
+                    \item GPT-3 → GPT-4 → GPT-5
+                    \item 训练成本极高，推理成本固定
+                \end{itemize}
+                
+                \vspace{0.2cm}
+                \textbf{新范式：推理时扩展}
+                \begin{itemize}
+                    \item 让模型"思考更久"
+                    \item 复杂问题多花时间推理
+                    \item 训练成本降低，推理按需付费
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.52\textwidth}
+            \begin{alertblock}{推理成本倒挂：厂商在亏钱！}
+                \footnotesize
+                \textbf{OpenAI的困境（2024-2025数据）：}
+                \begin{itemize}
+                    \item 推理部署成本：每次查询\$0.01-0.10
+                    \item 实际收费：远低于成本
+                    \item 2024年预计亏损：\textbf{\$50亿}
+                    \item 日运营成本：约\$70万/天
+                \end{itemize}
+                
+                \vspace{0.1cm}
+                \textbf{为什么还要做？}
+                \begin{itemize}
+                    \item 抢占市场份额优先于盈利
+                    \item 期望规模效应降低成本
+                    \item 依赖投资支撑（\$170亿融资）
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
     
-    \vspace{0.3cm}
-    \begin{block}{趋势观察}
-        \begin{itemize}
-            \item MCP协议成为行业标准，AI Agent互操作性大幅提升
-            \item 多模型选择成为标配，用户可根据任务选择最优模型
-            \item Agentic AI（智能体AI）成为2025年末最热门方向
-        \end{itemize}
-    \end{block}
+    \vspace{0.2cm}
+    \footnotesize
+    \begin{tabular}{lllll}
+        \toprule
+        \textbf{模型} & \textbf{类型} & \textbf{推理特性} & \textbf{适用场景} & \textbf{思考控制} \\
+        \midrule
+        \rowcolor{blue!8} GPT-5.2 & 传统 & 快速响应 & 通用对话、写作 & 无 \\
+        \rowcolor{orange!15} GPT-5.2（推理模式） & 推理型 & 内置深度思考 & 数学、逻辑、编程难题 & 自动 \\
+        \rowcolor{blue!8} Claude 4.5 Opus & 传统 & 快速+高质量 & 编程、长文档 & 无 \\
+        \rowcolor{orange!15} Claude（扩展思考） & 推理型 & Extended Thinking & 复杂分析、研究 & token预算 \\
+        \rowcolor{blue!8} Gemini 3 Pro & 传统 & 200万上下文 & 长文档分析 & 无 \\
+        \rowcolor{orange!15} DeepSeek R1 & 推理型 & 开源推理链 & 科研、数学证明 & 自适应 \\
+        \bottomrule
+    \end{tabular}
+    
+    \vspace{0.15cm}
+    \begin{exampleblock}{科研用户的福利}
+        大厂"烧钱补贴"期：高质量服务低于成本价，抓住窗口期多用！
+    \end{exampleblock}
 \end{frame}
 
 %========================================
 \section{主流AI大模型详解}
 %========================================
 
-\begin{frame}{OpenAI GPT系列}
+\begin{frame}{ChatGPT订阅价格详解（2026年1月）}
+    \centering
+    \small
+    \begin{tabular}{l|c|c|p{6.5cm}}
+        \toprule
+        \textbf{套餐} & \textbf{价格} & \textbf{模型} & \textbf{主要功能} \\
+        \midrule
+        \rowcolor{gray!10}
+        \textbf{Free} & 免费 & GPT-5.2-mini & 基础对话、有限次数GPT-5.2、联网搜索、代码执行 \\
+        \midrule
+        \textbf{Plus} & \$20/月 & GPT-5.2全系列 & 更多GPT-5.2额度、图像生成(DALL·E)、语音对话、自定义GPTs \\
+        \midrule
+        \rowcolor{blue!10}
+        \textbf{Pro} & \$200/月 & 全部模型 & \textbf{无限}GPT-5.2访问、最高推理能力、研究级任务 \\
+        \midrule
+        \textbf{Team} & \$25-30/人/月 & GPT-5.2全系列 & 团队协作、更长上下文、管理控制台、数据不训练 \\
+        \midrule
+        \rowcolor{yellow!10}
+        \textbf{Enterprise} & 联系销售 & 全部 & 无限高速、企业SSO、高级安全、专属支持、SOC2合规 \\
+        \bottomrule
+    \end{tabular}
+    
+    \vspace{0.4cm}
     \begin{columns}
-        \begin{column}{0.6\textwidth}
-            \textbf{模型家族（2025年12月最新）：}
-            \begin{itemize}
-                \item \textbf{GPT-5.1} - 当前主力模型（11/12发布）
-                \item \textbf{GPT-5.1-Codex-Max} - 编程专用（12/4公测）
-                \item \textbf{o3/o4-mini} - 推理模型系列
-            \end{itemize}
-            
-            \vspace{0.3cm}
-            \textbf{最新动态：}
-            \begin{itemize}
-                \item 12/9：成立Agentic AI Foundation
-                \item 12/9：发布首批OpenAI认证课程
-                \item 12/8：企业AI报告发布
-                \item 12/3：收购Neptune公司
-                \item 10/21：发布ChatGPT Atlas浏览器
-            \end{itemize}
-        \end{column}
-        \begin{column}{0.4\textwidth}
-            \begin{block}{ChatGPT订阅}
-                \begin{itemize}
-                    \item \textbf{Free}：有限使用
-                    \item \textbf{Plus}：\$20/月
-                    \item \textbf{Pro}：\$200/月
-                    \item \textbf{Team}：\$25-30/用户/月
-                \end{itemize}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{API定价（按Token计费）}
+                \footnotesize
+                \begin{tabular}{lcc}
+                    模型 & 输入 & 输出 \\
+                    \hline
+                    GPT-5.2 & \$2.5/M & \$10/M \\
+                    GPT-5.2-mini & \$0.15/M & \$0.60/M \\
+                    GPT-5.2-Codex & \$2.0/M & \$8/M \\
+                \end{tabular}
             \end{block}
-            \vspace{0.2cm}
-            \begin{exampleblock}{新功能}
-                \small
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{exampleblock}{推荐选择}
+                \footnotesize
                 \begin{itemize}
-                    \item Shopping Research（11/24）
-                    \item Company Knowledge（10/23）
-                    \item Parental Controls（9/29）
+                    \item 轻度用户 → Free足够
+                    \item 日常科研 → Plus性价比高
+                    \item 重度/推理 → Pro值得投资
+                    \item 团队协作 → Team/Enterprise
                 \end{itemize}
             \end{exampleblock}
         \end{column}
@@ -167,24 +345,15 @@
 \begin{frame}{Anthropic Claude系列}
     \begin{columns}
         \begin{column}{0.55\textwidth}
-            \textbf{模型家族（2025年12月最新）：}
+            \textbf{模型家族（2026年1月最新）：}
             \begin{itemize}
-                \item \textbf{Claude Opus 4.5}（11/25发布）\\
-                    {\small 世界最强编程、Agent和Computer Use模型}
                 \item \textbf{Claude Sonnet 4.5}（9/30发布）\\
-                    {\small 平衡性能与成本，含Agent SDK}
+                    {\small 世界最强编程模型（SWE-bench 77.2\%）\\
+                    OSWorld 61.4\%（计算机使用SOTA）}
+                \item \textbf{Claude Opus 4.5}（11/25发布）\\
+                    {\small 编程、Agent、Computer Use全能旗舰}
                 \item \textbf{Claude Haiku 4.5}（10/16发布）\\
                     {\small 超快速度，极具性价比}
-            \end{itemize}
-            
-            \vspace{0.3cm}
-            \textbf{本周重大新闻：}
-            \begin{itemize}
-                \item \textcolor{red}{12/10}：MCP协议捐赠给Agentic AI Foundation
-                \item \textcolor{red}{12/3}：收购Bun（JS运行时）
-                \item \textcolor{red}{12/3}：Claude Code达\$10亿收入！
-                \item 12/4：与Snowflake达成\$2亿合作
-                \item 11/18：登陆Microsoft 365 Copilot
             \end{itemize}
         \end{column}
         \begin{column}{0.45\textwidth}
@@ -211,30 +380,16 @@
 \begin{frame}{Google Gemini系列}
     \begin{columns}
         \begin{column}{0.6\textwidth}
-            \textbf{模型家族（2025年12月最新）：}
+            \textbf{模型家族（2026年1月最新）：}
             \begin{itemize}
-                \item \textbf{Gemini 3}（最新旗舰，全新智能时代）
-                \item \textbf{Gemini 3 Pro}（视觉AI前沿）
-                \item \textbf{Gemini 3 Pro Image}（图像生成）
-                \item \textbf{Nano Banana Pro}（轻量版）
+                \item \textbf{Gemini 3 Pro}（\textcolor{red}{HLE 37.5\%，科研第一}）
+                \item \textbf{Gemini 3 Flash}（12月——极速前沿智能）
+                \item \textbf{Gemini 3 Deep Think}（推理增强版）
+                \item \textbf{Nano Banana Pro}（轻量版图像生成）
             \end{itemize}
             
-            \vspace{0.3cm}
-            \textbf{最新动态：}
-            \begin{itemize}
-                \item 12/9：Gemini AI职场研究报告发布
-                \item Gemini 3 Pro已集成GitHub Copilot
-                \item Google AI Pro/Ultra提高API限额
-                \item Project Suncatcher：太空ML计算
-            \end{itemize}
-            
-            \vspace{0.3cm}
-            \textbf{适用场景：}
-            \begin{itemize}
-                \item 科研文献分析和总结
-                \item 多模态理解（图像/视频/音频）
-                \item 与Google Workspace集成办公
-            \end{itemize}
+            \vspace{0.2cm}
+            \textbf{适用场景：}科研分析、多模态理解、Google Workspace集成
         \end{column}
         \begin{column}{0.4\textwidth}
             \begin{tikzpicture}[scale=0.7]
@@ -258,15 +413,21 @@
 \begin{frame}{DeepSeek（中国）}
     \begin{columns}
         \begin{column}{0.6\textwidth}
-            \textbf{最新版本：DeepSeek-V3.2（2025年12月）}
+            \textbf{最新版本（2026年1月全球媒体报道）：}
+            \begin{itemize}
+                \item \textbf{DeepSeek-V3.2正式版}（1月发布）\\
+                    {\small 强化Agent能力，融入思考推理}
+                \item \textbf{DeepSeek-V3}（12/26发布）\\
+                    {\small 671B MoE参数，60 tokens/s（3倍V2速度）}
+            \end{itemize}
             
             \vspace{0.3cm}
             \textbf{核心特点：}
             \begin{itemize}
                 \item \textcolor{red}{中文能力全球第一}：在中文语境理解、古文、成语及中国文化相关任务上碾压所有国外模型
                 \item \textcolor{red}{完全免费}网页端和APP使用
-                \item 强化Agent能力与数学推理
-                \item API价格极具竞争力
+                \item \textcolor{red}{开源}：671B MoE + 37B激活参数
+                \item API价格全球最低！
             \end{itemize}
             
             \vspace{0.3cm}
@@ -316,6 +477,1387 @@
             \item \textbf{长文本处理}：Gemini 3 Pro (2M) 或 Claude (200K)
         \end{itemize}
     \end{block}
+\end{frame}
+
+\begin{frame}{著名大模型性能特点详解（一）}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{\textcolor{openaigreen}{\faRobot\ GPT-5.2 (OpenAI)}}
+                \textbf{核心优势：}
+                \begin{itemize}
+                    \item 综合能力最均衡的"全能选手"
+                    \item 生态最成熟，插件/工具最丰富
+                    \item 多模态能力强（图像、语音、视频）
+                    \item 指令遵循能力极佳
+                \end{itemize}
+                \textbf{相对弱点：}
+                \begin{itemize}
+                    \item 价格较高（API \$2.5-10/M tokens）
+                    \item 中文表达略显"翻译腔"
+                    \item 知识截止日期更新较慢
+                \end{itemize}
+                \textbf{最佳场景：}通用问答、创意写作、多模态任务
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{\textcolor{anthropicred}{\faComment\ Claude 4.5 (Anthropic)}}
+                \textbf{核心优势：}
+                \begin{itemize}
+                    \item \textbf{代码能力公认最强}（SWE-bench 77\%）
+                    \item 200K超长上下文，支持整个代码库
+                    \item 输出格式规范、逻辑清晰
+                    \item Computer Use功能（操作电脑）
+                \end{itemize}
+                \textbf{相对弱点：}
+                \begin{itemize}
+                    \item 多模态能力不如GPT/Gemini
+                    \item 有时"过于谨慎"，拒绝回答
+                    \item 创意写作风格较为正式
+                \end{itemize}
+                \textbf{最佳场景：}编程开发、代码审查、长文档分析
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{著名大模型性能特点详解（二）}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{\textcolor{googleblue}{\faGoogle\ Gemini 3 Pro (Google)}}
+                \textbf{核心优势：}
+                \begin{itemize}
+                    \item \textbf{HLE科研能力第一}（37.5\%）
+                    \item \textbf{2M超长上下文}（业界最长）
+                    \item 多模态理解最强（原生多模态）
+                    \item Google服务深度集成
+                \end{itemize}
+                \textbf{相对弱点：}
+                \begin{itemize}
+                    \item 国内访问受限
+                    \item 中文表达不如本土模型自然
+                    \item 部分编程语言支持较弱
+                \end{itemize}
+                \textbf{最佳场景：}科研问答、长文档分析、多模态研究
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{\textcolor{deepseekblue}{\faBrain\ DeepSeek V3.2 (中国)}}
+                \textbf{核心优势：}
+                \begin{itemize}
+                    \item \textbf{中文能力无敌}（语义、文化理解）
+                    \item \textbf{价格全球最低}（\$0.27/M输入）
+                    \item 完全免费网页端使用
+                    \item 开源，可本地部署
+                    \item 数学推理能力极强
+                \end{itemize}
+                \textbf{相对弱点：}
+                \begin{itemize}
+                    \item 多模态能力较基础
+                    \item 英文创意写作略逊
+                    \item 生态工具不如OpenAI丰富
+                \end{itemize}
+                \textbf{最佳场景：}中文任务、数学推理、性价比开发
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{著名大模型性能特点详解（三）}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{\faFire\ 2026年顶级模型对比}
+                \footnotesize
+                \begin{tabular}{p{2.2cm}p{2.5cm}}
+                    \toprule
+                    \textbf{模型} & \textbf{特点} \\
+                    \midrule
+                    \textbf{GPT-5.2} (OpenAI) & 全能旗舰、生态最强 \\
+                    \textbf{Gemini 3 Pro} & 科学推理SOTA、2M上下文 \\
+                    \textbf{Claude Opus 4.5} & 代码之王、Agent最强 \\
+                    \textbf{DeepSeek V3.2} & 中文最强、性价比王 \\
+                    \bottomrule
+                
+                \end{tabular}
+                \normalsize
+                
+                \vspace{0.3cm}
+                \textbf{2026年模型选择要点：}
+                \begin{itemize}
+                    \item 旧版推理模型已被整合到GPT-5.2
+                    \item 新旗舰模型内置推理能力
+                    \item 无需单独选择"推理模型"
+                    \item 关注任务匹配而非模型代号
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{各模型"性格"总结}
+                \begin{itemize}
+                    \item \textbf{GPT-5.2}：老成稳重的\textbf{全能助手}
+                    \item \textbf{Claude Opus 4.5}：严谨专业的\textbf{代码专家}
+                    \item \textbf{Gemini 3 Pro}：博学多才的\textbf{科研伙伴}
+                    \item \textbf{DeepSeek V3.2}：懂中文的\textbf{性价比之王}
+                \end{itemize}
+            \end{alertblock}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{实用建议}
+                \small
+                \begin{itemize}
+                    \item 日常问答：DeepSeek（免费）
+                    \item 写代码：Claude Opus 4.5（最强）
+                    \item 处理图片/视频：GPT-5.2或Gemini 3
+                    \item 中文写作：DeepSeek（最自然）
+                    \item 科学研究：Gemini 3 Pro
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{大模型能力雷达图对比}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \begin{tikzpicture}[scale=0.9]
+                % 雷达图坐标轴
+                \foreach \angle/\label in {90/代码能力, 162/推理能力, 234/多模态, 306/中文能力, 18/性价比} {
+                    \draw[gray!50] (0,0) -- (\angle:3);
+                    \node at (\angle:3.5) {\tiny \label};
+                }
+                % 刻度圈
+                \foreach \r in {1,2,3} {
+                    \draw[gray!30] (90:\r) -- (162:\r) -- (234:\r) -- (306:\r) -- (18:\r) -- cycle;
+                }
+                % GPT-5.2 (红色)
+                \draw[red!70, thick, fill=red!20, opacity=0.5] 
+                    (90:2.7) -- (162:2.8) -- (234:2.9) -- (306:2.2) -- (18:1.5) -- cycle;
+                % Claude 4.5 (蓝色)
+                \draw[blue!70, thick, fill=blue!20, opacity=0.5] 
+                    (90:3) -- (162:2.7) -- (234:1.8) -- (306:2.3) -- (18:2) -- cycle;
+                % Gemini 3 (绿色)
+                \draw[green!60!black, thick, fill=green!20, opacity=0.5] 
+                    (90:2.5) -- (162:2.9) -- (234:3) -- (306:2.2) -- (18:2.2) -- cycle;
+                % DeepSeek (橙色)
+                \draw[orange!80, thick, fill=orange!20, opacity=0.5] 
+                    (90:2.6) -- (162:2.8) -- (234:1.5) -- (306:3) -- (18:3) -- cycle;
+            \end{tikzpicture}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \textbf{图例说明：}
+            \begin{itemize}
+                \item[\textcolor{red!70}{\rule{0.5cm}{0.3cm}}] GPT-5.2
+                \item[\textcolor{blue!70}{\rule{0.5cm}{0.3cm}}] Claude 4.5
+                \item[\textcolor{green!60!black}{\rule{0.5cm}{0.3cm}}] Gemini 3 Pro
+                \item[\textcolor{orange!80}{\rule{0.5cm}{0.3cm}}] DeepSeek V3.2
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{block}{核心洞察}
+                \small
+                \begin{itemize}
+                    \item 没有"最好"的模型，只有"最适合"
+                    \item 各模型优势领域明显不同
+                    \item 组合使用效果最佳
+                    \item 关注任务需求而非品牌
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.2cm}
+            {\footnotesize 评分基于公开基准测试与实际使用体验}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+%========================================
+\section{大模型的核心问题与根本原因}
+%========================================
+
+\begin{frame}{大模型的三大核心问题}
+    \begin{columns}
+        \begin{column}{0.33\textwidth}
+            \begin{alertblock}{\faExclamationTriangle\ 幻觉 (Hallucination)}
+                \centering
+                \vspace{0.2cm}
+                \textbf{一本正经地胡说八道}
+                \vspace{0.2cm}
+                \begin{itemize}
+                    \item 编造不存在的引用
+                    \item 虚构历史事件
+                    \item 捏造统计数据
+                    \item 错误的技术细节
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.33\textwidth}
+            \begin{alertblock}{\faMemory\ 上下文遗忘}
+                \centering
+                \vspace{0.2cm}
+                \textbf{聊着聊着就忘了}
+                \vspace{0.2cm}
+                \begin{itemize}
+                    \item 忘记早期指令
+                    \item 丢失关键约束
+                    \item 前后矛盾
+                    \item 重复已说内容
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.33\textwidth}
+            \begin{alertblock}{\faChartLine\ 质量衰减}
+                \centering
+                \vspace{0.2cm}
+                \textbf{越聊越差}
+                \vspace{0.2cm}
+                \begin{itemize}
+                    \item 多轮后回答变短
+                    \item 创意能力下降
+                    \item 出现循环重复
+                    \item 指令遵循变差
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.5cm}
+    \begin{block}{核心认识}
+        \centering
+        这些问题\textbf{不是bug，而是当前技术架构的本质限制}。理解原因才能更好地规避。
+    \end{block}
+\end{frame}
+
+\begin{frame}{问题根源（一）：幻觉的本质——"鹦鹉学舌"而非"理解"}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{大模型的工作原理：}
+            \begin{enumerate}
+                \item 输入文本 → 转为Token序列
+                \item 根据上文预测\textbf{下一个最可能的Token}
+                \item 采样生成 → 重复直到结束
+            \end{enumerate}
+            
+            \vspace{0.3cm}
+            \textbf{\textcolor{red}{关键洞察：}}
+            \begin{itemize}
+                \item 模型在做\textbf{统计模式匹配}
+                \item \textbf{不是}在"理解"或"推理"
+                \item \textbf{不是}在查询知识库
+                \item 只是预测"什么词最可能出现在这里"
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{为什么会幻觉？}
+            \begin{itemize}
+                \item 训练数据中某些模式频繁出现
+                \item 模型学会了"看起来正确"的表达方式
+                \item 但无法验证内容的真实性
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{tikzpicture}[scale=0.8]
+                \node[draw, rounded corners, fill=blue!20, minimum width=3cm, minimum height=0.8cm] (input) at (0,3) {输入: "爱因斯坦在"};
+                \node[draw, rounded corners, fill=orange!20, minimum width=3cm, minimum height=0.8cm] (model) at (0,1.5) {模型: 计算概率分布};
+                \node[draw, rounded corners, fill=green!20, minimum width=3cm, minimum height=0.8cm] (output) at (0,0) {输出: "1905年" (P=0.3)};
+                
+                \draw[->, thick] (input) -- (model);
+                \draw[->, thick] (model) -- (output);
+                
+                \node[right, font=\tiny] at (1.8,1.5) {
+                    \begin{tabular}{ll}
+                        1905年 & 30\% \\
+                        1879年 & 25\% \\
+                        普林斯顿 & 15\% \\
+                        ... & ...
+                    \end{tabular}
+                };
+            \end{tikzpicture}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{本质问题}
+                \small
+                模型选择"统计上最可能"的续写，而非"事实上正确"的答案。当训练数据不足或有噪声时，就会产生幻觉。
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{问题根源（二）：上下文遗忘——有限的"工作记忆"}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Transformer的注意力机制：}
+            \begin{itemize}
+                \item 每个Token都要关注所有其他Token
+                \item 计算复杂度：$O(n^2)$（n为序列长度）
+                \item \textbf{上下文窗口}是硬性限制
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{上下文窗口限制（2026年）：}
+            \begin{itemize}
+                \item GPT-5.2: \textbf{128K} tokens
+                \item Claude 4.5: \textbf{200K} tokens
+                \item Gemini 3: \textbf{2M} tokens
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{\textcolor{red}{关键问题：}}
+            \begin{itemize}
+                \item 窗口内的信息\textbf{不是均匀关注}
+                \item 存在"Lost in the Middle"现象
+                \item 开头和结尾被关注更多
+                \item 中间部分容易被"遗忘"
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{tikzpicture}[scale=0.7]
+                \begin{axis}[
+                    xlabel={文本位置},
+                    ylabel={注意力权重},
+                    ymin=0, ymax=1,
+                    xmin=0, xmax=100,
+                    title={\small 注意力分布示意图},
+                    width=6cm, height=4.5cm,
+                    xtick={0,25,50,75,100},
+                    xticklabels={开头,,,中间,结尾}
+                ]
+                \addplot[blue, thick, smooth] coordinates {
+                    (0,0.9) (10,0.7) (25,0.4) (50,0.2) (75,0.4) (90,0.7) (100,0.9)
+                };
+                \end{axis}
+            \end{tikzpicture}
+            
+            \begin{alertblock}{"Lost in the Middle"现象}
+                \small
+                研究表明，当重要信息放在长文本中间时，模型检索准确率\textbf{下降40-60\%}。
+                
+                \vspace{0.1cm}
+                {\scriptsize Liu et al., 2024, "Lost in the Middle"}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{问题根源（三）：多轮对话质量衰减}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{多轮对话的技术实现：}
+            \begin{enumerate}
+                \item 每轮对话都把\textbf{完整历史}发给模型
+                \item 历史越长，Token消耗越多
+                \item 模型每次都要重新"阅读"全部内容
+            \end{enumerate}
+            
+            \vspace{0.3cm}
+            \textbf{质量衰减的原因：}
+            \begin{itemize}
+                \item \textbf{上下文污染}：历史中的错误会被"学习"
+                \item \textbf{注意力稀释}：关注点分散到更多内容
+                \item \textbf{模式锁定}：倾向重复已有的表达模式
+                \item \textbf{指令遗忘}：原始指令权重降低
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \begin{block}{类比理解}
+                \small
+                像一个人同时听10个人说话，每多一个人，对每个人的注意力就少一点。
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{tikzpicture}[scale=0.7]
+                \begin{axis}[
+                    xlabel={对话轮次},
+                    ylabel={回答质量（相对值）},
+                    ymin=0, ymax=100,
+                    xmin=1, xmax=20,
+                    title={\small 多轮对话质量变化},
+                    width=6cm, height=4.5cm,
+                    legend pos=north east
+                ]
+                \addplot[red, thick, mark=*] coordinates {
+                    (1,95) (3,90) (5,85) (8,75) (10,65) (15,50) (20,40)
+                };
+                \addplot[blue, thick, mark=square, dashed] coordinates {
+                    (1,95) (3,92) (5,88) (8,82) (10,78) (15,70) (20,65)
+                };
+                \legend{\tiny 无优化, \tiny 定期总结}
+                \end{axis}
+            \end{tikzpicture}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{技术解释}
+                \scriptsize
+                \textbf{为什么会重复？}\\
+                当历史中某个模式出现多次，模型预测"下一个词"时，这个模式的概率被不断强化，形成"自我循环"。
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{深层原因：为什么这些问题难以根治？}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{1. 训练目标的局限}
+            \begin{itemize}
+                \item 目标：预测下一个Token
+                \item \textbf{不是}：生成正确的事实
+                \item \textbf{不是}：保持逻辑一致性
+                \item \textbf{不是}：长期记忆管理
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{2. 知识存储方式}
+            \begin{itemize}
+                \item 知识编码在\textbf{模型参数}中
+                \item 不是存储在可查询的数据库
+                \item 无法精确检索和验证
+                \item 更新知识需要重新训练
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{3. 缺乏真正的"理解"}
+            \begin{itemize}
+                \item 没有世界模型
+                \item 无法进行因果推理
+                \item 不理解物理规律
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{Stochastic Parrot (随机鹦鹉)}
+                \small
+                Bender et al. (2021) 的著名论文指出：
+                
+                \vspace{0.2cm}
+                "大语言模型是\textbf{随机鹦鹉}——它们在操纵语言形式，而不理解语言的\textbf{意义}。"
+                
+                \vspace{0.2cm}
+                模型学会了"说人话"的统计模式，但不理解话语背后的世界。
+            \end{alertblock}
+            
+            \vspace{0.3cm}
+            \begin{block}{类比}
+                \small
+                \textbf{传统数据库}：图书馆，可以精确查找
+                
+                \vspace{0.1cm}
+                \textbf{大语言模型}：读过很多书的人，凭印象回答，可能记错细节
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{实用应对策略}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{应对幻觉：}
+            \begin{enumerate}
+                \item \textbf{要求引用来源}
+                    \begin{itemize}
+                        \item "请给出参考文献"
+                        \item 然后人工验证
+                    \end{itemize}
+                \item \textbf{使用RAG}
+                    \begin{itemize}
+                        \item 让模型检索真实文档
+                        \item 基于文档回答
+                    \end{itemize}
+                \item \textbf{交叉验证}
+                    \begin{itemize}
+                        \item 用多个模型验证
+                        \item 关键信息人工核实
+                    \end{itemize}
+            \end{enumerate}
+            
+            \vspace{0.3cm}
+            \textbf{应对上下文遗忘：}
+            \begin{enumerate}
+                \item 重要指令放在\textbf{开头和结尾}
+                \item 定期\textbf{重复关键约束}
+                \item 使用\textbf{结构化格式}（JSON/XML）
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{应对质量衰减：}
+            \begin{enumerate}
+                \item \textbf{定期总结}
+                    \begin{itemize}
+                        \item "请总结我们讨论的要点"
+                        \item 开新对话，粘贴总结继续
+                    \end{itemize}
+                \item \textbf{分段处理}
+                    \begin{itemize}
+                        \item 复杂任务拆分为多个短对话
+                        \item 每个对话专注单一目标
+                    \end{itemize}
+                \item \textbf{重置指令}
+                    \begin{itemize}
+                        \item 对话变差时重申原始要求
+                        \item "请重新阅读我的初始指令"
+                    \end{itemize}
+            \end{enumerate}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{黄金法则}
+                \centering
+                \textbf{AI是助手，不是权威}\\
+                \small
+                永远保持批判性思维，关键信息必须验证
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{前沿研究：这些问题正在被解决吗？}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{缓解幻觉的研究方向：}
+            \begin{itemize}
+                \item \textbf{RAG (检索增强生成)}
+                    \begin{itemize}
+                        \item 先检索相关文档
+                        \item 基于文档生成答案
+                        \item 显著减少事实错误
+                    \end{itemize}
+                \item \textbf{Self-Consistency}
+                    \begin{itemize}
+                        \item 多次采样取共识
+                        \item 提高答案可靠性
+                    \end{itemize}
+                \item \textbf{知识编辑}
+                    \begin{itemize}
+                        \item 精确修改模型中的错误知识
+                        \item 仍在研究阶段
+                    \end{itemize}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{扩展上下文的研究：}
+            \begin{itemize}
+                \item \textbf{稀疏注意力}
+                    \begin{itemize}
+                        \item 不关注所有Token
+                        \item 降低计算复杂度
+                    \end{itemize}
+                \item \textbf{记忆增强}
+                    \begin{itemize}
+                        \item 外部记忆模块
+                        \item 长期知识存储
+                    \end{itemize}
+                \item \textbf{上下文压缩}
+                    \begin{itemize}
+                        \item 自动总结历史
+                        \item 保留关键信息
+                    \end{itemize}
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{block}{现实预期}
+                \small
+                这些问题在\textbf{短期内不会完全解决}，但会持续改善。学会与这些限制共处是使用AI的必要技能。
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{"Lost in the Middle"现象详解}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{什么是"Lost in the Middle"？}
+            \begin{itemize}
+                \item 大模型处理长文本时的\textbf{注意力分布不均}现象
+                \item 开头和结尾的信息被充分关注
+                \item \textcolor{red}{\textbf{中间部分的信息容易被"遗忘"}}
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{实验数据（Liu et al., 2024）：}
+            \begin{itemize}
+                \item 测试任务：长文档问答
+                \item 关键信息在\textbf{开头}：准确率 \textbf{90\%+}
+                \item 关键信息在\textbf{中间}：准确率 \textbf{40-50\%}
+                \item 关键信息在\textbf{结尾}：准确率 \textbf{85\%+}
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{\textcolor{red}{影响范围：}}
+            \begin{itemize}
+                \item 所有Transformer架构模型都有此问题
+                \item 上下文越长，中间遗忘越严重
+                \item 即使是200K+上下文的模型也不例外
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{tikzpicture}[scale=0.75]
+                \begin{axis}[
+                    xlabel={关键信息位置（文档百分比）},
+                    ylabel={检索准确率（\%）},
+                    ymin=30, ymax=100,
+                    xmin=0, xmax=100,
+                    title={\small 不同位置的信息检索准确率},
+                    width=6.5cm, height=5cm,
+                    xtick={0,25,50,75,100},
+                    xticklabels={0\%,25\%,50\%,75\%,100\%},
+                    legend style={font=\tiny, at={(0.5,-0.25)}, anchor=north}
+                ]
+                \addplot[blue, thick, mark=*] coordinates {
+                    (0,95) (10,88) (25,65) (50,42) (75,58) (90,82) (100,92)
+                };
+                \addplot[red, thick, mark=square, dashed] coordinates {
+                    (0,92) (10,82) (25,55) (50,35) (75,50) (90,78) (100,88)
+                };
+                \legend{GPT-4, Claude 3}
+                \end{axis}
+            \end{tikzpicture}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{U型曲线}
+                注意力呈现典型的\textbf{U型分布}——首尾高、中间低。这是Transformer位置编码和注意力机制的固有特性。
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{应对"Lost in the Middle"的实用技巧}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{\faCheckCircle\ 文档组织策略：}
+            \begin{enumerate}
+                \item \textbf{关键信息前置}
+                    \begin{itemize}
+                        \item 最重要的内容放在开头
+                        \item 次重要的放在结尾
+                        \item 背景信息放在中间
+                    \end{itemize}
+                \item \textbf{分块处理}
+                    \begin{itemize}
+                        \item 长文档拆分为多个短段
+                        \item 每段独立提问
+                        \item 最后综合答案
+                    \end{itemize}
+                \item \textbf{重复关键信息}
+                    \begin{itemize}
+                        \item 在开头和结尾重复强调
+                        \item "请特别注意以下要求..."
+                    \end{itemize}
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{\faCode\ Prompt工程技巧：}
+            \begin{exampleblock}{示例：长文档问答}
+                \scriptsize
+                \texttt{【重要指令 - 开头】}\\
+                \texttt{请在以下文档中找到关于X的信息。}\\
+                \texttt{}\\
+                \texttt{[文档内容...]}\\
+                \texttt{}\\
+                \texttt{【重要提醒 - 结尾】}\\
+                \texttt{请确保回答基于文档内容，}\\
+                \texttt{特别关注关于X的部分。}
+            \end{exampleblock}
+            
+            \vspace{0.3cm}
+            \textbf{\faLightbulb\ RAG最佳实践：}
+            \begin{itemize}
+                \item 检索结果按相关性\textbf{重排序}
+                \item 最相关的放在\textbf{开头或结尾}
+                \item 每次检索控制在\textbf{5-10}个chunk
+                \item 使用\textbf{摘要}代替完整文档
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.3cm}
+    \begin{block}{科研应用提示}
+        \centering
+        处理长论文时，建议先让模型\textbf{分段总结}，再基于总结回答问题，而非直接处理全文。
+    \end{block}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\part{第二部分：模型深入解析}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%========================================
+\section{主流模型科研特点分析}
+%========================================
+
+\begin{frame}{什么是校准误差？——模型自知之明的衡量}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{校准误差（Calibration Error）定义}
+            \begin{itemize}
+                \item 衡量模型\textbf{置信度}与\textbf{实际准确率}的匹配程度
+                \item 公式：$\text{CE} = |\text{模型置信度} - \text{实际正确率}| \times 100$
+                \item \textbf{数值越低}，模型越``知道自己知不知道''
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{举例说明：}
+            \begin{itemize}
+                \item 模型说``我90\%确定答案是A''
+                \item 如果100次这样的情况中真的有90次正确\\
+                      → \textcolor{green!60!black}{校准误差 = 0（完美校准）}
+                \item 如果实际只有60次正确\\
+                      → \textcolor{red}{校准误差 = 30（过度自信）}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{tikzpicture}[scale=0.75]
+                \begin{axis}[
+                    ybar,
+                    symbolic x coords={GPT-5.2,GPT-5P,Claude,Gemini,DSR1},
+                    xtick=data,
+                    x tick label style={rotate=45, anchor=east, font=\tiny},
+                    ylabel={校准误差↓},
+                    ymin=0,ymax=80,
+                    bar width=12pt,
+                    nodes near coords,
+                    nodes near coords style={font=\tiny},
+                    title={\small HLE校准误差 (越低越好)},
+                    width=6cm, height=5cm
+                ]
+                \addplot[fill=green!60] coordinates {(GPT-5.2,45) (GPT-5P,49) (Claude,55) (Gemini,57) (DSR1,73)};
+                \end{axis}
+            \end{tikzpicture}
+            
+            \vspace{0.2cm}
+            \begin{block}{\small 科研应用意义}
+                \footnotesize
+                \begin{itemize}
+                    \item 低校准误差 = 可信的不确定性估计
+                    \item GPT-5系列校准最好（45-49）
+                    \item DeepSeek-R1过度自信（73）
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.2cm}
+    {\footnotesize \textbf{科研建议}：需要可靠置信度时选GPT-5系列；追求准确率选Gemini 3 Pro}
+\end{frame}
+
+\begin{frame}{DeepSeek V3.2：开源科研利器详解}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{DeepSeek V3.2/R1 关键数据}（HLE 2025.12）
+            \begin{itemize}
+                \item \textbf{HLE科研能力}：8.5\%（开源最强）
+                \item \textbf{SWE-bench}：60.0\%（仅\$0.03/任务）
+                \item \textbf{架构}：MoE，671B参数，37B激活
+                \item \textbf{特点}：
+                    \begin{itemize}
+                        \item 强化Agent能力
+                        \item 融入思考推理
+                        \item 中文理解无敌
+                    \end{itemize}
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \textbf{开源蒸馏模型}（可本地部署）：
+            \begin{itemize}
+                \item DeepSeek-V3-32B：适合消费级显卡
+                \item DeepSeek-Coder-V3：代码专精
+                \item 支持Ollama一键部署
+            
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{科研应用优势}
+                \begin{itemize}
+                    \item \textcolor{green!60!black}{\checkmark} 完全开源，MIT许可
+                    \item \textcolor{green!60!black}{\checkmark} 可本地部署
+                    \item \textcolor{green!60!black}{\checkmark} 中文推理能力极强
+                    \item \textcolor{green!60!black}{\checkmark} API成本极低（Claude的1/24）
+                    \item \textcolor{green!60!black}{\checkmark} 性价比之王
+                \end{itemize}
+            \end{alertblock}
+            
+            \vspace{0.3cm}
+            \begin{exampleblock}{推荐配置}
+                \textbf{日常使用}：DeepSeek V3.2 网页版（免费）\\
+                \textbf{本地部署}：DeepSeek-V3-32B\\
+                \textbf{API开发}：DeepSeek V3.2 API（最便宜）
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Gemini 3 Pro：科研能力世界第一}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{Gemini 3 Pro 核心特点}（HLE 2025.12数据）
+            \begin{itemize}
+                \item \textbf{HLE科研能力}：\textcolor{red}{\textbf{37.5\%}}（世界第一）
+                \item \textbf{校准误差}：57（置信度较准）
+                \item \textbf{上下文}：2M tokens（业界最长）
+                \item \textbf{多模态}：原生图文视频理解
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \textbf{为什么科研首选？}
+            \begin{itemize}
+                \item HLE测试中领先第二名6个百分点
+                \item 可一次读入整本教科书或多篇论文
+                \item 图表理解能力最强（14\%多模态题）
+                \item 与Google Scholar/Workspace深度集成
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{block}{科研应用场景}
+                \begin{itemize}
+                    \item \textbf{文献综述}：2M上下文读多篇论文
+                    \item \textbf{数据分析}：理解复杂图表
+                    \item \textbf{实验设计}：科学推理能力强
+                    \item \textbf{多模态研究}：图像/视频分析
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{访问方式}
+                \begin{itemize}
+                    \item Gemini App（免费版可用）
+                    \item Google AI Studio（开发者）
+                    \item Vertex AI（企业版）
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{科学研究模型选择指南}
+    \textbf{基于Humanity's Last Exam (HLE) 2025.12科研能力排名}
+    
+    \vspace{0.3cm}
+    \begin{tabular}{p{3.5cm}p{4cm}p{4cm}}
+        \toprule
+        \textbf{研究任务} & \textbf{首选模型} & \textbf{备选方案} \\
+        \midrule
+        \textbf{前沿科研问答} & Gemini 3 Pro (37.5\%) & GPT-5 Pro (31.6\%) \\
+        博士级科学推理 & Gemini 3 Pro & GPT-5.2 (27.8\%) \\
+        代码开发 & Claude Opus 4.5 (74.4\%) & Gemini 3 Pro (74.2\%) \\
+        本地部署科研 & DeepSeek-V3-32B & Qwen 2.5-32B \\
+        预算敏感科研 & DeepSeek R1 (8.5\%) & Gemini Flash \\
+        多模态科学数据 & Gemini 3 Pro & GPT-5.2 \\
+        中文科学文献 & DeepSeek V3.2 & Qwen 3.0 \\
+        长文档分析 & Gemini 3 Pro (2M) & Claude Opus 4.5 (200K) \\
+        \bottomrule
+    \end{tabular}
+    
+    \vspace{0.3cm}
+    \begin{alertblock}{重要提醒}
+        \begin{itemize}
+            \item 数据来源：scale.com/leaderboard/humanitys\_last\_exam (2025-12-17)
+            \item Gemini 3 Pro在HLE科研测试中领先第二名近6个百分点
+            \item 开源模型（DeepSeek R1）与闭源差距仍较大（8.5\% vs 37.5\%）
+        \end{itemize}
+    \end{alertblock}
+\end{frame}
+
+%========================================
+\section{多模态能力对比}
+%========================================
+
+\begin{frame}{多模态能力：科研中的关键差异}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{什么是多模态能力？}
+            \begin{itemize}
+                \item 处理\textbf{文本之外}的信息类型
+                \item 图像、图表、公式、视频等
+                \item 科研中经常需要分析复杂图表
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{科研场景需求：}
+            \begin{itemize}
+                \item \textbf{论文图表理解}：读懂实验结果图
+                \item \textbf{公式识别}：从截图提取LaTeX
+                \item \textbf{数据可视化分析}：解读统计图表
+                \item \textbf{实验数据}：显微镜/光谱图像
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{\textcolor{red}{重要发现}：}
+            \begin{itemize}
+                \item HLE测试中\textbf{14\%}为多模态题目
+                \item 多模态能力直接影响科研表现
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{主流模型多模态能力对比：}
+            
+            \vspace{0.2cm}
+            \begin{tikzpicture}[scale=0.7]
+                \begin{axis}[
+                    ybar,
+                    symbolic x coords={图表理解,公式识别,图像描述,数据分析},
+                    xtick=data,
+                    x tick label style={rotate=30, anchor=east, font=\tiny},
+                    ylabel={能力评分},
+                    ymin=0,ymax=100,
+                    bar width=8pt,
+                    legend style={font=\tiny, at={(0.5,-0.35)}, anchor=north, legend columns=3},
+                    title={\small 多模态任务能力对比},
+                    width=7cm, height=5cm
+                ]
+                \addplot[fill=blue!60] coordinates {(图表理解,95) (公式识别,85) (图像描述,90) (数据分析,92)};
+                \addplot[fill=red!60] coordinates {(图表理解,88) (公式识别,90) (图像描述,85) (数据分析,88)};
+                \addplot[fill=green!60] coordinates {(图表理解,82) (公式识别,88) (图像描述,80) (数据分析,85)};
+                \legend{Gemini 3, GPT-5.2, Claude 4.5}
+                \end{axis}
+            \end{tikzpicture}
+            
+            \vspace{0.2cm}
+            \begin{block}{\small 关键结论}
+                \footnotesize
+                \textbf{Gemini 3 Pro}：图表理解最强（原生多模态）\\
+                \textbf{GPT-5.2}：公式识别领先\\
+                \textbf{Claude 4.5}：多模态能力相对较弱
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{多模态科研应用实例}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{\faChartBar\ 场景1：论文图表分析}
+            \begin{exampleblock}{Prompt示例}
+                \scriptsize
+                \texttt{请分析这张实验结果图：}\\
+                \texttt{[上传图片]}\\
+                \texttt{1. 描述主要趋势}\\
+                \texttt{2. 识别异常数据点}\\
+                \texttt{3. 总结统计意义}
+            \end{exampleblock}
+            
+            \textbf{推荐：Gemini 3 Pro}
+            \begin{itemize}
+                \item 理解复杂科学图表
+                \item 准确提取数据趋势
+                \item 支持图表对比分析
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{\faSuperscript\ 场景2：公式OCR}
+            \begin{exampleblock}{应用}
+                \scriptsize
+                从论文截图、手写笔记中提取公式，自动转换为LaTeX代码
+            \end{exampleblock}
+            
+            \textbf{推荐：GPT-5.2 或 Mathpix}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{\faMicroscope\ 场景3：科学图像识别}
+            \begin{itemize}
+                \item 显微镜图像分析
+                \item 光谱数据解读
+                \item 晶体结构识别
+            \end{itemize}
+            
+            \textbf{推荐：专用模型 + Gemini辅助}
+            
+            \vspace{0.3cm}
+            \textbf{\faTable\ 模型选择速查表：}
+            \begin{tabular}{p{2.5cm}p{2.5cm}}
+                \toprule
+                \textbf{任务} & \textbf{推荐} \\
+                \midrule
+                图表/数据图 & Gemini 3 Pro \\
+                公式识别 & GPT-5.2 \\
+                手绘草图 & Gemini 3 \\
+                PDF截图 & GPT-5.2 \\
+                视频分析 & Gemini 3 Pro \\
+                \bottomrule
+            \end{tabular}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{\small 提示}
+                \footnotesize
+                DeepSeek V3.2多模态能力较弱，复杂图像任务建议使用Gemini或GPT。
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+%========================================
+\section{Prompt Engineering研究进展}
+%========================================
+
+\begin{frame}{Prompt Engineering：从工程到科学}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{学术研究背景：}
+            \begin{itemize}
+                \item Shah (2024): 《From Prompt Engineering to Prompt Science》
+                    \begin{itemize}
+                        \item 提出将Prompt构建科学化
+                        \item 强调可复现性和透明性
+                        \item 人在环路(Human-in-the-Loop)验证
+                    \end{itemize}
+                \item Bsharat et al. (2024): 《26 Principled Instructions》
+                    \begin{itemize}
+                        \item 提出26条Prompt设计原则
+                        \item 在GPT-3.5/4, LLaMA上验证有效
+                    \end{itemize}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{alertblock}{核心观点}
+                \small
+                科研中使用LLM需要：
+                \begin{itemize}
+                    \item 系统性的Prompt构建方法
+                    \item 可复现的实验流程
+                    \item 透明的决策过程
+                    \item 严格的效果验证
+                \end{itemize}
+            \end{alertblock}
+            \vspace{0.2cm}
+            {\scriptsize 参考: arXiv:2401.04122, arXiv:2312.16171}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{经典Prompt技术：学术研究验证}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{1. Zero-shot Prompting}
+            \begin{itemize}
+                \item 直接描述任务，无需示例
+                \item 适用：简单明确的任务
+                \item 优点：快速、通用
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{2. Few-shot Prompting}
+            \begin{itemize}
+                \item 提供2-5个输入输出示例
+                \item 适用：格式化输出、分类任务
+                \item 研究表明：3-5个示例最优
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{3. Chain-of-Thought (CoT)}
+            \begin{itemize}
+                \item Wei et al. (2022) 提出
+                \item 引导模型逐步推理
+                \item 数学/逻辑任务提升显著
+                \item 关键词："Let's think step by step"
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{4. Self-Consistency}
+            \begin{itemize}
+                \item 多次采样取多数结果
+                \item 提升推理任务可靠性
+                \item 适合关键决策场景
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    \vspace{0.2cm}
+    {\scriptsize 参考: Wei et al. "Chain-of-Thought Prompting" (NeurIPS 2022); Wang et al. "Self-Consistency" (ICLR 2023)}
+\end{frame}
+
+\begin{frame}{26条Prompt设计原则精选}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{指令清晰度原则：}
+            \begin{enumerate}
+                \item 无需礼貌用语，直接表达
+                \item 明确指定目标受众\\
+                    {\scriptsize "为专业研究人员解释..."}
+                \item 将复杂任务分解为子任务
+                \item 使用肯定指令，避免否定\\
+                    {\scriptsize "做X" 优于 "不要做Y"}
+                \item 使用引导词："Think step by step"
+            \end{enumerate}
+            
+            \vspace{0.2cm}
+            \textbf{格式控制原则：}
+            \begin{enumerate}
+                \setcounter{enumi}{5}
+                \item 使用分隔符区分内容\\
+                    {\scriptsize 如 \texttt{"""}, \texttt{<>}, \texttt{[TAG]}}
+                \item 指定输出格式和长度
+                \item 要求结构化输出(JSON/表格)
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{角色与上下文原则：}
+            \begin{enumerate}
+                \setcounter{enumi}{8}
+                \item 分配专家角色\\
+                    {\scriptsize "你是XX领域资深专家..."}
+                \item 提供背景和上下文信息
+                \item 使用Few-shot示例引导
+            \end{enumerate}
+            
+            \vspace{0.2cm}
+            \textbf{质量提升原则：}
+            \begin{enumerate}
+                \setcounter{enumi}{11}
+                \item 要求详细解释推理过程
+                \item 允许模型提问以澄清需求
+                \item 要求模型自我验证答案
+                \item 使用"我会给\$X小费"提升质量\\
+                    {\scriptsize (研究表明确有效果)}
+            \end{enumerate}
+            
+            \vspace{0.2cm}
+            {\scriptsize 完整26条: arXiv:2312.16171}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{科研场景专用Prompt技术}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{RAG (检索增强生成)}
+            \begin{itemize}
+                \item Lewis et al. (2020) 提出
+                \item 结合外部知识库检索
+                \item \textcolor{red}{显著减少幻觉}
+                \item 科研应用：文献综述、数据查询
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{Tree of Thoughts (ToT)}
+            \begin{itemize}
+                \item Yao et al. (2023) 提出
+                \item 探索多条推理路径
+                \item 适用：复杂问题求解
+                \item 科研应用：实验设计、方案对比
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{ReAct (推理+行动)}
+            \begin{itemize}
+                \item Yao et al. (2023) 提出
+                \item 交替推理与工具调用
+                \item 适用：需要外部信息的任务
+                \item 科研应用：数据分析、代码调试
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{Prompt Chaining}
+            \begin{itemize}
+                \item 将复杂任务串联多个Prompt
+                \item 每步输出作为下一步输入
+                \item 科研应用：论文写作流水线
+                    \begin{itemize}
+                        \item 大纲 → 章节 → 润色 → 审校
+                    \end{itemize}
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    \vspace{0.2cm}
+    {\scriptsize 参考: promptingguide.ai (DAIR.AI)}
+\end{frame}
+
+\begin{frame}{科研Prompt最佳实践}
+    \begin{block}{医学/生物领域研究发现 (Zaghir et al. 2024)}
+        \begin{itemize}
+            \item 系统性综述分析了医学领域Prompt Engineering应用
+            \item 发现：结构化Prompt显著提升临床文本理解准确率
+            \item 推荐：明确任务边界、提供领域术语定义
+        \end{itemize}
+    \end{block}
+    
+    \vspace{0.2cm}
+    \begin{block}{科学模拟与自动化 (Liu et al. 2024)}
+        \begin{itemize}
+            \item 《Automated Simulation Research Workflow through LLM Prompt Engineering》
+            \item 展示LLM驱动的科研自动化工作流
+            \item 关键：迭代式Prompt优化 + 错误反馈循环
+        \end{itemize}
+    \end{block}
+    
+    \vspace{0.2cm}
+    \begin{alertblock}{科研Prompt黄金法则}
+        \centering
+        明确角色 → 提供上下文 → 结构化输出 → 要求解释 → 迭代优化
+    \end{alertblock}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\part{第三部分：AI编程工具}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%========================================
+\section{Agent工作流基础}
+%========================================
+
+\begin{frame}{什么是AI Agent（智能体）？}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{传统大模型 vs Agent：}
+            \begin{itemize}
+                \item \textbf{传统模型}：单次问答，被动响应
+                \item \textbf{Agent}：自主规划，多步执行，主动完成任务
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{Agent的核心能力：}
+            \begin{enumerate}
+                \item \textbf{规划 (Planning)}
+                    \begin{itemize}
+                        \item 将复杂任务分解为子任务
+                        \item 制定执行计划和顺序
+                    \end{itemize}
+                \item \textbf{工具使用 (Tool Use)}
+                    \begin{itemize}
+                        \item 调用外部API和工具
+                        \item 读写文件、执行代码
+                    \end{itemize}
+                \item \textbf{记忆 (Memory)}
+                    \begin{itemize}
+                        \item 保存执行历史和中间结果
+                        \item 从错误中学习并调整
+                    \end{itemize}
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{tikzpicture}[scale=0.7, transform shape]
+                % Agent循环
+                \node[draw, rounded corners, fill=blue!20, minimum width=2.5cm, minimum height=0.8cm] (think) at (0,3) {\small 思考 (Think)};
+                \node[draw, rounded corners, fill=orange!20, minimum width=2.5cm, minimum height=0.8cm] (act) at (3,1.5) {\small 行动 (Act)};
+                \node[draw, rounded corners, fill=green!20, minimum width=2.5cm, minimum height=0.8cm] (observe) at (0,0) {\small 观察 (Observe)};
+                
+                \draw[->, thick] (think) -- (act);
+                \draw[->, thick] (act) -- (observe);
+                \draw[->, thick] (observe) -- (think);
+                
+                % 工具
+                \node[draw, fill=gray!20, font=\tiny] at (5.5,2.5) {文件系统};
+                \node[draw, fill=gray!20, font=\tiny] at (5.5,1.5) {代码执行};
+                \node[draw, fill=gray!20, font=\tiny] at (5.5,0.5) {网络搜索};
+                
+                \draw[->, dashed] (act) -- (5,2.5);
+                \draw[->, dashed] (act) -- (5,1.5);
+                \draw[->, dashed] (act) -- (5,0.5);
+            \end{tikzpicture}
+            
+            \vspace{0.3cm}
+            \begin{block}{ReAct框架}
+                \small
+                \textbf{Re}asoning + \textbf{Act}ing\\
+                Agent在每一步都进行推理，决定下一步行动，并观察结果。
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Agent工作流在科研中的应用}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{\faFlask\ 科研自动化场景：}
+            \begin{enumerate}
+                \item \textbf{文献综述自动化}
+                    \begin{itemize}
+                        \item 搜索相关论文
+                        \item 提取关键信息
+                        \item 生成综述报告
+                    \end{itemize}
+                \item \textbf{数据分析流程}
+                    \begin{itemize}
+                        \item 读取数据文件
+                        \item 执行统计分析代码
+                        \item 生成可视化图表
+                    \end{itemize}
+                \item \textbf{代码调试与优化}
+                    \begin{itemize}
+                        \item 分析错误信息
+                        \item 修改代码
+                        \item 重新运行测试
+                    \end{itemize}
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{\faRobot\ 主流Agent工具：}
+            \begin{itemize}
+                \item \textbf{GitHub Copilot Agent}
+                    \begin{itemize}
+                        \item 集成在VS Code中
+                        \item 自动修改多个文件
+                        \item 执行终端命令
+                    \end{itemize}
+                \item \textbf{Claude Code (Anthropic)}
+                    \begin{itemize}
+                        \item 专注于代码任务
+                        \item 支持完整项目开发
+                    \end{itemize}
+                \item \textbf{OpenAI Codex/Jules}
+                    \begin{itemize}
+                        \item 处理GitHub Issue
+                        \item 自动化代码审查
+                    \end{itemize}
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{MCP协议}
+                \small
+                Model Context Protocol：标准化Agent与工具的通信协议，使不同模型可以调用相同的工具集。
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Agent工作流示例：自动化论文分析}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{任务：}分析一篇PDF论文并生成摘要
+            
+            \vspace{0.2cm}
+            \textbf{Agent执行步骤：}
+            \begin{enumerate}
+                \item \textbf{Step 1：规划}
+                    \begin{itemize}
+                        \item "我需要先读取PDF，然后提取关键信息"
+                    \end{itemize}
+                \item \textbf{Step 2：调用工具}
+                    \begin{itemize}
+                        \item 调用PDF解析工具读取文件
+                    \end{itemize}
+                \item \textbf{Step 3：分析}
+                    \begin{itemize}
+                        \item 识别研究问题、方法、结果
+                    \end{itemize}
+                \item \textbf{Step 4：生成输出}
+                    \begin{itemize}
+                        \item 调用写文件工具保存摘要
+                    \end{itemize}
+                \item \textbf{Step 5：验证}
+                    \begin{itemize}
+                        \item 检查输出是否符合要求
+                    \end{itemize}
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{exampleblock}{Agent思考过程示例}
+                \scriptsize
+                \texttt{[思考] 用户要分析论文，我需要：}\\
+                \texttt{1. 读取PDF内容}\\
+                \texttt{2. 提取核心信息}\\
+                \texttt{3. 生成结构化摘要}\\
+                \texttt{}\\
+                \texttt{[行动] 调用read\_pdf工具}\\
+                \texttt{参数: \{"path": "paper.pdf"\}}\\
+                \texttt{}\\
+                \texttt{[观察] 获得论文文本...}\\
+                \texttt{}\\
+                \texttt{[思考] 论文是关于深度学习的，}\\
+                \texttt{主要贡献是提出新架构...}\\
+                \texttt{}\\
+                \texttt{[行动] 生成摘要并保存}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \begin{block}{与传统方式对比}
+                \scriptsize
+                传统：用户需要手动操作每一步\\
+                Agent：一句话描述任务，自动完成
+            \end{block}
+        \end{column}
+    \end{columns}
 \end{frame}
 
 %========================================
@@ -372,7 +1914,7 @@
             \end{itemize}
             
             \vspace{0.3cm}
-            \textbf{2025年12月最新更新：}
+            \textbf{2026年1月最新更新：}
             \begin{itemize}
                 \item \textcolor{red}{12/8}：Coding Agent支持模型选择
                 \item \textcolor{red}{12/5}：代码生成指标仪表板
@@ -383,7 +1925,7 @@
             \end{itemize}
         \end{column}
         \begin{column}{0.5\textwidth}
-            \begin{block}{订阅价格（2025年12月）}
+            \begin{block}{订阅价格（2026年1月）}
                 \begin{tabular}{ll}
                     \textbf{Free} & 免费（有限功能） \\
                     \textbf{Pro} & \$10/月 \\
@@ -483,7 +2025,7 @@ def calculate_fibonacci(n):
             OpenAI、Anthropic、Gemini、xAI全系列
         \end{column}
         \begin{column}{0.45\textwidth}
-            \begin{block}{价格（2025年12月）}
+            \begin{block}{价格（2026年1月）}
                 \begin{tabular}{ll}
                     \textbf{Hobby} & 免费 \\
                     \textbf{Pro} & \$20/月 \\
@@ -635,6 +2177,246 @@ irm https://claude.ai/install.ps1 | iex
         \end{itemize}
     \end{block}
 \end{frame}
+
+\begin{frame}[fragile]{GitHub Copilot 高级技巧（一）：自定义指令}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Custom Instructions设置：}
+            \begin{itemize}
+                \item 打开VS Code设置
+                \item 搜索 \texttt{copilot instructions}
+                \item 添加项目级或全局指令
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{指令文件 \texttt{.github/copilot-instructions.md}：}
+            \begin{lstlisting}[basicstyle=\ttfamily\tiny]
+# Project Instructions for Copilot
+
+## Code Style
+- Use Python 3.11+ features
+- Follow PEP8 strictly
+- Always add type hints
+- Prefer dataclasses over dicts
+
+## Libraries
+- Use PyTorch for deep learning
+- Use pytest for testing
+- Use black for formatting
+
+## Conventions
+- Function names: snake_case
+- Class names: PascalCase
+- Constants: UPPER_CASE
+            \end{lstlisting}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{使用场景：}
+            \begin{block}{团队规范统一}
+                \small
+                将 \texttt{.github/copilot-instructions.md} 提交到仓库，团队成员Copilot自动遵循相同规范
+            \end{block}
+            
+            \vspace{0.2cm}
+            \textbf{高级指令示例：}
+            \begin{lstlisting}[basicstyle=\ttfamily\tiny]
+## Scientific Computing
+- Use numpy for array operations
+- Always handle NaN values
+- Include units in variable names
+  (e.g., distance_meters)
+- Add docstrings with parameter 
+  types and return values
+
+## Paper-specific
+- Reference equations using LaTeX
+- Use consistent notation with paper
+            \end{lstlisting}
+            
+            \begin{alertblock}{Pro技巧}
+                \small
+                在指令中引用论文符号，让Copilot生成的变量名与论文一致！
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{GitHub Copilot 高级技巧（二）：Agent模式深度使用}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{启用Agent模式：}
+            \begin{itemize}
+                \item 设置中启用 \texttt{github.copilot.chat.agent.enabled}
+                \item 或使用 VS Code Insiders 版本
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{Agent核心能力：}
+            \begin{itemize}
+                \item \textbf{多文件编辑}：一次修改多个相关文件
+                \item \textbf{终端执行}：自动运行命令验证
+                \item \textbf{迭代修复}：发现错误自动重试
+                \item \textbf{上下文理解}：理解整个项目结构
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \textbf{Agent Prompt示例：}
+            \begin{lstlisting}[basicstyle=\ttfamily\tiny]
+@workspace 请为这个项目添加完整的
+pytest测试套件，包括：
+1. tests/目录结构
+2. conftest.py配置
+3. 所有公共函数的测试
+4. 运行测试验证通过
+            \end{lstlisting}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{实用Agent命令：}
+            \begin{block}{代码重构}
+                \scriptsize
+                \texttt{"@workspace 将所有print语句替换为logging，配置合适的log级别，确保现有功能不变"}
+            \end{block}
+            
+            \begin{block}{文档生成}
+                \scriptsize
+                \texttt{"@workspace 为所有公共API生成docstring，使用Google风格，包含参数类型和示例"}
+            \end{block}
+            
+            \begin{block}{Bug修复}
+                \scriptsize
+                \texttt{"@workspace /fix 运行pytest发现3个失败用例，请分析原因并修复"}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{Agent模式 vs 普通Chat}
+                \small
+                \begin{itemize}
+                    \item 普通Chat：只能建议，需手动执行
+                    \item Agent模式：直接执行，自动验证
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{GitHub Copilot 高级技巧（三）：上下文管理}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{上下文引用符号：}
+            \begin{itemize}
+                \item \texttt{@workspace} - 整个项目
+                \item \texttt{@file:path/to/file.py} - 特定文件
+                \item \texttt{\#selection} - 当前选中代码
+                \item \texttt{\#editor} - 当前打开文件
+                \item \texttt{\#terminalLastCommand} - 最近终端命令
+                \item \texttt{\#terminalSelection} - 终端选中内容
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{多文件上下文示例：}
+            \begin{lstlisting}[basicstyle=\ttfamily\tiny]
+参考 @file:models/base.py 中的
+BaseModel类，在 @file:models/vit.py
+中实现一个Vision Transformer，
+保持相同的接口风格
+            \end{lstlisting}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Slash Commands速查：}
+            \footnotesize
+            \begin{tabular}{ll}
+                \toprule
+                \textbf{命令} & \textbf{功能} \\
+                \midrule
+                \texttt{/explain} & 解释代码 \\
+                \texttt{/fix} & 修复问题 \\
+                \texttt{/tests} & 生成测试 \\
+                \texttt{/doc} & 生成文档 \\
+                \texttt{/optimize} & 优化性能 \\
+                \texttt{/new} & 创建新文件 \\
+                \texttt{/newNotebook} & 创建Jupyter \\
+                \texttt{/clear} & 清除对话 \\
+                \bottomrule
+            \end{tabular}
+            \normalsize
+            
+            \vspace{0.3cm}
+            \begin{exampleblock}{高效组合}
+                \scriptsize
+                \texttt{@workspace /tests 为 @file:src/utils.py 中所有函数生成pytest测试，覆盖边界情况}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{GitHub Copilot 高级技巧（四）：科研专用配置}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{科研项目指令模板：}
+            \begin{lstlisting}[basicstyle=\ttfamily\tiny]
+# .github/copilot-instructions.md
+
+## Research Project: [Your Paper Title]
+
+### Notation (from paper)
+- X: input tensor, shape (B, C, H, W)
+- y: labels, shape (B,)
+- theta: model parameters
+- L: loss function (cross-entropy)
+
+### Code Standards
+- NumPy docstring format
+- Include paper equation references
+- Use LaTeX in comments for math
+- Type hints required
+
+### Reproducibility
+- Set random seeds explicitly
+- Log all hyperparameters
+- Save model checkpoints with config
+
+### File Structure
+- models/: neural network definitions
+- data/: dataset loaders
+- experiments/: training scripts
+- analysis/: result visualization
+            \end{lstlisting}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{实验代码生成Prompt：}
+            \begin{exampleblock}{论文算法实现}
+                \scriptsize
+                \texttt{"根据论文公式(3)中的损失函数：}\\
+                \texttt{L = -sum(y*log(p)) + lambda*||W||\_2}\\
+                \texttt{实现PyTorch版本，包括：}\\
+                \texttt{1. 正则化项可配置}\\
+                \texttt{2. 数值稳定性处理}\\
+                \texttt{3. 支持类别权重"}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \begin{block}{与论文符号保持一致}
+                \scriptsize
+                在指令中定义论文符号后，Copilot会自动使用相同的变量命名：
+                \begin{itemize}
+                    \item 论文用 $\theta$ → 代码用 \texttt{theta}
+                    \item 论文用 $\mathcal{L}$ → 代码用 \texttt{loss}
+                    \item 论文用 $\hat{y}$ → 代码用 \texttt{y\_pred}
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{版本控制提示}
+                \small
+                将 \texttt{copilot-instructions.md} 随论文代码一起发布，便于他人复现！
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\part{第四部分：科研应用实践}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %========================================
 \section{科研场景应用}
@@ -925,49 +2707,9 @@ irm https://claude.ai/install.ps1 | iex
     \end{columns}
 \end{frame}
 
-%========================================
-\section{总结与展望}
-%========================================
-
-\begin{frame}{关键要点回顾}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \textbf{大模型选择：}
-            \begin{enumerate}
-                \item GPT-5系列 - 全能选手
-                \item Claude 4.5 - 代码之王
-                \item Gemini 3 - 多模态强手
-                \item DeepSeek V3 - 性价比首选
-            \end{enumerate}
-            
-            \vspace{0.3cm}
-            \textbf{工具选择：}
-            \begin{enumerate}
-                \item GitHub Copilot - 稳定可靠
-                \item Cursor - 极致AI体验
-                \item Windsurf - 企业首选
-                \item Claude Code - 终端神器
-            \end{enumerate}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \textbf{实用技能清单：}
-            \begin{itemize}
-                \item[\checkmark] 掌握至少一个AI编程工具
-                \item[\checkmark] 学会基础Prompt工程
-                \item[\checkmark] 了解不同模型特点
-                \item[\checkmark] 能在科研中合理应用AI
-                \item[\checkmark] 知道如何控制成本
-                \item[\checkmark] 了解数据隐私保护
-            \end{itemize}
-            
-            \vspace{0.3cm}
-            \begin{alertblock}{核心原则}
-                AI是\textbf{增强}而非\textbf{替代}\\
-                保持批判性思维，验证AI输出
-            \end{alertblock}
-        \end{column}
-    \end{columns}
-\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\part{第五部分：高级技巧}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %========================================
 \section{高级技巧与前沿话题}
@@ -980,7 +2722,6 @@ irm https://claude.ai/install.ps1 | iex
             \begin{itemize}
                 \item Anthropic提出的开放协议
                 \item 让AI直接操作本地文件、数据库、API
-                \it
             \end{itemize}
             
             \vspace{0.3cm}
@@ -1155,7 +2896,7 @@ irm https://claude.ai/install.ps1 | iex
             \end{itemize}
             
             \vspace{0.3cm}
-            \textbf{推荐开源模型 (2025.12)：}
+            \textbf{推荐开源模型 (2026.01)：}
             \begin{itemize}
                 \item \textbf{Llama 3.2} (Meta) - 通用能力强
                 \item \textbf{Qwen 2.5/3.0} (阿里) - 中文最佳开源
@@ -1233,6 +2974,165 @@ irm https://claude.ai/install.ps1 | iex
 \section{API省钱与数据安全}
 %========================================
 
+\begin{frame}{使用技巧：如何获得更详细的回答}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{为什么AI回答有时很简短？}
+            \begin{itemize}
+                \item 大模型通过预测"下一个词"生成回答
+                \item 训练数据决定了\textbf{平均输出长度}
+                \item 遇到"结束标记(EOF)"就停止输出
+                \item 模型倾向于给出"够用"的回答
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{\textcolor{green!60!black}{获取详细回答的技巧：}}
+            \begin{itemize}
+                \item \textbf{"详细一点"} - 最简单有效
+                \item \textbf{"请展开说明"} - 要求更多细节
+                \item \textbf{"请给出完整示例"} - 要求完整代码/步骤
+                \item \textbf{"请分步骤解释"} - 结构化输出
+                \item \textbf{"至少写1000字"} - 明确长度要求
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{大模型输出原理}
+                大模型是\textbf{逐词预测}的：
+                \begin{itemize}
+                    \item 根据上文预测下一个词的概率
+                    \item 通过采样选择输出哪个词
+                    \item 重复直到生成结束标记
+                \end{itemize}
+                因此，\textbf{提示词会影响输出长度}！
+            \end{alertblock}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{示例对比}
+                \small
+                \textbf{简单问法：}"解释什么是机器学习"\\
+                → 可能只得到2-3句话
+                
+                \vspace{0.2cm}
+                \textbf{详细问法：}"详细解释什么是机器学习，包括定义、主要类型、应用场景和学习建议"\\
+                → 会得到完整详细的回答
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{ChatGPT订阅 vs API计费——两种完全不同的模式}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{\textcolor{openaigreen}{\faUser\ 普通用户：ChatGPT订阅制}}
+            \begin{block}{计费方式：按月订阅（一口价）}
+                \begin{itemize}
+                    \item \textbf{Free}：0元（基础功能）
+                    \item \textbf{Plus}：\$20/月
+                    \item \textbf{Pro}：\$200/月（极高频用户）
+                \end{itemize}
+            \end{block}
+            
+            \textbf{限制方式：按次数 (Messages)}
+            \begin{itemize}
+                \item 限制你"点击发送"的次数
+                \item 如：Plus用户每3小时约80次
+                \item \textcolor{green!60!black}{无论回答长短，都算1次}
+                \item 不用担心生成字数多会多扣钱
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{判断方法}
+                \small
+                每月固定扣\$20，用不用都是这个钱\\
+                → 您是\textbf{订阅用户}
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{\textcolor{githubblack}{\faCode\ 开发者/第三方应用：API计费}}
+            \begin{block}{计费方式：按Token精确计费}
+                \begin{itemize}
+                    \item \textbf{输入Token}：发送的内容（含历史）
+                    \item \textbf{输出Token}：AI回答的内容
+                    \item 输出通常比输入贵（如4倍）
+                \end{itemize}
+            \end{block}
+            
+            \textbf{限制方式：用多少付多少}
+            \begin{itemize}
+                \item 需要填入API Key（sk-xxxx）
+                \item 适用于：沉浸式翻译、写作软件等
+                \item \textcolor{red}{生成字数越多，费用越高}
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{判断方法}
+                \small
+                需要充值，看着余额减少\\
+                → 您是\textbf{API用户（按Token计费）}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{避坑指南：警惕"套壳"应用}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{\textcolor{red}{\faExclamationTriangle\ 常见套路}}
+            \begin{itemize}
+                \item 很多第三方AI网站/APP
+                \item 声称"按次收费"或"按月不限次"
+                \item 实际是调用官方API后\textbf{加价倒卖}
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{套壳应用的计费真相：}
+            \begin{itemize}
+                \item 他们按Token从官方购买服务
+                \item 然后按次/按月卖给你
+                \item 通常存在\textbf{隐藏限制}
+                \item 可能\textbf{加价50-200\%}
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{识别方法}
+                \small
+                \begin{itemize}
+                    \item 不是官方域名（如非chatgpt.com）
+                    \item 价格异常便宜或贵
+                    \item 要求充值到他们平台
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{\textcolor{green!60!black}{\faCheckCircle\ 推荐做法}}
+            
+            \begin{block}{日常使用}
+                \begin{itemize}
+                    \item 直接用官方ChatGPT/Claude
+                    \item 订阅制，次数限制清晰
+                    \item 数据安全有保障
+                \end{itemize}
+            \end{block}
+            
+            \begin{block}{开发/集成}
+                \begin{itemize}
+                    \item 直接申请官方API Key
+                    \item 或使用可信中转（如云雾AI）
+                    \item 按Token付费，透明计价
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \textbf{官方渠道：}
+            \begin{itemize}
+                \item OpenAI: \url{chatgpt.com}
+                \item Anthropic: \url{claude.ai}
+                \item DeepSeek: \url{chat.deepseek.com}
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
 \begin{frame}{API省钱技巧（一）：免费额度汇总}
     \begin{columns}
         \begin{column}{0.5\textwidth}
@@ -1252,7 +3152,7 @@ irm https://claude.ai/install.ps1 | iex
                 \item \textbf{Anthropic}：\$5免费额度
                 \item \textbf{Google}：Gemini API免费层
                 \item \textbf{DeepSeek}：100万Token/月免费
-                \item \textbf{智谱AI}：新用户赠送Token
+                \item \textbf{阿里云Qwen}：免费调用额度
             \end{itemize}
         \end{column}
         \begin{column}{0.5\textwidth}
@@ -1311,12 +3211,12 @@ irm https://claude.ai/install.ps1 | iex
                 \toprule
                 \textbf{模型} & \textbf{输入} & \textbf{输出} \\
                 \midrule
-                GPT-4o & \$2.5/M & \$10/M \\
-                GPT-4o-mini & \$0.15/M & \$0.6/M \\
-                Claude Opus & \$15/M & \$75/M \\
-                Claude Sonnet & \$3/M & \$15/M \\
-                Gemini Pro & \$1.25/M & \$5/M \\
-                DeepSeek V3 & \textcolor{green!60!black}{\$0.27/M} & \textcolor{green!60!black}{\$1.1/M} \\
+                GPT-5.2 & \$5/M & \$15/M \\
+                GPT-5.2-mini & \$0.3/M & \$1.2/M \\
+                Claude Opus 4.5 & \$20/M & \$80/M \\
+                Claude Sonnet 4 & \$4/M & \$16/M \\
+                Gemini 3 Pro & \$2/M & \$8/M \\
+                DeepSeek V3.2 & \textcolor{green!60!black}{\$0.4/M} & \textcolor{green!60!black}{\$1.6/M} \\
                 \bottomrule
             \end{tabular}
             \normalsize
@@ -1325,8 +3225,8 @@ irm https://claude.ai/install.ps1 | iex
             \begin{exampleblock}{省钱计算}
                 \small
                 处理10篇论文（约50万Token）：\\
-                GPT-4o: $\approx$\$6.25\\
-                DeepSeek: $\approx$\$0.68 \textcolor{green!60!black}{(省90\%!)}
+                GPT-5.2: $\approx$\$10\\
+                DeepSeek V3.2: $\approx$\$1.0 \textcolor{green!60!black}{(省90\%!)}
             \end{exampleblock}
         \end{column}
     \end{columns}
@@ -1444,6 +3344,556 @@ irm https://claude.ai/install.ps1 | iex
     \end{columns}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\part{第六部分：风险与规范}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%========================================
+\section{AI论文检测与学术诚信}
+%========================================
+
+\begin{frame}{AI生成内容检测工具概览}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{主流AI检测工具：}
+            \begin{itemize}
+                \item \textbf{Turnitin AI Detection}
+                    \begin{itemize}
+                        \item 学术界最权威
+                        \item 已集成至多数高校系统
+                        \item 检测准确率约98\%
+                    \end{itemize}
+                \item \textbf{GPTZero}
+                    \begin{itemize}
+                        \item 专为教育场景设计
+                        \item 提供逐句分析
+                        \item 免费版可用
+                    \end{itemize}
+                \item \textbf{Originality.AI}
+                    \begin{itemize}
+                        \item 商业级检测
+                        \item 支持批量检测
+                    \end{itemize}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{检测原理：}
+            \begin{block}{统计特征分析}
+                \small
+                \begin{itemize}
+                    \item \textbf{困惑度(Perplexity)}：AI文本通常更"可预测"
+                    \item \textbf{突发性(Burstiness)}：人类写作句长变化大
+                    \item \textbf{词汇多样性}：AI倾向使用常见词
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{重要提醒}
+                \small
+                \begin{itemize}
+                    \item 检测工具存在\textbf{假阳性}风险
+                    \item 非母语者文本更易被误判
+                    \item 技术文档/代码注释误判率高
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{各大期刊/会议的AI使用政策}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{明确允许（需声明）：}
+            \begin{itemize}
+                \item \textcolor{green!60!black}{\faCheck\ Nature系列}
+                    \begin{itemize}
+                        \item 必须在Methods或致谢中声明
+                        \item AI不能作为作者
+                    \end{itemize}
+                \item \textcolor{green!60!black}{\faCheck\ Science系列}
+                    \begin{itemize}
+                        \item 允许用于润色和编辑
+                        \item 需明确说明使用方式
+                    \end{itemize}
+                \item \textcolor{green!60!black}{\faCheck\ ACL/EMNLP/NeurIPS}
+                    \begin{itemize}
+                        \item 允许辅助写作
+                        \item 禁止AI直接生成核心内容
+                    \end{itemize}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{标准声明模板：}
+            \begin{exampleblock}{推荐写法}
+                \scriptsize
+                \texttt{"During the preparation of this work, the authors used [Tool Name] for [specific purpose, e.g., language editing, code debugging]. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the content of the publication."}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \textbf{禁止的行为：}
+            \begin{itemize}
+                \item[$\times$] AI作为论文作者
+                \item[$\times$] 未声明的大规模AI生成
+                \item[$\times$] AI生成数据/实验结果
+                \item[$\times$] AI生成文献引用
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{如何合规使用AI避免学术不端}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{\textcolor{green!60!black}{\faCheck\ 合规使用场景：}}
+            \begin{itemize}
+                \item 语法和拼写检查
+                \item 语言润色（非母语者）
+                \item 代码调试和优化
+                \item 文献检索辅助
+                \item 格式转换（如Markdown→LaTeX）
+                \item 数据可视化代码生成
+                \item 解释复杂概念（学习用途）
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{\textcolor{red}{\faTimes\ 禁止使用场景：}}
+            \begin{itemize}
+                \item 生成核心创新内容
+                \item 编造实验数据
+                \item 生成虚假引用
+                \item 代写整篇论文
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{降低AI检测风险的技巧：}
+            \begin{block}{合法优化方法}
+                \small
+                \begin{enumerate}
+                    \item \textbf{分段处理}：不要一次性生成长文本
+                    \item \textbf{人工改写}：AI输出后大幅修改
+                    \item \textbf{混合写作}：AI润色人写的草稿
+                    \item \textbf{增加个性}：加入个人观点和例子
+                    \item \textbf{使用引用}：增加具体文献支撑
+                \end{enumerate}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{黄金法则}
+                \centering
+                \textbf{AI是助手，不是作者}\\
+                \small
+                你必须能解释和捍卫论文中的每一句话
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{学术诚信自查清单}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{提交前必查项目：}
+            \begin{itemize}
+                \item[$\square$] 所有引用已在数据库中验证存在
+                \item[$\square$] 实验数据来自真实实验
+                \item[$\square$] 核心创新点是原创思考
+                \item[$\square$] AI使用已按期刊要求声明
+                \item[$\square$] 能够解释论文任何部分
+                \item[$\square$] 合作者都同意最终版本
+                \item[$\square$] 没有一字不改地使用AI输出
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{记录保留建议：}
+            \begin{itemize}
+                \item 保存所有AI对话记录
+                \item 保留论文各版本草稿
+                \item 记录AI使用的具体环节
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{被质疑时的应对：}
+            \begin{block}{如果收到AI检测警告}
+                \small
+                \begin{enumerate}
+                    \item \textbf{保持冷静}：检测工具有误判
+                    \item \textbf{提供证据}：展示写作过程记录
+                    \item \textbf{解释内容}：证明你理解所写内容
+                    \item \textbf{展示草稿}：提供修改历史
+                \end{enumerate}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{预防措施}
+                \small
+                \begin{itemize}
+                    \item 使用Git管理论文版本
+                    \item 用Overleaf等协作平台（有历史记录）
+                    \item 定期保存写作进度截图
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+%========================================
+\section{免费/开源AI绘图工具}
+%========================================
+
+\begin{frame}{科研绘图免费工具大全（一）：流程图与架构图}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{1. Mermaid + AI}
+            \begin{itemize}
+                \item \textbf{完全免费开源}
+                \item 用文本描述生成图表
+                \item 支持流程图、时序图、类图等
+                \item \textbf{集成}：VS Code、GitHub、Notion
+            \end{itemize}
+            \begin{exampleblock}{让AI生成Mermaid代码}
+                \scriptsize
+                \texttt{"请用Mermaid语法画一个神经网络训练流程图，包括数据加载、前向传播、损失计算、反向传播、参数更新"}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \textbf{2. Draw.io (diagrams.net)}
+            \begin{itemize}
+                \item \textbf{完全免费}，无需注册
+                \item 丰富的科学图形库
+                \item 支持导出PDF/SVG/PNG
+                \item 网页版：\url{draw.io}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{3. Excalidraw}
+            \begin{itemize}
+                \item \textbf{开源免费}，手绘风格
+                \item 适合PPT和博客配图
+                \item 有AI辅助插件
+                \item \url{excalidraw.com}
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{4. PlantUML}
+            \begin{itemize}
+                \item \textbf{开源}，文本转UML图
+                \item 支持类图、活动图、状态图
+                \item 可与LaTeX集成
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{AI + 绘图工作流}
+                \small
+                让ChatGPT/Claude生成Mermaid或PlantUML代码 → 粘贴到在线编辑器 → 导出高清图片
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{科研绘图免费工具大全（二）：数据可视化}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{1. Python + Matplotlib/Seaborn}
+            \begin{itemize}
+                \item \textbf{完全免费开源}
+                \item 科研论文标准工具
+                \item AI可直接生成代码
+            \end{itemize}
+            \begin{exampleblock}{Prompt示例}
+                \scriptsize
+                \texttt{"用matplotlib画一个双Y轴图，左轴是accuracy，右轴是loss，X轴是epoch，使用Science期刊配色"}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \textbf{2. Plotly (开源版)}
+            \begin{itemize}
+                \item 交互式图表
+                \item 支持3D可视化
+                \item 可导出静态图片
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \textbf{3. Altair}
+            \begin{itemize}
+                \item 声明式可视化
+                \item 语法简洁优雅
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{4. Python绘图配色推荐：}
+            \begin{block}{科研级配色方案}
+                \scriptsize
+                \begin{itemize}
+                    \item \texttt{scienceplots} - Nature/Science风格
+                    \item \texttt{seaborn} - 统计图表配色
+                    \item \texttt{cmocean} - 海洋学配色
+                    \item \texttt{palettable} - 多种学术配色
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \textbf{5. 在线工具}
+            \begin{itemize}
+                \item \textbf{RAWGraphs} - 开源数据可视化
+                \item \textbf{Flourish} - 免费版可用
+                \item \textbf{Datawrapper} - 新闻级图表
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{安装科研绘图包}
+                \scriptsize
+                \texttt{pip install scienceplots}\\
+                \texttt{plt.style.use(['science','nature'])}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{科研绘图免费工具大全（三）：生物医学与专业图}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{1. BioRender替代方案（免费）}
+            \begin{itemize}
+                \item \textbf{Bioicons} (\url{bioicons.com})
+                    \begin{itemize}
+                        \item 免费生物图标库
+                        \item SVG格式可编辑
+                    \end{itemize}
+                \item \textbf{SciDraw} (\url{scidraw.io})
+                    \begin{itemize}
+                        \item 开源科学插图
+                        \item 可商用
+                    \end{itemize}
+                \item \textbf{Servier Medical Art}
+                    \begin{itemize}
+                        \item 免费医学插图库
+                        \item CC BY 3.0许可
+                    \end{itemize}
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \textbf{2. 化学结构图}
+            \begin{itemize}
+                \item \textbf{ChemDraw Free} (在线版)
+                \item \textbf{MolView} - 开源分子可视化
+                \item \textbf{RDKit} - Python化学库
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{3. 神经网络架构图}
+            \begin{itemize}
+                \item \textbf{NN-SVG} (\url{alexlenail.me/NN-SVG})
+                    \begin{itemize}
+                        \item 免费在线工具
+                        \item 生成精美神经网络图
+                    \end{itemize}
+                \item \textbf{Netron} - 模型可视化
+                \item \textbf{TensorBoard} - 训练可视化
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{4. LaTeX绘图}
+            \begin{itemize}
+                \item \textbf{TikZ/PGFPlots}
+                    \begin{itemize}
+                        \item 论文内嵌图表最佳
+                        \item AI可生成TikZ代码
+                    \end{itemize}
+                \item \textbf{pgfgantt} - 甘特图
+                \item \textbf{circuitikz} - 电路图
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{AI辅助绘图Prompt模板}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{生成Matplotlib代码：}
+            \begin{exampleblock}{论文级图表}
+                \scriptsize
+                \texttt{"Generate Python code for a publication-quality figure:}\\
+                \texttt{- Data: [your data]}\\
+                \texttt{- Type: line plot with error bars}\\
+                \texttt{- Style: Nature journal (use scienceplots)}\\
+                \texttt{- Font: Times New Roman, 12pt}\\
+                \texttt{- Size: 3.5 inch width (single column)}\\
+                \texttt{- DPI: 300}\\
+                \texttt{- Save as PDF and PNG"}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \textbf{生成TikZ代码：}
+            \begin{exampleblock}{流程图}
+                \scriptsize
+                \texttt{"用TikZ画一个机器学习pipeline流程图，包括：数据预处理→特征提取→模型训练→评估，使用蓝色系配色"}
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{生成Mermaid代码：}
+            \begin{exampleblock}{系统架构图}
+                \scriptsize
+                \texttt{"用Mermaid画一个微服务架构图，包括：API Gateway, User Service, Order Service, Database，用flowchart TB格式"}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \textbf{免费工具速查表：}
+            \footnotesize
+            \begin{tabular}{ll}
+                \toprule
+                \textbf{用途} & \textbf{推荐工具} \\
+                \midrule
+                流程图 & Draw.io, Mermaid \\
+                数据图表 & Matplotlib, Plotly \\
+                架构图 & Excalidraw, PlantUML \\
+                生物医学 & Bioicons, SciDraw \\
+                神经网络 & NN-SVG, TikZ \\
+                化学结构 & MolView, RDKit \\
+                \bottomrule
+            \end{tabular}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+%========================================
+\section{科研LLM应用：风险与最佳实践}
+%========================================
+
+\begin{frame}{科研LLM应用的关键风险}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{1. 幻觉与事实错误}
+            \begin{itemize}
+                \item 编造不存在的引用
+                \item 虚构实验数据
+                \item 错误的数学推导
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{2. 可复现性问题}
+            \begin{itemize}
+                \item 模型输出随机性
+                \item API版本变化
+                \item Prompt敏感性
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{3. 学术诚信风险}
+            \begin{itemize}
+                \item 过度依赖AI写作
+                \item 未声明AI使用
+                \item 抄袭检测新挑战
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{4. 偏见传播}
+            \begin{itemize}
+                \item 训练数据偏见
+                \item 领域知识不均衡
+                \item 语言/文化偏见
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{FLAWS基准发现 (Xi et al. 2025)}
+                \small
+                LLM在科学论文错误检测中：
+                \begin{itemize}
+                    \item 能检测明显错误
+                    \item 但细微逻辑错误难以发现
+                    \item 过度自信问题普遍
+                \end{itemize}
+            \end{alertblock}
+            
+            {\scriptsize arXiv:2511.21843}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{科研LLM应用最佳实践清单}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{写作阶段：}
+            \begin{itemize}
+                \item[$\square$] 所有引用人工验证
+                \item[$\square$] 数据和结果人工核实
+                \item[$\square$] 声明AI辅助使用
+                \item[$\square$] 保持原创核心贡献
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{代码生成：}
+            \begin{itemize}
+                \item[$\square$] 运行并验证所有代码
+                \item[$\square$] 添加单元测试
+                \item[$\square$] 检查边界情况
+                \item[$\square$] 代码审查
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{数据分析：}
+            \begin{itemize}
+                \item[$\square$] 验证统计方法正确性
+                \item[$\square$] 检查数据预处理逻辑
+                \item[$\square$] 人工复核关键结果
+                \item[$\square$] 保存完整分析日志
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{核心原则}
+                \large
+                \centering
+                \textbf{AI辅助，人类负责}\\
+                \small
+                所有发表内容由作者承担责任
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{可复现科研的LLM使用规范}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{记录要求：}
+            \begin{enumerate}
+                \item \textbf{模型信息}
+                    \begin{itemize}
+                        \item 模型名称和版本
+                        \item API调用日期
+                        \item 温度等参数设置
+                    \end{itemize}
+                \item \textbf{Prompt记录}
+                    \begin{itemize}
+                        \item 完整Prompt文本
+                        \item System prompt
+                        \item 上下文信息
+                    \end{itemize}
+                \item \textbf{输出记录}
+                    \begin{itemize}
+                        \item 原始输出保存
+                        \item 人工修改追踪
+                        \item 版本控制
+                    \end{itemize}
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{exampleblock}{论文方法部分示例}
+                \scriptsize
+                \texttt{"We used GPT-5.2 (version 2025-11) with temperature=0.3 for code generation. The prompts are provided in Appendix A. All generated code was manually reviewed and tested before inclusion."}
+            \end{exampleblock}
+            
+            \vspace{0.3cm}
+            \begin{block}{开放科学建议}
+                \small
+                \begin{itemize}
+                    \item 发布Prompt模板
+                    \item 共享验证脚本
+                    \item 记录失败案例
+                    \item 讨论局限性
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
 %========================================
 \section{科研场景Prompt模板}
 %========================================
@@ -1535,7 +3985,7 @@ irm https://claude.ai/install.ps1 | iex
                 \end{itemize}
             \end{alertblock}
             
-            \vspace(0.2cm)
+            \vspace{0.2cm}
             \textbf{推荐工作流：}
             \begin{enumerate}
                 \item 在Semantic Scholar/Google Scholar找论文
@@ -1649,20 +4099,684 @@ irm https://claude.ai/install.ps1 | iex
 \end{frame}
 
 %========================================
+\section{研究验证的高级Prompt技术}
+%========================================
+
+\begin{frame}[fragile]{研究验证的Prompt模式（一）：结构化科研任务}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{假设生成Prompt (基于LLM4SR)}
+            \begin{exampleblock}{模板}
+                \scriptsize
+                \texttt{【背景】}\\
+                \texttt{研究领域：[你的领域]}\\
+                \texttt{已知发现：[列出3-5个关键发现]}\\
+                \texttt{研究空白：[你识别的空白]}\\
+                \texttt{}\\
+                \texttt{【任务】}\\
+                \texttt{生成3个可检验的研究假设：}\\
+                \texttt{1. 基于已有发现的延伸}\\
+                \texttt{2. 跨领域创新结合}\\
+                \texttt{3. 反直觉但有理论支撑}\\
+                \texttt{}\\
+                \texttt{【要求】}\\
+                \texttt{- 每个假设明确可证伪}\\
+                \texttt{- 说明验证方法}\\
+                \texttt{- 预测可能结果}
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{文献综述规划Prompt}
+            \begin{exampleblock}{模板 (LitLLM风格)}
+                \scriptsize
+                \texttt{【输入】}\\
+                \texttt{主题：[你的研究主题]}\\
+                \texttt{关键词：[5-8个关键词]}\\
+                \texttt{}\\
+                \texttt{【任务】}\\
+                \texttt{Step 1: 生成文献检索策略}\\
+                \texttt{Step 2: 设计综述大纲(5-7节)}\\
+                \texttt{Step 3: 为每节列出应覆盖的问题}\\
+                \texttt{}\\
+                \texttt{【输出格式】}\\
+                \texttt{JSON结构，包含：}\\
+                \texttt{- search\_queries: 检索词组合}\\
+                \texttt{- outline: 大纲结构}\\
+                \texttt{- questions: 各节核心问题}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{研究验证的Prompt模式（二）：代码生成最佳实践}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{科学计算代码Prompt (基于实证研究)}
+            \begin{exampleblock}{Data-Aware模板}
+                \scriptsize
+                \texttt{【数据规格】}\\
+                \texttt{文件：experiment\_results.csv}\\
+                \texttt{行数：1000条记录}\\
+                \texttt{列定义：}\\
+                \texttt{- method: str (A/B/C)}\\
+                \texttt{- accuracy: float [0,1]}\\
+                \texttt{- runtime: float (秒)}\\
+                \texttt{- dataset: str (5个数据集名)}\\
+                \texttt{}\\
+                \texttt{【任务】}\\
+                \texttt{生成统计分析代码：}\\
+                \texttt{1. 按method分组计算均值±std}\\
+                \texttt{2. 配对t检验(A vs B, A vs C)}\\
+                \texttt{3. 生成论文Table 1格式输出}\\
+                \texttt{}\\
+                \texttt{【约束】}\\
+                \texttt{- 使用pandas + scipy}\\
+                \texttt{- 处理缺失值(dropna)}\\
+                \texttt{- 显著性标记: *p<0.05, **p<0.01}
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{迭代修复模式}
+            \begin{alertblock}{错误反馈Prompt}
+                \scriptsize
+                \texttt{代码执行出现以下错误：}\\
+                \texttt{```}\\
+                \texttt{[粘贴完整错误信息]}\\
+                \texttt{```}\\
+                \texttt{}\\
+                \texttt{原始代码：}\\
+                \texttt{```python}\\
+                \texttt{[粘贴相关代码段]}\\
+                \texttt{```}\\
+                \texttt{}\\
+                \texttt{请：}\\
+                \texttt{1. 诊断错误原因}\\
+                \texttt{2. 提供修复后的完整代码}\\
+                \texttt{3. 解释修改点}
+            \end{alertblock}
+            
+            \vspace{0.2cm}
+            \begin{block}{关键发现}
+                \small
+                研究表明迭代修复可将\\
+                代码执行成功率从\\
+                \textbf{45\% → 78\%}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{研究验证的Prompt模式（三）：Chain-of-Thought科研版}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{方法论推导CoT}
+            \begin{exampleblock}{模板}
+                \scriptsize
+                \texttt{【问题】}\\
+                \texttt{设计一个[任务类型]的方法}\\
+                \texttt{目标：[具体目标]}\\
+                \texttt{约束：[限制条件]}\\
+                \texttt{}\\
+                \texttt{【推理步骤】}\\
+                \texttt{Step 1: 分析任务本质}\\
+                \texttt{- 输入是什么？输出是什么？}\\
+                \texttt{- 核心挑战是什么？}\\
+                \texttt{}\\
+                \texttt{Step 2: 回顾相关方法}\\
+                \texttt{- 现有方法如何解决？}\\
+                \texttt{- 各自的优缺点？}\\
+                \texttt{}\\
+                \texttt{Step 3: 设计新方法}\\
+                \texttt{- 如何结合优点？}\\
+                \texttt{- 如何解决现有缺点？}\\
+                \texttt{}\\
+                \texttt{Step 4: 验证可行性}\\
+                \texttt{- 计算复杂度分析}\\
+                \texttt{- 潜在问题和解决方案}
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{实验设计CoT}
+            \begin{exampleblock}{模板}
+                \scriptsize
+                \texttt{【研究问题】}\\
+                \texttt{验证假设H：[你的假设]}\\
+                \texttt{}\\
+                \texttt{【逐步设计】}\\
+                \texttt{Think step by step:}\\
+                \texttt{}\\
+                \texttt{1. 需要什么数据？}\\
+                \texttt{   - 数据集选择理由}\\
+                \texttt{   - 样本量估算}\\
+                \texttt{}\\
+                \texttt{2. 比较什么基线？}\\
+                \texttt{   - SOTA方法列表}\\
+                \texttt{   - 公平性考虑}\\
+                \texttt{}\\
+                \texttt{3. 用什么指标？}\\
+                \texttt{   - 主要指标 + 辅助指标}\\
+                \texttt{   - 统计显著性要求}\\
+                \texttt{}\\
+                \texttt{4. 消融实验设计}\\
+                \texttt{   - 哪些组件需要消融？}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{研究验证的Prompt模式（四）：多Agent协作科研}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{模拟同行评审}
+            \begin{exampleblock}{Reviewer Agent Prompt}
+                \scriptsize
+                \texttt{你是[顶会名称]的资深审稿人。}\\
+                \texttt{}\\
+                \texttt{【评审标准】}\\
+                \texttt{- Novelty (1-5): 创新性}\\
+                \texttt{- Soundness (1-5): 方法严谨性}\\
+                \texttt{- Clarity (1-5): 表达清晰度}\\
+                \texttt{- Significance (1-5): 重要性}\\
+                \texttt{}\\
+                \texttt{【任务】}\\
+                \texttt{1. 给出各项评分和理由}\\
+                \texttt{2. 列出主要优点(3条)}\\
+                \texttt{3. 列出主要缺点(3条)}\\
+                \texttt{4. 提出具体改进问题(5个)}\\
+                \texttt{5. 给出最终建议：}\\
+                \texttt{   Accept/Weak Accept/}\\
+                \texttt{   Weak Reject/Reject}
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Devil's Advocate模式}
+            \begin{exampleblock}{反驳者Prompt}
+                \scriptsize
+                \texttt{扮演一个严格的批评者：}\\
+                \texttt{}\\
+                \texttt{【论文声明】}\\
+                \texttt{[你的主要贡献声明]}\\
+                \texttt{}\\
+                \texttt{【任务】}\\
+                \texttt{试图反驳这个声明：}\\
+                \texttt{1. 找出逻辑漏洞}\\
+                \texttt{2. 质疑实验设计}\\
+                \texttt{3. 提出反例场景}\\
+                \texttt{4. 指出过度声明}\\
+                \texttt{}\\
+                \texttt{对每个批评点，}\\
+                \texttt{建议如何加强论述}
+            \end{exampleblock}
+            
+            \vspace{0.2cm}
+            \begin{block}{研究支持}
+                \small
+                ResearchTown研究表明\\
+                多Agent模拟可发现\\
+                人类忽略的研究机会
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{科研LLM工具生态系统：2026年全景图}
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \textbf{文献管理与检索}
+            \begin{itemize}
+                \item \textbf{Semantic Scholar} - 语义论文搜索
+                \item \textbf{Elicit} - AI研究助手
+                \item \textbf{Consensus} - 科学共识查询
+                \item \textbf{Connected Papers} - 论文关系图
+                \item \textbf{ResearchRabbit} - 文献推荐
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{写作与编辑}
+            \begin{itemize}
+                \item \textbf{Writefull} - 学术语言优化
+                \item \textbf{Paperpal} - 论文润色
+                \item \textbf{Grammarly} - 语法检查
+                \item \textbf{QuillBot} - 改写工具
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \textbf{代码与分析}
+            \begin{itemize}
+                \item \textbf{GitHub Copilot} - 代码补全
+                \item \textbf{Cursor} - AI-first IDE
+                \item \textbf{Code Interpreter} - 数据分析
+                \item \textbf{Julius.ai} - 可视化生成
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \textbf{专业领域工具}
+            \begin{itemize}
+                \item \textbf{BioGPT} - 生物医学
+                \item \textbf{ChemCrow} - 化学研究
+                \item \textbf{Galactica} - 科学知识
+                \item \textbf{AlphaFold} - 蛋白质结构
+            \end{itemize}
+            
+            \vspace{0.2cm}
+            \begin{alertblock}{选择原则}
+                \small
+                任务专用工具 > 通用LLM
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{科研LLM应用路线图：从入门到精通}
+    \begin{tikzpicture}[
+        node distance=0.6cm,
+        level/.style={rectangle, draw, rounded corners, minimum width=3cm, minimum height=0.6cm, align=center, font=\small},
+        arrow/.style={->, >=stealth, thick}
+    ]
+        % Level 1
+        \node[level, fill=green!20] (l1) {\textbf{Level 1: 基础应用}};
+        \node[right=0.2cm of l1, font=\scriptsize, text width=8cm] (l1d) {
+            文献总结 | 语言润色 | 简单代码生成 | LaTeX公式
+        };
+        
+        % Level 2
+        \node[level, fill=blue!20, below=of l1] (l2) {\textbf{Level 2: 系统应用}};
+        \node[right=0.2cm of l2, font=\scriptsize, text width=8cm] (l2d) {
+            Related Work撰写 | 数据分析流程 | 实验代码开发 | 审稿意见回复
+        };
+        
+        % Level 3
+        \node[level, fill=orange!20, below=of l2] (l3) {\textbf{Level 3: 高级应用}};
+        \node[right=0.2cm of l3, font=\scriptsize, text width=8cm] (l3d) {
+            研究想法生成 | 多Agent协作 | 自动化工作流 | 跨领域探索
+        };
+        
+        % Level 4
+        \node[level, fill=red!20, below=of l3] (l4) {\textbf{Level 4: 前沿应用}};
+        \node[right=0.2cm of l4, font=\scriptsize, text width=8cm] (l4d) {
+            AI Co-scientist | 全流程自动化 | 科研Agent开发 | 领域定制模型
+        };
+        
+        \draw[arrow] (l1) -- (l2);
+        \draw[arrow] (l2) -- (l3);
+        \draw[arrow] (l3) -- (l4);
+    \end{tikzpicture}
+    
+    \vspace{0.3cm}
+    \begin{block}{2026年建议}
+        \small
+        大多数科研人员应达到 \textbf{Level 2-3}，重点是\\
+        \textbf{高效使用现有工具}而非追求最新技术
+    \end{block}
+\end{frame}
+
+%========================================
 % 附录
 %========================================
 \appendix
 
-\begin{frame}{附录：国内用户访问方案}
+%----------------------------------------
+% 附录A：开源工具与部署
+%----------------------------------------
+
+\begin{frame}{附录A：开源模型生态}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{主流开源模型}
+                \small
+                \begin{itemize}
+                    \item \textbf{LLaMA 3.1}（Meta）
+                    \begin{itemize}
+                        \tiny
+                        \item 8B/70B/405B参数
+                        \item 商用友好许可
+                        \item 多语言支持
+                    \end{itemize}
+                    \item \textbf{Qwen2.5}（阿里巴巴）
+                    \begin{itemize}
+                        \tiny
+                        \item 0.5B-72B多规格
+                        \item 中文能力出色
+                        \item Apache 2.0许可
+                    \end{itemize}
+                    \item \textbf{DeepSeek V3}
+                    \begin{itemize}
+                        \tiny
+                        \item MoE架构，高效推理
+                        \item 开源权重，MIT许可
+                        \item 性能接近GPT-4
+                    \end{itemize}
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{特化模型}
+                \small
+                \begin{itemize}
+                    \item \textbf{代码生成}：CodeLlama, StarCoder2
+                    \item \textbf{数学推理}：DeepSeek-Math
+                    \item \textbf{多模态}：LLaVA, Qwen-VL
+                    \item \textbf{医学}：BioMistral, Med-PaLM开源版
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.3cm}
+            \begin{exampleblock}{选择建议}
+                \small
+                \begin{itemize}
+                    \item 资源有限 → Qwen2.5-7B
+                    \item 中文任务 → Qwen2.5/DeepSeek
+                    \item 代码任务 → CodeLlama/StarCoder2
+                    \item 最强性能 → LLaMA 3.1-405B
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{附录A：本地部署方案}
+    \begin{columns}
+        \begin{column}{0.48\textwidth}
+            \begin{block}{推理框架}
+                \small
+                \begin{description}
+                    \item[Ollama] 最简单的本地部署
+                    \begin{itemize}
+                        \tiny
+                        \item 一键安装运行
+                        \item 支持主流开源模型
+                        \item Mac/Linux/Windows
+                    \end{itemize}
+                    \item[vLLM] 高性能推理
+                    \begin{itemize}
+                        \tiny
+                        \item PagedAttention优化
+                        \item 高吞吐量服务
+                        \item 适合生产环境
+                    \end{itemize}
+                    \item[llama.cpp] CPU推理
+                    \begin{itemize}
+                        \tiny
+                        \item 纯C++实现
+                        \item 无需GPU
+                        \item 量化支持
+                    \end{itemize}
+                \end{description}
+            \end{block}
+        \end{column}
+        \begin{column}{0.52\textwidth}
+            \begin{block}{硬件需求估算}
+                \centering
+                \small
+                \begin{tabular}{ccc}
+                    \toprule
+                    \textbf{模型规模} & \textbf{显存(FP16)} & \textbf{显存(4bit)} \\
+                    \midrule
+                    7B & 14GB & 4GB \\
+                    13B & 26GB & 8GB \\
+                    70B & 140GB & 35GB \\
+                    \bottomrule
+                \end{tabular}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{Ollama快速开始}
+                \ttfamily\tiny
+                \texttt{\# 安装后直接运行}\\[0.1cm]
+                \texttt{ollama run llama3.1}\\[0.1cm]
+                \texttt{\# 或运行其他模型}\\[0.1cm]
+                \texttt{ollama run qwen2.5:7b}\\[0.1cm]
+                \texttt{ollama run deepseek-v3}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{附录A：vLLM部署示例}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{安装与启动}
+\begin{verbatim}
+# 安装vLLM
+pip install vllm
+
+# 启动API服务
+python -m vllm.entrypoints.openai.api_server \
+    --model Qwen/Qwen2.5-7B-Instruct \
+    --host 0.0.0.0 \
+    --port 8000
+\end{verbatim}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Python调用}
+\begin{verbatim}
+from openai import OpenAI
+
+# 使用OpenAI兼容API
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="not-needed"
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen2.5-7B-Instruct",
+    messages=[{"role": "user", 
+               "content": "你好"}]
+)
+\end{verbatim}
+            \end{block}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.3cm}
+    \begin{alertblock}{性能优化提示}
+        \small
+        使用 \texttt{--tensor-parallel-size} 进行多GPU并行，\texttt{--quantization awq} 启用量化
+    \end{alertblock}
+\end{frame}
+
+\begin{frame}{附录A：WebUI工具}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Open WebUI}
+                \begin{itemize}
+                    \item 类ChatGPT界面
+                    \item 支持Ollama后端
+                    \item Docker一键部署
+                    \item 多用户管理
+                    \item RAG文档上传
+                \end{itemize}
+                
+                \vspace{0.2cm}
+                \texttt{\tiny docker run -d -p 3000:8080 \textbackslash\\
+                -v open-webui:/app/backend/data \textbackslash\\
+                ghcr.io/open-webui/open-webui:main}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Text Generation WebUI}
+                \begin{itemize}
+                    \item Gradio界面
+                    \item 多种加载器支持
+                    \item 参数调节丰富
+                    \item 扩展系统
+                    \item 适合实验调试
+                \end{itemize}
+            \end{block}
+            
+            \vspace{0.3cm}
+            \begin{exampleblock}{科研场景推荐}
+                \small
+                \begin{itemize}
+                    \item 日常使用 → Open WebUI
+                    \item 模型调试 → Text Gen WebUI
+                    \item 批量处理 → vLLM API
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{附录A：云端部署选项}
+    \begin{block}{主流云平台}
+        \small
+        \begin{tabular}{llll}
+            \toprule
+            \textbf{平台} & \textbf{特点} & \textbf{适用场景} & \textbf{价格参考} \\
+            \midrule
+            Hugging Face & 模型托管/Spaces & 演示/小规模 & 免费-\$9/月 \\
+            阿里云PAI & 国内主流 & 企业生产 & 按需计费 \\
+            AutoDL & 性价比高 & 学术研究 & ￥1-3/小时 \\
+            Vast.ai & 便宜GPU & 实验测试 & \$0.2-1/小时 \\
+            \bottomrule
+        \end{tabular}
+    \end{block}
+    
+    \vspace{0.3cm}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{学术用户推荐}
+                \begin{enumerate}
+                    \item AutoDL租用GPU实例
+                    \item 配置好环境后保存镜像
+                    \item 按需开机，用完关闭
+                    \item 成本可控，灵活使用
+                \end{enumerate}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{exampleblock}{免费资源}
+                \begin{itemize}
+                    \item Google Colab（有限GPU）
+                    \item Kaggle Notebooks
+                    \item HF Spaces免费层
+                    \item 各厂商新用户优惠
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{附录A：数据隐私与合规}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{本地部署优势}
+                \begin{itemize}
+                    \item \textcolor{green!60!black}{\faCheck} 数据完全本地化
+                    \item \textcolor{green!60!black}{\faCheck} 无API调用记录
+                    \item \textcolor{green!60!black}{\faCheck} 符合单位保密要求
+                    \item \textcolor{green!60!black}{\faCheck} 可离线使用
+                    \item \textcolor{green!60!black}{\faCheck} 无使用成本
+                \end{itemize}
+            \end{alertblock}
+            
+            \vspace{0.3cm}
+            \begin{block}{适用场景}
+                \begin{itemize}
+                    \item 涉密/敏感数据处理
+                    \item 内部文档分析
+                    \item 无法联网的环境
+                    \item 高频调用需求
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{部署策略建议}
+                \small
+                \textbf{分级使用策略：}
+                \begin{enumerate}
+                    \item \textbf{公开数据}：云端API
+                    \begin{itemize}
+                        \tiny
+                        \item 使用最强模型
+                        \item 按需付费
+                    \end{itemize}
+                    \item \textbf{内部数据}：本地7B模型
+                    \begin{itemize}
+                        \tiny
+                        \item Ollama + Open WebUI
+                        \item 单卡即可运行
+                    \end{itemize}
+                    \item \textbf{敏感数据}：离线部署
+                    \begin{itemize}
+                        \tiny
+                        \item 完全断网
+                        \item 专用服务器
+                    \end{itemize}
+                \end{enumerate}
+            \end{block}
+            
+            \vspace{0.2cm}
+            \begin{exampleblock}{推荐配置}
+                \tiny
+                办公场景：RTX 4090 (24GB) 运行7B-13B模型足够日常使用
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{附录A：开源工具生态图}
+    \centering
+    \begin{tikzpicture}[scale=0.75, transform shape,
+        box/.style={rectangle, draw, rounded corners, minimum width=2cm, minimum height=0.8cm, font=\small},
+        category/.style={rectangle, draw, fill=blue!20, rounded corners, minimum width=2.5cm, minimum height=0.6cm, font=\footnotesize\bfseries}]
+        
+        % 中心
+        \node[box, fill=red!30, minimum width=3cm] (center) at (0,0) {\textbf{本地AI系统}};
+        
+        % 模型层
+        \node[category] (models) at (-5, 2) {开源模型};
+        \node[box, fill=green!20] at (-5, 1) {\tiny LLaMA/Qwen/DeepSeek};
+        
+        % 推理层
+        \node[category] (inference) at (0, 2) {推理框架};
+        \node[box, fill=yellow!20] at (0, 1) {\tiny Ollama/vLLM/llama.cpp};
+        
+        % 界面层
+        \node[category] (ui) at (5, 2) {用户界面};
+        \node[box, fill=cyan!20] at (5, 1) {\tiny Open WebUI/Gradio};
+        
+        % 应用层
+        \node[category] (apps) at (-5, -2) {RAG应用};
+        \node[box, fill=purple!20] at (-5, -1) {\tiny LangChain/LlamaIndex};
+        
+        % 向量库
+        \node[category] (vector) at (0, -2) {向量数据库};
+        \node[box, fill=orange!20] at (0, -1) {\tiny Chroma/Milvus/FAISS};
+        
+        % 微调
+        \node[category] (finetune) at (5, -2) {微调工具};
+        \node[box, fill=pink!20] at (5, -1) {\tiny LoRA/QLoRA/PEFT};
+        
+        % 连线
+        \draw[->, thick] (models) -- (center);
+        \draw[->, thick] (inference) -- (center);
+        \draw[->, thick] (ui) -- (center);
+        \draw[->, thick] (apps) -- (center);
+        \draw[->, thick] (vector) -- (center);
+        \draw[->, thick] (finetune) -- (center);
+        
+    \end{tikzpicture}
+    
+    \vspace{0.3cm}
+    \small
+    \textbf{完整开源方案}：无需付费，数据安全，可定制化
+\end{frame}
+
+%----------------------------------------
+% 附录B：访问方案
+%----------------------------------------
+
+\begin{frame}{附录B：国内用户访问方案}
     \begin{columns}
         \begin{column}{0.5\textwidth}
             \textbf{直接可用（无需翻墙）：}
             \begin{itemize}
                 \item \textcolor{green!60!black}{\faCheck\ DeepSeek} - \url{chat.deepseek.com}
                 \item \textcolor{green!60!black}{\faCheck\ 通义千问} - \url{tongyi.aliyun.com}
-                \item \textcolor{green!60!black}{\faCheck\ 智谱清言} - \url{chatglm.cn}
-                \item \textcolor{green!60!black}{\faCheck\ 豆包} - \url{doubao.com}
                 \item \textcolor{green!60!black}{\faCheck\ Kimi} - \url{kimi.moonshot.cn}
+                \item \textcolor{green!60!black}{\faCheck\ 豆包} - \url{doubao.com}
                 \item \textcolor{green!60!black}{\faCheck\ 文心一言} - \url{yiyan.baidu.com}
             \end{itemize}
             
@@ -1706,7 +4820,7 @@ irm https://claude.ai/install.ps1 | iex
             \textbf{什么是云雾AI？}
             \begin{itemize}
                 \item 国内可直连的API中转服务
-                \item 支持GPT-4/Claude/Gemini等主流模型
+                \item 支持GPT-5.2/Claude/Gemini等主流模型
                 \item \textbf{OpenAI兼容格式}，几乎零成本迁移
                 \item 按量付费，价格透明
             \end{itemize}
@@ -1735,7 +4849,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="gpt-4o",  # 或其他模型
+    model="gpt-5.2",  # 或其他模型
     messages=[
         {"role": "user", 
          "content": "你好！"}
@@ -1794,7 +4908,7 @@ BASE_URL=https://yunwu.ai
 CODE=your-password
 
 # 可选：自定义模型列表
-CUSTOM_MODELS=+gpt-4o,+claude-3-opus
+CUSTOM_MODELS=+gpt-5.2,+claude-opus-4.5
                 \end{lstlisting}
             \end{block}
             
@@ -1829,9 +4943,9 @@ CUSTOM_MODELS=+gpt-4o,+claude-3-opus
 // config.json
 {
   "models": [{
-    "title": "GPT-4o via Yunwu",
+    "title": "GPT-5.2 via Yunwu",
     "provider": "openai",
-    "model": "gpt-4o",
+    "model": "gpt-5.2",
     "apiKey": "your-yunwu-token",
     "apiBase": "https://yunwu.ai/v1"
   }]
@@ -1845,7 +4959,7 @@ from langchain_openai import ChatOpenAI
 llm = ChatOpenAI(
     api_key="your-yunwu-token",
     base_url="https://yunwu.ai/v1",
-    model="gpt-4o"
+    model="gpt-5.2"
 )
             \end{lstlisting}
         \end{column}
@@ -1856,7 +4970,7 @@ curl https://yunwu.ai/v1/chat/completions \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-4o",
+    "model": "gpt-5.2",
     "messages": [{"role": "user", 
                   "content": "Hello!"}]
   }'
@@ -2121,51 +5235,6 @@ You are a data scientist. When analyzing:
     \end{alertblock}
 \end{frame}
 
-\begin{frame}{附录：本周AI热点速递（12月8-10日）}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \textbf{\textcolor{red}{重磅：MCP成为行业标准}}
-            \begin{itemize}
-                \item 12/10：Anthropic将MCP协议捐赠给新成立的Agentic AI Foundation
-                \item 12/9：OpenAI共同成立该基金会，发布AGENTS.md标准
-                \item 意义：AI Agent互操作性将大幅提升
-            \end{itemize}
-            
-            \vspace{0.3cm}
-            \textbf{OpenAI动态：}
-            \begin{itemize}
-                \item 12/9：首批官方认证课程发布
-                \item 12/9：任命新CRO Denise Dresser
-                \item 12/8：与Deutsche Telekom合作
-                \item 12/8：与Instacart购物体验合作
-                \item 12/3：收购Neptune公司
-            \end{itemize}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \textbf{Anthropic动态：}
-            \begin{itemize}
-                \item 12/3：收购Bun（JavaScript运行时）
-                \item 12/3：Claude Code达\$10亿收入！
-                \item 12/4：与Snowflake \$2亿合作
-                \item 12/9：与Accenture多年合作
-            \end{itemize}
-            
-            \vspace{0.3cm}
-            \textbf{GitHub Copilot更新：}
-            \begin{itemize}
-                \item 12/8：Coding Agent模型选择
-                \item 12/5：代码生成指标仪表板
-                \item 12/4：GPT-5.1-Codex-Max公测
-                \item 12/3：Claude Opus 4.5全平台
-                \item 12/1：Copilot Spaces公共空间
-            \end{itemize}
-        \end{column}
-    \end{columns}
-    
-    \vspace{0.2cm}
-    {\small \textbf{数据来源}：OpenAI Blog, Anthropic News, GitHub Changelog（2025年12月10日更新）}
-\end{frame}
-
 \begin{frame}{附录：价格速查表}
     \footnotesize
     \begin{tabular}{llll}
@@ -2239,7 +5308,7 @@ You are a data scientist. When analyzing:
 \end{frame}
 
 \begin{frame}{附录：科研全流程 Prompt 指南 (1/6) - 模型选择}
-    \begin{block}{不同任务的最佳模型选择 (2025.12版)}
+    \begin{block}{不同任务的最佳模型选择 (2026.01版)}
         \begin{itemize}
             \item \textbf{长文本阅读与润色}：\textcolor{googleblue}{Gemini 3 Pro} (2M context), \textcolor{anthropicred}{Claude Opus 4.5} (200k)
                 \begin{itemize}
@@ -2251,7 +5320,7 @@ You are a data scientist. When analyzing:
                 \end{itemize}
             \item \textbf{数学推理与理论推导}：\textcolor{deepseekblue}{DeepSeek V3.2 (中文最强)}, \textcolor{openaigreen}{GPT-5.2 Pro}
                 \begin{itemize}
-                    \item \textit{理由：DeepSeek在数学和逻辑推理上已超越旧版o1模型，且对中文数学术语支持最好。}
+                    \item \textit{理由：DeepSeek在数学和逻辑推理上已达到GPT-5.2同级水平，且对中文数学术语支持最好。}
                 \end{itemize}
             \item \textbf{代码实现与实验}：\textcolor{anthropicred}{Claude Opus 4.5}, \textcolor{openaigreen}{GPT-5.2}
                 \begin{itemize}
@@ -2355,6 +5424,54 @@ You are a data scientist. When analyzing:
     \end{exampleblock}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\part{第七部分：总结与展望}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%========================================
+\section{总结与展望}
+%========================================
+
+\begin{frame}{关键要点回顾}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{大模型选择：}
+            \begin{enumerate}
+                \item GPT-5系列 - 全能选手
+                \item Claude 4.5 - 代码之王
+                \item Gemini 3 - 多模态强手
+                \item DeepSeek V3 - 性价比首选（开源）
+            \end{enumerate}
+            
+            \vspace{0.3cm}
+            \textbf{开源工具选择：}
+            \begin{enumerate}
+                \item Ollama + 本地模型 - 隐私保护
+                \item Continue.dev - 开源Copilot
+                \item Zotero - 文献管理
+                \item LangChain + Chroma - 知识库
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{实用技能清单：}
+            \begin{itemize}
+                \item[\checkmark] 掌握至少一个AI编程工具
+                \item[\checkmark] 学会基础Prompt工程
+                \item[\checkmark] 了解不同模型特点
+                \item[\checkmark] 能在科研中合理应用AI
+                \item[\checkmark] 知道如何控制成本
+                \item[\checkmark] 了解数据隐私保护
+            \end{itemize}
+            
+            \vspace{0.3cm}
+            \begin{alertblock}{核心原则}
+                AI是\textbf{增强}而非\textbf{替代}\\
+                保持批判性思维，验证AI输出
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
 \begin{frame}
     \begin{center}
         \Huge\textbf{谢谢！}
@@ -2372,8 +5489,8 @@ You are a data scientist. When analyzing:
         \end{tabular}
         
         \vspace{0.5cm}
-        {\small 演示文稿更新日期：2025年12月10日}\\
-        {\scriptsize 数据来源：OpenAI Blog, Anthropic News, GitHub Changelog, Google AI Blog, Cursor Changelog}
+        {\small 演示文稿更新日期：2026年1月7日}\\
+        {\scriptsize 数据来源：Scale AI HLE Leaderboard, SWE-bench, OpenAI, Anthropic, Google AI Blog, Cursor Changelog}
     \end{center}
 \end{frame}
 

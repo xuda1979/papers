@@ -43,9 +43,9 @@
 \toprule
 \textbf{优先级} & \textbf{法规名称} & \textbf{核心内容} & \textbf{建议时间} \\
 \midrule
-P0 & 《人工智能法》 & AI发展与治理基本法 & 2025年立项，2027年出台 \\
-P1 & 《AI安全管理条例》 & AI系统安全要求 & 2025年出台 \\
-P1 & 《AI算力管理办法》 & 智算中心管理规范 & 2025年出台 \\
+P0 & 《人工智能法》 & AI发展与治理基本法 & 2026年立项，2028年出台 \\
+P1 & 《AI安全管理条例》 & AI系统安全要求 & 2026年出台 \\
+P1 & 《AI算力管理办法》 & 智算中心管理规范 & 2026年出台 \\
 P2 & 《AI数据管理条例》 & 训练数据合规要求 & 2026年出台 \\
 P2 & 《AI应用分级管理办法》 & 高风险应用准入 & 2026年出台 \\
 \bottomrule
@@ -78,159 +78,43 @@ P2 & 《AI应用分级管理办法》 & 高风险应用准入 & 2026年出台 \\
 
 联邦学习（Federated Learning）是实现"数据不出域"的核心技术\cite{FederatedLearning2024, GoogleFL2024, FedAvg2024}。
 
-\textbf{1. 基础FedAvg算法}
+在基础FedAvg算法中，每轮通信$t$，参与方$k$本地更新$w_k^{t+1} = w_k^t - \eta \nabla F_k(w_k^t)$，随后服务器进行聚合，计算$w^{t+1} = \sum_{k=1}^{K} \frac{n_k}{n} w_k^{t+1}$，其中$n_k$为第$k$方数据量，$n=\sum_k n_k$为总数据量。
 
-每轮通信$t$，参与方$k$本地更新：
-\begin{equation}
-w_k^{t+1} = w_k^t - \eta \nabla F_k(w_k^t)
-\end{equation}
+针对异构数据问题，FedProx算法进行了改进，通过添加近端正则项$\min_{w_k} F_k(w_k) + \frac{\mu}{2} \|w_k - w^t\|^2$来解决Non-IID数据问题，其中正则系数$\mu$控制本地模型与全局模型的距离。
 
-服务器聚合：
-\begin{equation}
-w^{t+1} = \sum_{k=1}^{K} \frac{n_k}{n} w_k^{t+1}
-\end{equation}
+个性化联邦学习（APFL）则允许每方维护全局模型$w$和本地模型$v_k$，通过公式$\bar{w}_k = \alpha_k v_k + (1-\alpha_k) w$进行混合，混合系数$\alpha_k$根据本地数据分布自适应调整。
 
-其中$n_k$为第$k$方数据量，$n=\sum_k n_k$为总数据量。
+为优化通信效率，可采用梯度压缩技术，如Top-K稀疏化仅传输最大的K个梯度分量；或量化通信，将FP32梯度量化为INT8甚至1-bit；此外，周期性聚合通过减少通信频率、增加本地迭代次数来提升效率。
 
-\textbf{2. 异构数据下的改进：FedProx}
+在安全威胁方面，主要存在三种攻击类型。首先是梯度逆向攻击，其原理是从梯度重建训练数据，通过优化 $\min_x \|g - \nabla_w L(w, x)\|^2$ 来恢复原始样本$x$，可导致图像、文本等敏感数据泄露。其次是模型投毒攻击，恶意参与方上传被污染的模型更新，旨在使全局模型在特定输入上输出错误结果，或通过后门攻击植入触发器。最后是成员推断攻击，利用模型对训练数据和非训练数据的不同行为，判断某条数据是否参与了训练。
 
-添加近端正则项解决Non-IID数据问题：
-\begin{equation}
-\min_{w_k} F_k(w_k) + \frac{\mu}{2} \|w_k - w^t\|^2
-\end{equation}
-
-正则系数$\mu$控制本地模型与全局模型的距离。
-
-\textbf{3. 个性化联邦学习：APFL}
-
-每方维护全局模型$w$和本地模型$v_k$：
-\begin{equation}
-\bar{w}_k = \alpha_k v_k + (1-\alpha_k) w
-\end{equation}
-
-混合系数$\alpha_k$根据本地数据分布自适应调整。
-
-\textbf{4. 通信效率优化}
-梯度压缩：Top-K稀疏化，仅传输最大的K个梯度分量；量化通信：将FP32梯度量化为INT8甚至1-bit；周期性聚合：减少通信频率，增加本地迭代次数。
-
-\textbf{攻击类型}：
-
-\textbf{1. 梯度逆向攻击}
-原理：从梯度重建训练数据；方法：通过优化 $\min_x \|g - \nabla_w L(w, x)\|^2$ 来恢复原始样本$x$；效果：可恢复图像、文本等敏感数据。
-
-\textbf{2. 模型投毒攻击}
-原理：恶意参与方上传被污染的模型更新；目标：使全局模型在特定输入上输出错误结果；后门攻击：植入触发器，正常输入正常输出，特定触发输入恶意输出。
-
-\textbf{3. 成员推断攻击}
-原理：判断某条数据是否参与了训练 方法：利用模型对训练数据和非训练数据的不同行为
-
-\textbf{防御方案}：
-
-\textbf{差分隐私（Differential Privacy）}
-\begin{equation}
-\Pr[\mathcal{M}(D) \in S] \leq e^\varepsilon \cdot \Pr[\mathcal{M}(D') \in S] + \delta
-\end{equation}
-
-其中$D, D'$为相差一条记录的数据集，$(\varepsilon, \delta)$-DP保证个体隐私。
-
-具体实现：梯度裁剪+高斯噪声
-\begin{equation}
-\tilde{g} = \frac{g}{\max(1, \|g\|/C)} + \mathcal{N}(0, \sigma^2 C^2 \mathbf{I})
-\end{equation}
-
-$C$为裁剪阈值，$\sigma$为噪声系数，典型配置$\sigma=1.0$, $C=1.0$可达$\varepsilon=3$。
-
-\textbf{安全聚合（Secure Aggregation）}
-原理：服务器只能看到聚合结果，看不到个体更新；方法：基于秘密分享或同态加密；开销：通信量增加$O(K^2)$，计算量增加$O(K)$。
+针对上述威胁，防御方案主要包括差分隐私（Differential Privacy）和安全聚合（Secure Aggregation）。差分隐私通过满足$\Pr[\mathcal{M}(D) \in S] \leq e^\varepsilon \cdot \Pr[\mathcal{M}(D') \in S] + \delta$来保证个体隐私，具体实现常采用梯度裁剪加高斯噪声的方式，即$\tilde{g} = \frac{g}{\max(1, \|g\|/C)} + \mathcal{N}(0, \sigma^2 C^2 \mathbf{I})$，其中$C$为裁剪阈值，$\sigma$为噪声系数。安全聚合则基于秘密分享或同态加密，确保服务器只能看到聚合结果而无法获知个体更新，但这会带来通信量增加$O(K^2)$和计算量增加$O(K)$的开销。
 
 \subsection{深度技术详解：同态加密}
 
-同态加密（Homomorphic Encryption）允许在密文上直接计算\cite{HomomorphicEncryption2024, TFHE2024, CKKS2024}。
+同态加密（Homomorphic Encryption）允许在密文上直接计算\cite{HomomorphicEncryption2024, TFHE2024, CKKS2024}。根据支持运算的类型，同态加密可分为三类：部分同态（PHE）仅支持加法或乘法，如Paillier和RSA，适用于简单统计；有限同态（SWHE）支持有限次乘法，如BGV和BFV，适用于浅层神经网络；全同态（FHE）支持任意次数运算，如TFHE和CKKS，适用于深度学习。
 
-\textbf{1. 同态加密分类}
+CKKS方案在近似计算方面表现最优，特别适合机器学习中的浮点运算。其明文空间为$\mathbb{C}^{N/2}$复数向量，通过将浮点向量编码为多项式实现。该方案支持加法同态$\text{Enc}(m_1) + \text{Enc}(m_2) = \text{Enc}(m_1 + m_2)$和乘法同态$\text{Enc}(m_1) \times \text{Enc}(m_2) = \text{Enc}(m_1 \cdot m_2)$。关键参数包括多项式度数$N$（典型值为$2^{15}$或$2^{16}$，决定批处理槽位数）、模数链$\{q_0, q_1, ..., q_L\}$（$L$决定乘法深度）以及缩放因子$\Delta$（控制精度，典型值为$2^{40}$）。
 
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lccc}
-\toprule
-\textbf{类型} & \textbf{支持运算} & \textbf{代表方案} & \textbf{应用场景} \\
-\midrule
-部分同态(PHE) & 仅加法或乘法 & Paillier, RSA & 简单统计 \\
-有限同态(SWHE) & 有限次乘法 & BGV, BFV & 浅层神经网络 \\
-全同态(FHE) & 任意次数 & TFHE, CKKS & 深度学习 \\
-\bottomrule
-\end{tabular}
-\end{table}
+FHE的核心挑战在于噪声增长，Bootstrapping技术通过刷新密文$\text{Bootstrap}(\text{Enc}(m)) \rightarrow \text{Enc}'(m)$来解决这一问题。然而，其代价高昂，TFHE Bootstrapping约需10-50ms/门，CKKS Bootstrapping约需1-10秒/次，这成为FHE实用化的主要瓶颈。
 
-\textbf{2. CKKS方案详解（近似计算最优）}
-
-CKKS适合机器学习中的浮点运算：
-明文空间：$\mathbb{C}^{N/2}$复数向量；编码：将浮点向量编码为多项式；加法同态：$\text{Enc}(m_1) + \text{Enc}(m_2) = \text{Enc}(m_1 + m_2)$；乘法同态：$\text{Enc}(m_1) \times \text{Enc}(m_2) = \text{Enc}(m_1 \cdot m_2)$。
-
-关键参数：
-多项式度数$N$：典型$N=2^{15}$或$2^{16}$，决定批处理槽位数；模数链$\{q_0, q_1, ..., q_L\}$：$L$决定乘法深度；缩放因子$\Delta$：控制精度，典型$\Delta=2^{40}$。
-
-\textbf{3. Bootstrapping技术}
-
-FHE的核心挑战是噪声增长。Bootstrapping可刷新密文：
-\begin{equation}
-\text{Bootstrap}(\text{Enc}(m)) \rightarrow \text{Enc}'(m)
-\end{equation}
-
-代价：
-TFHE Bootstrapping：约10-50ms/门；CKKS Bootstrapping：约1-10秒/次；是FHE实用化的主要瓶颈。
-
-\textbf{4. FHE神经网络推理性能}\footnote{数据来源：综合学术文献，包括Microsoft SEAL、IBM HELib等项目的基准测试。实际性能因硬件和参数设置差异较大。}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lccc}
-\toprule
-\textbf{模型} & \textbf{明文延迟} & \textbf{FHE延迟} & \textbf{放大倍数} \\
-\midrule
-LeNet-5 (MNIST) & 0.1ms & 2秒 & 20000× \\
-ResNet-20 (CIFAR) & 1ms & 5分钟 & 300000× \\
-BERT (小型) & 10ms & 数小时 & $>$100000× \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{结论}：FHE目前仅适用于延迟不敏感、高安全需求场景（如医疗诊断、金融审计）。
+在神经网络推理性能方面，FHE目前仍面临巨大挑战。以LeNet-5 (MNIST)为例，明文延迟仅0.1ms，而FHE延迟高达2秒，放大倍数达20000倍；ResNet-20 (CIFAR)的明文延迟为1ms，FHE延迟则需5分钟，放大倍数达300000倍；对于BERT (小型)模型，明文延迟10ms，FHE延迟更是长达数小时，放大倍数超过100000倍。因此，FHE目前仅适用于延迟不敏感且具有高安全需求的场景，如医疗诊断和金融审计。
 
 \subsection{深度技术详解：可信执行环境（TEE）}
 
 可信执行环境提供硬件级数据保护\cite{IntelSGX2024, AMDSEV2024, ARMTrustZone2024}。
 
-\textbf{1. Intel SGX（Software Guard Extensions）}
+Intel SGX（Software Guard Extensions）通过Enclave机制提供隔离的安全内存区域，由CPU直接加密。其核心组件包括专用安全内存EPC（Enclave Page Cache），当前容量限制通常在128MB至1GB之间；远程证明（Remote Attestation）机制用于验证代码完整性和TEE真实性；密封存储（Sealing）技术则负责数据的持久化保护。在性能方面，内存加密带来的开销约为5-10\%，Enclave进出开销约为8000-20000个CPU周期，而EPC换页开销在严重时可能导致性能下降10-100倍。
 
-架构特点：
-Enclave：隔离的安全内存区域，CPU直接加密；EPC（Enclave Page Cache）：专用安全内存，当前限制128MB-1GB；远程证明（Remote Attestation）：验证代码完整性和TEE真实性；密封存储（Sealing）：数据持久化保护。
+AMD SEV（Secure Encrypted Virtualization）采用VM级别的隔离策略，对整个虚拟机内存进行加密。SEV-SNP进一步增加了内存完整性保护。与SGX相比，SEV支持更大内存且无EPC限制，更加云友好，适合机密计算（Confidential Computing）场景。
 
-性能特点：
-内存加密开销：约5-10\%；Enclave进出开销：约8000-20000 CPU周期；EPC换页开销：严重时性能下降10-100×。
+ARM TrustZone/CCA架构采用双世界设计，分为Normal World和Secure World。Armv9引入的CCA（Confidential Compute Architecture）新特性支持Realm机制，类似于SGX的隔离区域，主要适用于移动设备和边缘计算场景。
 
-\textbf{2. AMD SEV（Secure Encrypted Virtualization）}
+NVIDIA Confidential Computing为AI提供了GPU TEE支持。H100 GPU支持Confidential Computing模式，实现AES-256全显存加密，并通过GPU远程证明保护推理请求和模型权重。
 
-架构特点：
-VM级别隔离：整个虚拟机内存加密；SEV-SNP：增加内存完整性保护；支持更大内存：无EPC限制；云友好：适合confidential computing。
+在系统架构层面，首先由客户端验证服务器TEE证明，建立基于TLS和Attestation的安全通道，并发送加密推理请求。随后，TEE服务器在Enclave内加载模型权重，解密用户请求，执行推理计算，并将结果加密返回。这种架构提供了多重信任保证：模型提供方确信模型不会被服务器运营方窃取，用户确信请求内容不会被服务器看到，而服务器只需信任Intel、AMD或ARM等硬件厂商。
 
-\textbf{3. ARM TrustZone/CCA}
-
-架构特点：
-双世界架构：Normal World + Secure World；CCA（Confidential Compute Architecture）：Armv9新特性；Realm：类似SGX的隔离区域；适用：移动设备、边缘计算。
-
-\textbf{4. NVIDIA Confidential Computing}
-
-GPU TEE for AI：
-H100支持：Confidential Computing模式；显存加密：AES-256全显存加密；Attestation：GPU远程证明；应用：保护推理请求和模型权重。
-
-\textbf{系统架构}：
-首先，客户端——验证服务器TEE证明；建立安全通道（TLS + Attestation）；发送加密推理请求。其次，TEE服务器——在Enclave内加载模型权重；解密用户请求；执行推理计算；加密返回结果。第三，信任保证——模型提供方：模型不被服务器运营方窃取；用户：请求内容不被服务器看到；服务器：只需信任Intel/AMD/ARM。
-
-\textbf{性能基准（H100 Confidential模式）}：
-吞吐量下降：约15-25\%；延迟增加：约10-20\%；显存开销：加密元数据约5\%；适用场景：高安全敏感推理服务。
+在性能基准方面，以H100 Confidential模式为例，吞吐量下降约15-25\%，延迟增加约10-20\%，加密元数据带来的显存开销约为5\%。这种性能损耗使得该技术主要适用于高安全敏感的推理服务。
 
 \subsection{数据跨境流动技术管控方案}
 
@@ -262,14 +146,13 @@ H100支持：Confidential Computing模式；显存加密：AES-256全显存加�
 
 其中$\Delta f$为全局敏感度，$\varepsilon$为隐私预算。
 
-典型配置：
-统计查询：$\varepsilon=1.0$，误差约$\pm 5\%$；机器学习：$\varepsilon=8.0$，模型精度下降约2-5\%；高敏感场景：$\varepsilon=0.1$，误差约$\pm 30\%$。
+在典型配置下，不同场景对隐私预算$\varepsilon$的选择有所不同。对于统计查询，通常设置$\varepsilon=1.0$，此时误差约为$\pm 5\%$；对于机器学习任务，$\varepsilon$可放宽至8.0，模型精度下降约2-5\%；而在高敏感场景中，$\varepsilon$需严格限制在0.1左右，但这会导致误差增加至$\pm 30\%$。
 
 \subsection{国际格局深度分析}
 
 当前全球AI发展呈现出多极竞争的格局，各主要力量在技术实力、政策取向和战略目标上存在显著差异。
 
-美国在这一领域保持全面领先地位，同时持续强化对竞争对手的遏制。在技术层面，GPT-5系列、Claude 4系列等前沿模型确保了美国的技术优势。在政策层面，芯片出口管制措施持续升级，技术封锁的范围不断扩大。军事化进程明显加速，国防部AI中心已全面运作。在国际治理领域，美国试图主导AI治理规则的制定，塑造有利于自身的国际秩序。
+美国在这一领域保持全面领先地位，同时持续强化对竞争对手的遏制。在技术层面，GPT-5系列、Claude 4.5系列等前沿模型确保了美国的技术优势。在政策层面，芯片出口管制措施持续升级，技术封锁的范围不断扩大。军事化进程明显加速，国防部AI中心已全面运作。在国际治理领域，美国试图主导AI治理规则的制定，塑造有利于自身的国际秩序。
 
 欧盟呈现出监管先行、发展滞后的特征。《AI法案》的全面实施使欧盟在法规层面走在前列，但技术发展相对落后，缺乏世界级的基础模型。这种状况引发了战略焦虑，欧盟担心成为中美技术竞争的"殖民地"，因此在中美之间寻求平衡，试图找到自己的战略空间。
 
