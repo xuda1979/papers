@@ -81,6 +81,10 @@ class Interval:
              return self * (1.0 / other)
         return NotImplemented
 
+    def div_interval(self, other):
+        """Explicit division method for compatibility."""
+        return self.__truediv__(other)
+
     def __pow__(self, exponent: int):
         if exponent == 0:
             return Interval(1.0, 1.0)
@@ -103,5 +107,27 @@ class Interval:
     def contains(self, value: float) -> bool:
         return self.lower <= value <= self.upper
 
+    def mag(self) -> float:
+        """Magnitude: max(|lower|, |upper|)"""
+        return max(abs(self.lower), abs(self.upper))
+
+    def subset_of(self, other: 'Interval') -> bool:
+        return other.lower <= self.lower and self.upper <= other.upper
+
+    def intersection(self, other: 'Interval') -> 'Interval':
+        l = max(self.lower, other.lower)
+        u = min(self.upper, other.upper)
+        if l <= u:
+            return Interval(l, u)
+        return None
+
     def __repr__(self):
         return f"[{self.lower:.6e}, {self.upper:.6e}]"
+
+    def exp(self):
+        """Exponential function for interval."""
+        import math
+        # exp is monotonic increasing
+        # Round outward
+        eps = np.finfo(float).eps
+        return Interval(math.exp(self.lower) * (1.0 - eps), math.exp(self.upper) * (1.0 + eps))
