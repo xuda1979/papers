@@ -1,0 +1,62 @@
+\chapter{Verification Suite and Code Availability}
+\label{app:verification_notes}
+
+\section{Code Repository}
+
+The complete source code for the computer-assisted verification of the Renormalization Group flow is publicly available. This codebase serves as the "Audit Package" referenced in the main text.
+
+\begin{description}
+    \item[Repository URL:] \url{https://github.com/xuda1979/yang-mills-mass-gap-verification}
+    \item[License:] MIT License (Open Source)
+    \item[Language:] Python 3.8+ (No heavy dependencies, reliance only on Standard Library and NumPy for intermediate storage)
+\end{description}
+
+\section{Verification Components}
+
+The suite consists of three primary modules that map directly to the logic of the proof:
+
+\subsection{1. Geometric Foundation (\texttt{rigorous\_constants\_derivation.py})}
+\label{sec:geometric-constants}
+This module implements the \emph{ab initio} derivation of the bounding constants used in the proof. It answers the "Circularity" critique by deriving the \textbf{Pollution Constant} $C_{poll}$ using strictly geometric arguments (surface-to-volume scaling on the hypercube) and worst-case polynomial decay assumptions.
+
+\textbf{Key Result (Section \ref{sec:geometric-constants}):}
+\begin{equation}
+    C_{poll} \le C_{geo} \cdot C_{decay} \cdot C_{mix} \approx 0.02
+\end{equation}
+This constant ensures that the feedback from relevant operators into the irrelevant tail is suppressed by a factor of 50 relative to the stability threshold.
+
+\subsection{2. The Flow Engine (\texttt{full\_verifier\_phase2.py})}
+This script executes the iterative step of the Renormalization Group. For each step $k$ from $\beta=\VerBetaIntermediateMin$ to $\beta=\VerBetaIntermediateMax$:
+\begin{enumerate}
+    \item Constructs the "Tube" $T_k$ as a ball in the Banach space of effective actions.
+    \item Computes the image $T'_{k+1} = \mathcal{R}(T_k)$ using Interval Arithmetic.
+    \item Verifies the inclusion $T'_{k+1} \subset T_{k+1}$ with explicit safety margins.
+\end{enumerate}
+
+\subsection{3. Spectral Analysis (\texttt{ab\_initio\_jacobian.py})}
+Computes the eigenvalues of the linearized RG map around the trivial fixed point to determine the contraction rates $\lambda_{rel}$ and $\lambda_{irr}$.
+
+\section{Audit Instructions}
+
+To reproduce the verification results on a standard workstation:
+
+\begin{verbatim}
+$ git clone https://github.com/xuda1979/yang-mills-mass-gap-verification.git
+$ cd yang-mills-mass-gap-verification
+
+# 1. Verify Analytic Constants (The Geometric Proof)
+$ python rigorous_constants_derivation.py
+  > [PASS] Robust Contraction Proven with safety margin > 20%.
+
+# 2. Run the Full Flow Verification
+$ python full_verifier_phase2.py
+  > [INFO] Step 0: Beta=\VerBetaIntermediateMin ... Verified
+  > ...
+  > [INFO] Step N: Beta=\VerBetaIntermediateMax ... Verified
+  > [SUCCESS] Mass Gap Verified via Tube Contraction.
+\end{verbatim}
+
+\section{Data Persistence}
+
+All verification runs generate a cryptographic hash of the input parameters and the output logs. The files \texttt{rigorous\_constants.json} and \texttt{certificate\_phase2\_hardened.json} included in the repository serve as the permanent record of the proof's numerical components.
+

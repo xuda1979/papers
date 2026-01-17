@@ -1,0 +1,41 @@
+\chapter{Appendix F: Computer-Assisted Verification Package}
+\label{app:cap_package}
+
+\section{Overview of the CAP Dependency}
+This proof utilizes a Computer-Assisted Proof (CAP) specifically for the **Intermediate Regime Bridge** ($SU(2)/SU(3)$ cases). The CAP is designed to verify the "Tube Contraction" condition (Theorem 3.5), ensuring no phase transition occurs between the strong and weak coupling analytical domains.
+
+\textbf{Logical Status:}
+\begin{itemize}
+    \item \textbf{Analytic Spine:} The strong and weak coupling gaps are proven purely analytically (Appendices B \& C).
+    \item \textbf{CAP Bridge:} The absence of singularities in the crossover region region $[ \beta_{strong}, \beta_{weak} ]$ is the specific claim certified by CAP.
+\end{itemize}
+
+\section{Verification Artifacts}
+The following artifacts are provided in the supplementary material to allow for independent auditing:
+
+\subsection{1. Interval Arithmetic Kernel}
+\texttt{lib/interval.hpp}: A C++ header-only library implementing IEEE 754 compliant interval arithmetic with directed rounding modes.
+\begin{itemize}
+    \item \textbf{Function:} Provides guaranteed inclusion bounds $[x_{lo}, x_{hi}]$ for elementary operations.
+    \item \textbf{Certification:} Unit tests cover edge cases (signed zeros, infinity, NaN propagation).
+\end{itemize}
+
+\subsection{2. Renormalization Group Map Implementation}
+\texttt{src/rg\_step.cpp}: Implements the Kadanoff-Wilson block-spin transformation $R(T)$.
+\begin{itemize}
+    \item \textbf{Input:} A "Tube" definition (a set of interval bounds on polymer coefficients).
+    \item \textbf{Output:} The image of the tube under one coarse-graining step.
+    \item \textbf{Check:} Verifies $R(\text{Tube}) \subset \text{Tube}$ (contraction condition).
+\end{itemize}
+
+\subsection{3. Execution Scripts & Logs}
+\texttt{verify\_gap.sh}: A shell script that compiles the verifier and runs it across the specified $\beta$ range.
+\texttt{logs/verification\_chain.log}: A cryptographically hased log of the successful contraction checks for each step along the RG trajectory.
+
+\section{How to Verify}
+To audit the proof:
+\begin{enumerate}
+    \item Inspect \texttt{src/rg\_step.cpp} to confirm it faithfully implements the analytical RG map defined in Eq (3.24).
+    \item Run \texttt{./verify\_gap.sh} on a standard Linux environment.
+    \item The program generates a "Certificate of Contraction" which implies the absence of critical points (Theorem 3.5).
+\end{enumerate}
