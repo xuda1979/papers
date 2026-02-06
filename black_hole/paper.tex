@@ -166,7 +166,7 @@
 
 % Inline dataset loader toggle (set \hmcloadexternaldatatrue to prefer external .dat files)
 \newif\ifhmcloadexternaldata
-\hmcloadexternaldatafalse
+\hmcloadexternaldatatrue
 \newcommand{\hmcloaddataset}[3]{%
   \ifhmcloadexternaldata
     \IfFileExists{#1}{%
@@ -200,7 +200,7 @@ time mean_S std_S upper_S lower_S ideal_page hawking bh_entropy
 12.00 0.00 0.00 0.00 0.00 0.00 12.00 0.00
 }\datatablePagecurve
 }
-\hmcloaddataset{datatablePagecurve.dat}{\datatablePagecurve}{\hmcinlinePagecurve}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % g2 sidebands (v5)
 \newcommand{\hmcinlineGtwo}{%
@@ -224,7 +224,7 @@ delta mean_g2 ci_low ci_high
 15.0000 0.9999 0.9994 1.0004
 }\datatableGtwo
 }
-\hmcloaddataset{datatableGtwo.dat}{\datatableGtwo}{\hmcinlineGtwo}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % Ablation (v5)
 \newcommand{\hmcinlineAblation}{%
@@ -238,7 +238,7 @@ strong-eps 1.00 1.00 0.20 0.01 0.11 6 0.201
 gentle-eps 1.00 1.00 0.04 0.01 0.11 6 0.041
 }\datatableAblation
 }
-\hmcloaddataset{datatableAblation.dat}{\datatableAblation}{\hmcinlineAblation}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 \newcommand{\hmcinlineAblationSig}{%
 \pgfplotstableread[col sep=space]{
@@ -255,7 +255,7 @@ gentle-eps rmse_page 0.00 0.9997 1.0000 0.00
 gentle-eps max_g2_amp -88.00 0.0000 0.0000 -12.44
 }\datatableAblationSig
 }
-\hmcloaddataset{datatableAblationSig.dat}{\datatableAblationSig}{\hmcinlineAblationSig}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % Exact comb (v5)
 \newcommand{\hmcinlineExactComb}{%
@@ -272,7 +272,7 @@ time mean_S std_S upper_S lower_S
 8.00 7.89 0.04 7.93 7.84
 }\datatableExactComb
 }
-\hmcloaddataset{datatableExactComb.dat}{\datatableExactComb}{\hmcinlineExactComb}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % PT-MPO Page curve (v5 simulation output)
 \newcommand{\hmcinlinePTMPO}{%
@@ -301,7 +301,7 @@ time mean_S std_S upper_S lower_S ideal_page
 20.00 0.05 0.05 0.10 0.00 0.00
 }\datatablePTMPO
 }
-\hmcloaddataset{datatablePTMPO.dat}{\datatablePTMPO}{\hmcinlinePTMPO}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % PT-MPO scaling data (v5 simulation output)
 \newcommand{\hmcinlinePTMPOscaling}{%
@@ -313,7 +313,7 @@ chi r L T runtime_s mem_GB nRMSE_Page
 256 8 64 128 7680 32.0 0.08
 }\datatablePTMPOscaling
 }
-\hmcloaddataset{datatablePTMPOscaling.dat}{\datatablePTMPOscaling}{\hmcinlinePTMPOscaling}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % PT-MPO error convergence (v5 simulation output)
 \newcommand{\hmcinlinePTMPOerror}{%
@@ -325,7 +325,7 @@ chi rmse rmse_err
 256 0.08 0.005
 }\datatablePTMPOerror
 }
-\hmcloaddataset{datatablePTMPOerror.dat}{\datatablePTMPOerror}{\hmcinlinePTMPOerror}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % K-fold CV (v5)
 \newcommand{\hmcinlineCVsummary}{%
@@ -338,7 +338,7 @@ fold rmse_mean rmse_std n_runs
 5 0.11 0.03 20
 }\datatableCVsummary
 }
-\hmcloaddataset{datatableCVsummary.dat}{\datatableCVsummary}{\hmcinlineCVsummary}
+% Dataset load is deferred until \AtBeginDocument (see below).
 
 % QEC repetition-code fidelity (v5)
 \newcommand{\hmcinlineQEC}{%
@@ -356,7 +356,22 @@ rho p F_mean F_std
 0.8 0.10 0.9069 0.0013
 }\datatableQEC
 }
-\hmcloaddataset{datatableQEC.dat}{\datatableQEC}{\hmcinlineQEC}
+% Dataset load is deferred until \AtBeginDocument (see below).
+
+% MiKTeX/pgfplotstable can error if \pgfplotstableread runs in the preamble.
+% Defer all dataset reads until after \begin{document}.
+\AtBeginDocument{%
+  \hmcloaddataset{datatablePagecurve.dat}{\datatablePagecurve}{\hmcinlinePagecurve}%
+  \hmcloaddataset{datatableGtwo.dat}{\datatableGtwo}{\hmcinlineGtwo}%
+  \hmcloaddataset{datatableAblation.dat}{\datatableAblation}{\hmcinlineAblation}%
+  \hmcloaddataset{datatableAblationSig.dat}{\datatableAblationSig}{\hmcinlineAblationSig}%
+  \hmcloaddataset{datatableExactComb.dat}{\datatableExactComb}{\hmcinlineExactComb}%
+  \hmcloaddataset{datatablePTMPO.dat}{\datatablePTMPO}{\hmcinlinePTMPO}%
+  \hmcloaddataset{datatablePTMPOscaling.dat}{\datatablePTMPOscaling}{\hmcinlinePTMPOscaling}%
+  \hmcloaddataset{datatablePTMPOerror.dat}{\datatablePTMPOerror}{\hmcinlinePTMPOerror}%
+  \hmcloaddataset{datatableCVsummary.dat}{\datatableCVsummary}{\hmcinlineCVsummary}%
+  \hmcloaddataset{datatableQEC.dat}{\datatableQEC}{\hmcinlineQEC}%
+}
 
 %\arxivnumber{1234.56789} % if you have one
 
@@ -533,12 +548,12 @@ This paper makes the following contributions:
 \(S_{\mathrm{BH}}(u_n)\) & Bekenstein--Hawking entropy at retarded time \(u_n\). \(A(u)/(4G\hbar)\). \\
 \(\dmem(u_n)\) & Effective memory dimension, \(e^{S_{\mathrm{BH}}(u_n)}\). \\
 \(U_n\), \(\Upsilon_{n{:}0}\) & Local isometry at step \(n\); multi-time process tensor (Choi state of the comb). \\
-\(\ellmem\), \(\taumem\) & Spatial memory length scale; Temporal memory time scale. \\
+\(\ellmem\), \(\taumem\) & Memory depth (number of steps); memory correlation time. \\
 \(\Irate\), \(\Eflux\) & Information release rate; Energy flux at ${\mathcal I}^+$. \\
 \(\Ddiamond{\cdot}\) & Diamond norm (channel/process distance). \\
 \(\ell_{\rm mem}\), \(t_{\rm scr}\) & Memory depth (temporal correlation length); scrambling time. \\
 Logs & Natural logarithms unless noted. \\
-Units & \(c=k_B=1\). $\hbar=1$ (Planck units) unless explicit. \\
+Units & \(G=\hbar=c=k_B=1\) unless stated otherwise. \\
 Asymptotics & \(O(\cdot)\) hides constants independent of \(S_{\mathrm{BH}}\). \\
 \bottomrule
 \end{tabularx}
@@ -809,10 +824,10 @@ The cumulative radiation is $O_{\le n}=\bigotimes_{k=1}^n O_k$.
 \begin{remark}[Energy Balance, Observability, and the Role of $E_n$]\label{rem:entropy_target_E_n}
 The Page curve tracks the entanglement entropy of the \emph{total} accumulated outgoing system, $S(O_{\le n})$. The auxiliary system $E_n$ is mathematically essential for maintaining global unitarity (P1) via Stinespring dilation; it carries away the entropy associated with the shrinking memory dimension (P4).
 
-\textbf{Energy Balance and Observability:} Physically, $E_n$ may correspond to soft radiation or leakage of gravitational edge modes. As detailed below (Sec 2.4, bookkeeping), $E_n$ carries energy $\langle \omega_{E_{n}}\rangle$ required to balance the entropy reduction (P4). If $E_n$ is unobservable astrophysically (merging into the unresolved background), this energy contributes to the total ADM mass loss but is not typically accounted for in the detectable spectrum $R_n$. $R_{\le n}$ (the primary Hawking flux) remains the accessible observable.
+\textbf{Energy Balance and Observability:} Physically, $E_n$ may correspond to soft radiation or leakage of gravitational edge modes. As detailed below in the bookkeeping ledger, $E_n$ carries energy $\langle \omega_{E_{n}}\rangle$ required to balance the entropy reduction (P4). If $E_n$ is unobservable astrophysically (merging into the unresolved background), this energy contributes to the total ADM mass loss but is not typically accounted for in the detectable spectrum $R_n$. $R_{\le n}$ (the primary Hawking flux) remains the accessible observable.
 
 \textbf{Implications for the Page Curve:} Our Page-curve theorems (\Cref{thm:comb-page}) rigorously apply to $S(O_{\le n})=S(R_{\le n}E_{\le n})$. The decoupling bounds derived from scrambling (P2/P2$'$) ensure that the information is transferred coherently into the combined system $O_n$. Assuming the split between $R_n$ and $E_n$ does not hide significant entanglement (consistent with the 2-design behavior), the entropy $S(R_{\le n})$ of the \emph{detectable} radiation alone will still follow the Page curve behavior up to the error terms derived in \Cref{lem:comb-error-budget}.
-\ Specifically, the 2-design behavior implies that the mutual information $I(R_n:E_n)$ is typically small, ensuring the operational Page curve $S(R_{\le n})$ tracks the theoretical one $S(O_{\le n})$.
+Specifically, the 2-design behavior implies that the mutual information $I(R_n:E_n)$ is typically small, ensuring the operational Page curve $S(R_{\le n})$ tracks the theoretical one $S(O_{\le n})$.
 \end{remark}
 
 \paragraph{A Toy Example: 3-Qubit Memory Comb.}
@@ -920,7 +935,7 @@ Equivalently, this bounds the trace distance between the coarse-grained output s
         \item \textbf{Parameters:} Depend on surface gravity ($\kappa$), correlation length ($\xi$), and butterfly velocity ($v_B$).
     \end{itemize}
     \item \textbf{Implication Map:}
-    A1--A4 (Semiclassical regime, operator growth (A2), thermal mixing (A3)) + Holographic Conjectures (Sec 4) $\stackrel{\text{\Cref{sec:EH-to-design}}}{\Longrightarrow}$ P2$'$ (Weak Scrambling). If additional spectral/mixing gaps hold $\Rightarrow$ P2 (Strong Scrambling).
+    A1--A4 (Semiclassical regime, operator growth (A2), thermal mixing (A3)) + holographic conjectures C1--C3 (\Cref{sec:EH-to-design}) $\Longrightarrow$ P2$'$ (Weak Scrambling). If additional spectral/mixing gaps hold $\Rightarrow$ P2 (Strong Scrambling).
 \end{itemize}
 \end{minipage}}
 \end{center}
@@ -1387,7 +1402,7 @@ The non-Markovian memory kernel introduces small, $O(1/S_{\rm BH})$ corrections 
 % [REV:label-out-of-title] moved label out of title for cleveref
 \label{sec:EH-to-design}
 
-This section fills the gap identified earlier by rigorously upgrading the heuristic coarse-graining hypothesis to a theorem.  We first fix the setting and the coarse-graining map, then bound the second-frame potential of the resulting ensemble using: (i) the MSS chaos bound and shockwave analysis in 4D EH gravity, (ii) the ETH ansatz in the microcanonical window, and (iii) late-time spectral correlations (ramp) computed by a semiclassical gravitational saddle.  The Roberts--Yoshida identity then converts this bound into quantitative closeness to a Haar $2$-design \cite{RobertsYoshida2017}.  Throughout, ``rigorous'' means that {\em conditional} on clearly stated hypotheses A1--A3 below, all steps are mathematical implications with explicit constants.
+This section fills the gap identified earlier by rigorously upgrading the heuristic coarse-graining hypothesis to a theorem.  We first fix the setting and the coarse-graining map, then bound the second-frame potential of the resulting ensemble using: (i) the MSS chaos bound and shockwave analysis in 4D EH gravity, (ii) the ETH ansatz in the microcanonical window, and (iii) late-time spectral correlations (ramp) computed by a semiclassical gravitational saddle.  The Roberts--Yoshida identity then converts this bound into quantitative closeness to a Haar $2$-design \cite{RobertsYoshida2017}.  Throughout, ``rigorous'' means that {\em conditional} on clearly stated hypotheses C1--C3 below, all steps are mathematical implications with explicit constants.
 
 \subsection*{Setting and coarse-graining}
 
@@ -1517,9 +1532,9 @@ for some $C,\gamma>0$ independent of $S_{\mathrm{BH}},T,N,k,\ell$.  In particula
 \end{theorem}
 \paragraph{Sanity-check numerics (linking to $\ell_{\rm mem},\tau_{\rm mem}$).}
 Theorem~\ref{thm:EH-2design} predicts that (i) the frame-potential deficit decays as $\propto e^{-T/t_{\rm mix}}$ with $t_{\rm mix}=O(\tau_{\rm mem})$, and (ii) locality errors collapse once $\ell\gtrsim\ell_{\rm mem}$.
-Both behaviors appear in our ablations: see \S\ref{subsec:adversarial} and \S\,`Ablation Studies and Robustness', and the data tables
-	exttt{datatableAblation.dat}, \texttt{datatablePTMPOscaling.dat}, and \texttt{datatableGtwo.dat} documented in \Cref{app:data}.
-For convenience, the scripts \texttt{run\_ablation\_suite.py} and \texttt{generate\_page\_curve.py} regenerate the key sweeps;
+Both behaviors appear in our ablations: see \Cref{subsec:adversarial,subsec:ablation} and the data tables
+\texttt{datatableAblation.dat}, \texttt{datatablePTMPOscaling.dat}, and \texttt{datatableGtwo.dat} documented in \Cref{app:data}.
+For convenience, the helper scripts \texttt{extract_inline_datasets.py} and \texttt{code/generate_reports.py} regenerate the packaged datasets and diagnostic figures;
 checksums are listed in \Cref{app:code,app:data}.
 \begin{proof}[Proof of Theorem~\ref{thm:EH-2design}]
 \emph{Step 1 (Setup).} Fix the coarse-graining parameters from Definition~\ref{def:CG}. Let $\mathcal{H}_\Delta$
@@ -1651,8 +1666,8 @@ The finite memory structure arises because the kernels (\eg, \eqref{eq:kernel_sc
 &\qquad\qquad +\, \alpha_\ell\,\ln\!\frac{\omega+i0^+}{\kappa}\ +\ i\,\pi\,\tanh\!\frac{\beta\omega}{2}\Bigg\}\ +\ O\!\Big(S_{\rm BH}^{-2}\Big).
 \label{eq:kernel_4d}
 \end{align}
-This extrapolation relies on the assumption that the low-frequency Schwarzian structure, derived near extremality, is universal even away from extremality. Uncertainties in this extrapolation primarily affect the high-frequency behavior and the precise values of the greybody factors $\Gamma_\ell(\omega)$. While the qualitative features of the memory kernel are expected to be robust, these uncertainties motivate empirical validation via kernel tomography (Sec 4.8).
-This result incorporates the essential Schwarzian structure while adding realistic 4D effects, providing a concrete target for experimental searches (Section \ref{sec:predictions}). We further anchor these kernels in UV models below.
+This extrapolation relies on the assumption that the low-frequency Schwarzian structure, derived near extremality, is universal even away from extremality. Uncertainties in this extrapolation primarily affect the high-frequency behavior and the precise values of the greybody factors $\Gamma_\ell(\omega)$. While the qualitative features of the memory kernel are expected to be robust, these uncertainties motivate empirical validation via kernel tomography (\Cref{subsec:kernel_tomography}).
+This result incorporates the essential Schwarzian structure while adding realistic 4D effects, providing a concrete target for experimental searches (\Cref{sec:predictions}). We further anchor these kernels in UV models below.
 
 \paragraph{Regime of Validity, Locality, and UV Sensitivity.}
 These kernels are derived in the semiclassical regime ($S_{\rm BH} \gg 1$) and low-energy effective theory ($\omega \ll M_p$). They are spatially local (acting at the stretched horizon) but temporally non-local (retarded memory over time $\tau_{\rm mem} \sim \beta \log S_{\rm BH}$). The $O(1/S_{\rm BH})$ suppression is robust in this regime. Crucially, the kernels satisfy the Fluctuation-Dissipation Theorem (\cref{sec:influence}), ensuring thermal stability and preventing secular growth in the linear response. While the precise high-frequency behavior depends on the UV completion (encoded in the spectral density $\mathcal{J}_\ell(\omega)$ in \cref{ssec:uv-anchor}), the low-frequency Schwarzian structure is expected to be universal.
@@ -1828,7 +1843,7 @@ We replace the ``minimal single-cut proxy'' with a multi-cut estimator: sweep ov
 \paragraph{Scalable process-tensor MPO (PT-MPO)}
 We represent the non-Markovian \HMC{} as a process tensor $\Upsilon$ with finite memory length $\ell_{\rm mem}$ and compress it as an MPO of bond dimension $D_{\Upsilon}=O(d^{\ell_{\rm mem}})$ using local purification. Time evolution is performed by TEBD on the PT-MPO, contracting physical legs only when emissions occur.
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
 \caption{PT-TEBD for the Horizon Memory Comb.}
 \label{alg:ptmpo}
 \begin{algorithmic}[1]
@@ -2019,6 +2034,7 @@ A key prediction of the \HMC{} model is the existence of non-trivial temporal co
 Our primary endpoints are: (i) the RMSE between the radiation entropy and the Page curve envelope, and (ii) the amplitude (or integrated power) of the first nonzero sideband in $g^{(2)}(\Delta u)$ (or the corresponding ringdown feature). Unless stated otherwise we report point estimates with 95\% confidence intervals across independent runs. For between-setting comparisons we use Welch's unequal-variance t-tests; where appropriate we add standardized effect sizes (Cohen's $d$) with CIs. We avoid post-hoc endpoint selection; ablation sweeps are treated as exploratory and interpreted via effect sizes and uncertainty rather than binary significance thresholds. All random seeds, ensemble sizes, truncation thresholds, and convergence checks are recorded in \Cref{app:code}. Error bars in figures indicate 95\% confidence intervals unless noted in the caption.
 
 \subsection{Ablation Studies and Robustness}
+\label{subsec:ablation}
 \paragraph{On the ``generic scrambler'' assumption (P2)}
 Property P2 (derived from Axiom A3) states that each near-horizon step is an $\varepsilon_2$--approximate $2$--design.
 In the revised derivation the conditional EH-to-design result (Theorem~\ref{thm:EH-2design}) together with Theorem~\ref{thm:tdesign-grav} implies that by
@@ -2242,7 +2258,7 @@ Fix local physical dimension $d$, memory depth $\ell_{\rm mem}$, target bond $\c
   \item \emph{Late-time ringdown echoes} with delay fixed by the redshifted memory timescale and echo-to-main ratio set by \(\ellmem/R_s\).
 \end{enumerate}
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
 \caption{Echo-stacking protocol with nuisance controls}
 \label{alg:echo-stack}
 \begin{algorithmic}[1]
@@ -2267,7 +2283,7 @@ We formalize ``effective persistent excitation'' from quasinormal-mode (QNM) spe
 \begin{align}
 \mathcal{I}(K) \simeq \sum_{m} \frac{A_m^2}{\sigma^2}\,\frac{T_{\mathrm{obs}}}{1+(\omega_m\tau_{\rm mem})^{-2}},
 \end{align}
-implying a detection threshold on $\mathrm{SNR}$ for current ground-based detectors (assuming sufficient signal amplitude; see Sec 5.4).
+implying a detection threshold on $\mathrm{SNR}$ for current ground-based detectors (assuming sufficient signal amplitude; see \Cref{subsec:gw_ringdowns}).
 % Simulation notes and further details are provided in Appendix~\ref{app:gw-sim}.
 
 \paragraph{Analog Hawking Platforms (Controlled Inputs).}
@@ -2285,7 +2301,7 @@ The \HMC{} predicts three key observables:
 \item \emph{Multi-time witness operators $\mathbb{W}^{(k)}$} measure higher-order causal correlations across $k$ Hawking modes and break Markovian collapse, testable in quantum simulators implementing circuit-based black hole protocols.
 \item \emph{Recovery probes $\rho^{\rm rec}_{\rm early}$} obtained via optimal decoding channels test whether early radiation can be purified from late-time data once the Page time is passed.
 \end{enumerate}
-For gravitational-wave ringdowns, $g^{(2)}$ is replaced by \emph{causal sidebands in the phase-locked spectrum}; for tabletop analogue systems (BEC, water-wave, or fiber-loop blackholes), direct photon/phonon coincidence counting is possible.
+For gravitational-wave ringdowns, $g^{(2)}$ is replaced by \emph{causal sidebands in the phase-locked spectrum}; for tabletop analogue systems (BEC, water-wave, or fiber-loop black holes), direct photon/phonon coincidence counting is possible.
 
 \subsection{Analogue Hawking Platforms: Sensitivity and SNR}
 Analogue gravity systems, such as sonic black holes in Bose-Einstein condensates~\cite{Barcelo:2011, Steinhauer:2016}, provide a controlled laboratory environment to test the \HMC{}. Our model predicts deviations from perfect thermality in the form of $O(1/S_{\rm BH})$ sidebands in the two-point intensity correlator, $g^{(2)}(\Delta u)$. These sidebands should exhibit an oscillatory, decaying structure with a correlation time $\tau_{\rm mem}\sim \beta \log S_{\rm BH}$ and characteristic frequencies $\omega_{\rm mem}$ set by the poles of the memory kernel $\Xi^R(\omega)$ (Eqs.~\ref{eq:kernel_schwarzian}, \ref{eq:kernel_4d}).
@@ -2296,6 +2312,7 @@ The signal-to-noise ratio (SNR) for detecting these sidebands can be estimated. 
 In typical analogue systems (\eg, BECs~\cite{Steinhauer:2016}), the effective entropy is $S_{\rm BH}^{\rm eff} \sim 10^3$--$10^6$, yielding a predicted amplitude $\epsilon \sim 10^{-6}$--$10^{-3}$. The memory time $\tau_{\rm mem}$ depends on the effective temperature $T$ (controlled by the flow gradient, a proxy for surface gravity $\kappa$) and $S_{\rm BH}^{\rm eff}$. For $\tau_{\rm mem} \sim 10$ms and an experiment duration $T \sim 1$ hour, achieving ${\rm SNR} > 3$ requires $\epsilon \gtrsim 5\times 10^{-4}$ (with uncertainties dominated by systematic noise and finite sampling). Key experimental knobs include $T$, the detector bandwidth (to resolve $\omega_{\rm mem}$), and the sample size (requiring $N_{\rm samples} \gtrsim 10^6$ for sufficient $g^{(2)}$ statistics). While challenging, stacking data from multiple runs could elevate a weak signal to a statistically significant discovery.
 
 \subsection{Gravitational-wave Ringdowns: Causal Sidebands and Phase Coherence}
+\label{subsec:gw_ringdowns}
 The memory kernel can also leave an imprint on the gravitational waves emitted during a black hole merger ringdown. The stretched horizon, acting as a dissipative membrane with memory, can reprocess a fraction of the outgoing wave energy. Crucially, during the brief ringdown phase the black hole's memory is approximately constant (the horizon does not shrink significantly on ringdown timescales), so the memory acts as a static retarded filter. This leads to small, coherent, late-time phase modulations, or "soft echoes," which are distinct from the acausal echoes predicted by more exotic near-horizon structures~\cite{Cardoso:2016, Abedi:2017}.
 
 The key \HMC{} prediction is that these echoes are strictly causal and their spectral content is constrained by the same kernel $\Xi^R$ that unitarizes evaporation. This provides a powerful modeling tool. Instead of searching for generic echo templates, one can use waveform models that combine the standard quasi-normal modes (QNMs) with causal sidebands derived from our Schwarzian or membrane-paradigm kernels. This reduces the search space and connects the echo signature directly to the physics of information recovery. 
@@ -2403,7 +2420,7 @@ w_i \propto \int df\,\frac{|\mathcal{T}(f;\Omega_\ast)|^2}{S_i(f)},
 \end{equation}
 where $\mathcal{T}(f;\Omega_\ast)$ is the normalized Fourier transform of the comb template (derived from the memory kernel), and $w_i$ are inverse-noise-variance weights for each detector and event.
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
 \caption{Comb matched-filter search for \HMC{} echoes.}
 \label{alg:combfilter}
 \begin{algorithmic}[1]
@@ -2490,6 +2507,7 @@ N \;\gtrsim\; \frac{25}{\bar{\rho}^2\,\alpha^2}\; S_{\rm BH}^2,
 which is prohibitive for stellar-mass BHs with current detectors but could become feasible for intermediate-mass black holes with next-generation detectors like the Einstein Telescope or Cosmic Explorer. Analogue platforms, with their much smaller effective $S_{\rm BH}$, offer a more promising near-term path to detection.
 
 \subsection{Kernel Tomography Under Physical Constraints}
+\label{subsec:kernel_tomography}
 If future observations provide both Page-like entropy curves (\eg, from non-dynamical island reconstructions) and measurements of temporal correlators like $g^{(2)}$, it may be possible to perform "kernel tomography." This involves using the data to reconstruct the memory kernel $\Xi^R(\omega)$ itself. This is a highly constrained inversion problem, as any viable kernel must satisfy the fundamental principles of causality (Kramers-Kronig relations) and thermal consistency (KMS/FDT).
 
 One could fit the data to different functional families of kernels, such as the Schwarzian-like model (\eqref{eq:kernel_schwarzian}) versus the 4D membrane-like model (\eqref{eq:kernel_4d}). Statistical model selection criteria like the Bayesian Information Criterion (BIC) or Akaike Information Criterion (AIC), combined with cross-validation on held-out data, could then be used to discriminate between these competing physical models for the horizon microdynamics.
@@ -2692,7 +2710,7 @@ Given a tomographic estimate of the reduced channel $\mathcal{N}_{R\to L}$ induc
 with $\sigma_R$ and $\sigma_L$ suitable reference marginals (\eg, Gibbs-like steady states induced by the comb).
 Averaging over $\theta$ (``twirled Petz'') yields state-independent performance and near-optimal fidelity in practice.
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
 \caption{QEC reconstruction for \HMC{} via rotated Petz.}
 \label{alg:rotated_petz_hmc}
 \begin{algorithmic}[1]
@@ -2715,7 +2733,7 @@ Our framework depends on assumptions that delimit its validity:
 \item \textbf{Coarse-graining and stationarity.} We assume piecewise-adiabatic evaporation within fixed windows; highly dynamical mergers or strong accretion require extensions.
 \item \textbf{Energy conditions.} The design argument uses averaged energy inequalities at the horizon; exotic violations may alter bounds (\cref{app:stress_tensor}).
 \item \textbf{Modeling choices.} Finite-memory truncations and PT-MPO compressions introduce controlled biases certified in \cref{sec:numerical_validation}.
-\item \textbf{Astrophysical systematics.} Echo/sideband searches face nontrivial backgrounds; our protocol includes stringent controls (Alg.~\ref{alg:echo-stack}) but targeted pipelines are needed.
+\item \textbf{Astrophysical systematics.} Echo/sideband searches face nontrivial backgrounds; our protocol includes stringent controls (App.~\ref{app:gw-sim}) but targeted pipelines are needed.
 \end{itemize}
 These limitations suggest clear empirical and theoretical next steps (see \cref{sec:conclusion}).
 
@@ -2988,7 +3006,7 @@ Decompose $\phi$ into right/left movers, solve via method of images, and impleme
 \mathcal{R}(\omega)\;=\;\frac{\lambda+i\omega\;-\;\Xi^R(\omega)}{\lambda-i\omega\;+\;\Xi^R(\omega)}\,,
 \qquad \Xi^R(\omega)\equiv \mathcal{F}\{\mathcal{K}\}(i\omega+0^+),
 \end{equation}
-where $\Xi^R$ is retarded and analytic in the upper-half plane, and $|\mathcal{R}(\omega)|\le 1$ is enforced by the KMS/positivity constraints on $\mathcal{K}$. The time-domain Green\'s functions are then computed using standard contour methods.
+where $\Xi^R$ is retarded and analytic in the upper-half plane, and $|\mathcal{R}(\omega)|\le 1$ is enforced by the KMS/positivity constraints on $\mathcal{K}$. The time-domain Green's functions are then computed using standard contour methods.
 
 \paragraph{Energy flux and particle spectrum}
 The renormalized flux at null infinity is
@@ -3002,7 +3020,7 @@ The intensity correlator $g^{(2)}(\Delta u)$ follows from the normally ordered f
 \begin{equation}
 \delta g^{(2)}(\Delta u)\;\propto\; \int_{0}^{\infty} \mathrm{d}\omega\;\left|\mathcal{R}(\omega)\right|^2\cos(\omega\Delta u)\,e^{-\Gamma(\omega)\Delta u},
 \end{equation}
-naturally producing a comb of oscillatory, exponentially decaying sidebands as in \cref{fig:g2}. Here $\Gamma(\omega)$ parameterizes any additional damping from the mirror\'s effective bath. This structure reproduces the \HMC{} prediction in an experimentally tunable platform.
+naturally producing a comb of oscillatory, exponentially decaying sidebands as in \cref{fig:g2}. Here $\Gamma(\omega)$ parameterizes any additional damping from the mirror's effective bath. This structure reproduces the \HMC{} prediction in an experimentally tunable platform.
 
 \paragraph{Experimental protocol}
 A concrete laboratory test proceeds in four stages:
@@ -3012,7 +3030,7 @@ A concrete laboratory test proceeds in four stages:
   \item Fit an ansatz $\Xi^R(\omega)=\sum_j \frac{g_j^2}{\omega-\Omega_j+i\Gamma_j}$ under positivity ($g_j^2\ge 0$) and KMS constraints (detailed balance) to the measured $g^{(2)}$ via a constrained maximum-likelihood estimator. Use cross-validation and AIC/BIC to prevent overfitting.
   \item Validate causality by Kramers--Kronig checks and by verifying the time-domain support ($\propto \Theta(u-u')$) of the reconstructed kernel. Perform injection tests using synthetic kernels to quantify bias and variance.
 \end{enumerate}
-Because analogue platforms can realize $S_{\rm BH}^{\rm eff}\sim 10^3$'?$10^6$, the $O(1/S)$ sidebands are experimentally accessible, providing a practical pathway for kernel tomography constrained by complete positivity (CP)/KMS/causality.
+Because analogue platforms can realize $S_{\rm BH}^{\rm eff}\sim 10^3\text{--}10^6$, the $O(1/S)$ sidebands are experimentally accessible, providing a practical pathway for kernel tomography constrained by complete positivity (CP)/KMS/causality.
 
 \paragraph{Systematics and robustness}
 Dominant systematics include detector dead time and non-stationarity of the background flow. These can be mitigated with interleaved calibration runs, block-bootstrap error bars, and null tests using off-target delays. The constrained fit and Kramers--Kronig validation together ensure the recovered kernel remains physical (complete positivity (CP) and causal).
@@ -3038,7 +3056,7 @@ Near-extremal black holes are described by JT gravity, with the boundary mode ca
 as in \eqref{eq:kernel_schwarzian}. The digamma functions encode the thermal pole structure consistent with KMS.
 
 \paragraph{Analyticity, causality, and Kramers--Kronig}
-The upper-half plane analyticity of $\Xi^R(\omega)$ implies the time-domain kernel $K(t)$ vanishes for $t<0$. The real and imaginary parts satisfy Kramers--Kronig relations. The fluctuation'?dissipation theorem fixes the symmetric noise kernel $N(\omega)$ once $\Im \Xi^R(\omega)$ is known, ensuring complete positivity of the reduced dynamics.
+The upper-half plane analyticity of $\Xi^R(\omega)$ implies the time-domain kernel $K(t)$ vanishes for $t<0$. The real and imaginary parts satisfy Kramers--Kronig relations. The fluctuation-dissipation theorem fixes the symmetric noise kernel $N(\omega)$ once $\Im \Xi^R(\omega)$ is known, ensuring complete positivity of the reduced dynamics.
 
 \paragraph{Low-frequency asymptotics}
 Expanding at small $\omega$,
@@ -3059,7 +3077,9 @@ The inverse transform $K(t)=\int \frac{d\omega}{2\pi}\,e^{-i\omega t}\Xi^R(\omeg
 \paragraph{Quickstart (regenerate all datasets)}
 \begin{verbatim}
 # Recreate all ASCII tables for PGFPlots and write checksum manifests.
-python3 simulation.py --s-initial 12 --steps 12 --num-runs 100 --g2-runs 200 --kfolds 5 --seed 42 --threads 1 --pythonhashseed 0 --save-ledger seed_ledger.json
+python3 simulation.py --s-initial 12 --steps 12 --num-runs 100 \
+  --g2-runs 200 --kfolds 5 --seed 42 --threads 1 \
+  --pythonhashseed 0 --save-ledger seed_ledger.json
 
 # Verify checksums (must print 'OK' for each file)
 sha256sum -c checksums.sha256.txt
@@ -3144,25 +3164,25 @@ sha256sum -c checksums_v5.txt
 
 \paragraph{Checksum Table (v5 datasets)}
 To ensure byte-identical reproduction of the datasets used in this manuscript, we provide the following SHA256 checksums:
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{SHA256 Checksums for key datasets (v5).}
 \label{tab:checksums}
-\footnotesize
-\begin{tabular}{ll}
+\scriptsize
+\begin{tabular}{@{}lp{40em}@{}}
 \toprule
 \textbf{Dataset} & \textbf{SHA256 Hash} \\
 \midrule
-datatableAblation.dat & 9fa7055e3a566dbd00ec0ab4efba56e7e3de8d64604ac304eb111ba16f7e2ebc \\
-datatableAblationSig.dat & 2af783261bdbed64102dd3f0143cfbc842fc024a32ab9aeb47136012f1029d87 \\
-datatableCVsummary.dat & 5cda6d08e4aab1a8bdc012f8c96c4c5d85eb428ce47071fe6b4e59f36af8637c \\
-datatableExactComb.dat & a71d0004e1621b6173a189706171a691f81e9ee997f8e56a20e418c785d9648f \\
-datatableGtwo.dat & 5a97d052c182b1a9a583c527e291ce3cbd52261e00fe6a916684cf4028d5a19e \\
-datatablePTMPO.dat & 70103ec26265f0dea58c900a9f7042a79a81fab45ce50c2c81b0de9b54ab9729 \\
-datatablePTMPOerror.dat & 2d2f18556ca8b7454f7fb787d6000808a745e32bf89b83bce6e38c5ba63f278b \\
-datatablePTMPOscaling.dat & 222574e45a4a4721f30f43e226c31ac9c0824871a5484a55c9055be6a1612537 \\
-datatablePagecurve.dat & 19f61e03c220ca4dba3e2e5ee3b1a5defc470ef2fc76bea945dfa6a7c4765007 \\
-datatableQEC.dat & e110c888caf200292e6b7ae2ee31e91a741fcfd03554c1137fa651bc29dada39 \\
+datatableAblation.dat & \texttt{9fa7055e3a566dbd00ec0ab4efba56e7e3de8d64604ac304eb111ba16f7e2ebc} \\
+datatableAblationSig.dat & \texttt{2af783261bdbed64102dd3f0143cfbc842fc024a32ab9aeb47136012f1029d87} \\
+datatableCVsummary.dat & \texttt{5cda6d08e4aab1a8bdc012f8c96c4c5d85eb428ce47071fe6b4e59f36af8637c} \\
+datatableExactComb.dat & \texttt{a71d0004e1621b6173a189706171a691f81e9ee997f8e56a20e418c785d9648f} \\
+datatableGtwo.dat & \texttt{5a97d052c182b1a9a583c527e291ce3cbd52261e00fe6a916684cf4028d5a19e} \\
+datatablePTMPO.dat & \texttt{70103ec26265f0dea58c900a9f7042a79a81fab45ce50c2c81b0de9b54ab9729} \\
+datatablePTMPOerror.dat & \texttt{2d2f18556ca8b7454f7fb787d6000808a745e32bf89b83bce6e38c5ba63f278b} \\
+datatablePTMPOscaling.dat & \texttt{222574e45a4a4721f30f43e226c31ac9c0824871a5484a55c9055be6a1612537} \\
+datatablePagecurve.dat & \texttt{19f61e03c220ca4dba3e2e5ee3b1a5defc470ef2fc76bea945dfa6a7c4765007} \\
+datatableQEC.dat & \texttt{e110c888caf200292e6b7ae2ee31e91a741fcfd03554c1137fa651bc29dada39} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3182,20 +3202,21 @@ For each figure/table we ship the exact ASCII table used by PGFPlots and report 
 \centering
 \caption{Data manifest: generated tables with SHA256 and size.}
 \label{tab:datamanifest}
-\begin{tabular}{lll}
+\scriptsize
+\begin{tabular}{@{}lp{42em}l@{}}
 \toprule
-File & SHA256 & Size (KB) \\
+File & SHA256 & Size \\
 \midrule
-datatableAblation.dat & 9fa7055e3a566dbd00ec0ab4efba56e7e3de8d64604ac304eb111ba16f7e2ebc & 0.3 \\
-datatableAblationSig.dat & 2af783261bdbed64102dd3f0143cfbc842fc024a32ab9aeb47136012f1029d87 & 0.5 \\
-datatableCVsummary.dat & 5cda6d08e4aab1a8bdc012f8c96c4c5d85eb428ce47071fe6b4e59f36af8637c & 0.1 \\
-datatableExactComb.dat & a71d0004e1621b6173a189706171a691f81e9ee997f8e56a20e418c785d9648f & 0.3 \\
-datatableGtwo.dat & 5a97d052c182b1a9a583c527e291ce3cbd52261e00fe6a916684cf4028d5a19e & 0.5 \\
-datatablePTMPO.dat & 70103ec26265f0dea58c900a9f7042a79a81fab45ce50c2c81b0de9b54ab9729 & 0.7 \\
-datatablePTMPOerror.dat & 2d2f18556ca8b7454f7fb787d6000808a745e32bf89b83bce6e38c5ba63f278b & 0.1 \\
-datatablePTMPOscaling.dat & 222574e45a4a4721f30f43e226c31ac9c0824871a5484a55c9055be6a1612537 & 0.1 \\
-datatablePagecurve.dat & 19f61e03c220ca4dba3e2e5ee3b1a5defc470ef2fc76bea945dfa6a7c4765007 & 0.6 \\
-datatableQEC.dat & e110c888caf200292e6b7ae2ee31e91a741fcfd03554c1137fa651bc29dada39 & 0.2 \\
+datatableAblation.dat & \texttt{9fa7055e3a566dbd00ec0ab4efba56e7e3de8d64604ac304eb111ba16f7e2ebc} & 0.3 \\
+datatableAblationSig.dat & \texttt{2af783261bdbed64102dd3f0143cfbc842fc024a32ab9aeb47136012f1029d87} & 0.5 \\
+datatableCVsummary.dat & \texttt{5cda6d08e4aab1a8bdc012f8c96c4c5d85eb428ce47071fe6b4e59f36af8637c} & 0.1 \\
+datatableExactComb.dat & \texttt{a71d0004e1621b6173a189706171a691f81e9ee997f8e56a20e418c785d9648f} & 0.3 \\
+datatableGtwo.dat & \texttt{5a97d052c182b1a9a583c527e291ce3cbd52261e00fe6a916684cf4028d5a19e} & 0.5 \\
+datatablePTMPO.dat & \texttt{70103ec26265f0dea58c900a9f7042a79a81fab45ce50c2c81b0de9b54ab9729} & 0.7 \\
+datatablePTMPOerror.dat & \texttt{2d2f18556ca8b7454f7fb787d6000808a745e32bf89b83bce6e38c5ba63f278b} & 0.1 \\
+datatablePTMPOscaling.dat & \texttt{222574e45a4a4721f30f43e226c31ac9c0824871a5484a55c9055be6a1612537} & 0.1 \\
+datatablePagecurve.dat & \texttt{19f61e03c220ca4dba3e2e5ee3b1a5defc470ef2fc76bea945dfa6a7c4765007} & 0.6 \\
+datatableQEC.dat & \texttt{e110c888caf200292e6b7ae2ee31e91a741fcfd03554c1137fa651bc29dada39} & 0.2 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3237,7 +3258,6 @@ $\lambda_L$ & Lyapunov exponent (chaos bound $2\pi T_H$) \\
 \end{longtable}
 
 \section{Appendix I: Operator-Algebra QEC for \HMC{} and a Recovery Theorem}
-\label{app:oa_qec}
 \label{app:oaqec}
 We briefly record an operator-algebra quantum error correction (OA-QEC) perspective on the \HMC{}.
 Let $\mathcal{A}_{\mathrm{int}}$ be the von Neumann algebra generated by interior observables that our comb assigns to a late-time slice.
@@ -3253,7 +3273,7 @@ We give a concrete approximate recovery map $\mathcal{R}$ onto the radiation alg
 \mathcal{R}_{\mathrm{TP}}(\cdot)=\int dU\, \mathcal{N}^\dagger\!\big(\sigma^{1/2} U^\dagger\, \mathcal{N}(\sigma^{-1/2} (\cdot) \sigma^{-1/2})\,U\,\sigma^{1/2}\big),
 \end{align}
 achieves diamond error $\varepsilon=O(e^{-\alpha \SBH})$ with $\alpha$ set by the scrambling gap and finite memory rank. 
-% (proof sketch in App.~\ref{app:oaqec}). (NOTE: Appendix missing)
+% (proof sketch below).
 
 In the \HMC{}, $\varepsilon$ can be chosen $O(e^{-\alpha S_{\rm BH}})$ once $|L|$ exceeds the (scrambling-modified) Page time, by a decoupling argument that uses the multi-time Choi state of the comb and strong data processing.
 A constructive choice is the rotated Petz map built from the late-radiation steady state, as in Algorithm~\ref{alg:rotated_petz_hmc}.
@@ -3283,7 +3303,7 @@ for universal constants $c_i$. Consequently,
 
 The proof follows the standard Hayden-Preskill argument~\cite{Hayden:2007} but replaces the Haar average by the approximate $2$--design. The key observation is that the second moment of the channel suffices to control the trace distance via the Fawzi-Renner entropic uncertainty relation. Locality enters through the exponential decay of correlations: operators supported outside the lightcone contribute at most $O(e^{-\ell_{\rm scr}/\xi})$ to the second moment. Energy conservation (controlled by $\varepsilon_{\rm spec}$) ensures that the single-step entropy production matches the thermal expectation, preventing runaway growth or depletion of $S(R_{\le n})$.
 
-\begin{proposition}[OTOC decay $\Rightarrow$ local $2$--design with constants]\label{prop:otoc_design_app}
+\begin{proposition}[OTOC decay $\Rightarrow$ local $2$--design with constants]\label{prop:otoc-design}
 Let $U(t)$ be generated by a local Hamiltonian with Lieb--Robinson velocity $v_{\rm LR}$ on a lattice, and let $X$ be a ball of radius $r$.
 Assume for all local $O_X$ and $O_Y$ separated by distance $d(X,Y)$ that the regulated OTOC obeys
 \[
@@ -3330,27 +3350,6 @@ where the second term accounts for the finite mixing time of the memory-lightcon
 % [REV:label-out-of-title] moved label out of title for cleveref
 \label{app:gw-sim}
 
-\section{Appendix L: EFT Matching and UV Completions}\label{app:new-physics-eft}
-
-\subsection{Tree-level matching examples}
-\paragraph{Heavy scalar.} Consider a neutral scalar $\varphi$ with
-\begin{equation}
-\mathcal{L}\supset -\frac{1}{2}(\partial\varphi)^2-\frac{1}{2}M^2\varphi^2+\frac{\alpha}{\Lambda}\,\varphi\,T^\mu{}_\mu\,.
-\end{equation}
-Integrating out $\varphi$ at tree level gives $\Delta\mathcal{L}_{\rm EFT}\sim +\frac{\alpha^2}{2\,\Lambda^2 M^2}(T^\mu{}_\mu)^2$, which fits the curvature-squared basis after using the semiclassical Einstein equation. Matching yields $c_i\sim \alpha^2(\Lambda M)^{-2}$ and hence $\epsilon_{\rm UV}\sim \alpha^2(\mathcal{E}/\Lambda)^2(M/\Lambda)^{-2}$.
-
-\paragraph{Heavy vector.} A $U(1)'$ boson $A'_\mu$ with mass $M'$ and coupling $g' J^\mu A'_\mu$ generates $(g'^2/M'^2)(J^\mu J_\mu)$ after integrating out $A'_\mu$. In the gravitational scattering regime this appears as an irrelevant contact deformation that corrects the eikonal kernel by $O(g'^2 \mathcal{E}^2/M'^2)$, again within the $\epsilon_{\rm UV}$ bookkeeping.
-
-\subsection{Comb distance bound: details}
-Let $\mathcal{C}_k$ be the $k$-round comb built from an isometric Stinespring representation of the Hawking map. If $\mathcal{N}_j$ and $\mathcal{N}'_j$ denote the $j^{\rm th}$ round channels in the EH and deformed theories, then
-\begin{equation}
-\big\|\mathcal{C}_k-\mathcal{C}_k'\big\|_\diamond \;\le\; \sum_{j=1}^k \big\|\mathcal{N}_j-\mathcal{N}'_j\big\|_\diamond \;\le\; 2\sum_{j=1}^k \big\|U_j-U'_j\big\|\,.
-\end{equation}
-Using the Duhamel estimate round-by-round and the energy-shell norm control discussed in Appendix~C gives \Cref{prop:robustness-uv}.
-
-\subsection{Higher-derivative gravity and the chaos bound}
-Curvature-squared terms shift the eikonal phase and scrambling rate by $O(\ell_\ast^2/L^2)$, with $L$ the near-horizon curvature radius and $\ell_\ast\sim \Lambda^{-1}$. Under standard analyticity/positivity conditions, these corrections cannot increase the Lyapunov exponent above $2\pi/\beta$, so the argument in Appendix~B that underlies \Cref{thm:EH-2design} is unaffected up to $\delta\to\delta'$.
-
 We outline the signal-processing pipeline for injecting and recovering memory sidebands in simulated gravitational-wave (GW) data, focusing on the coherent stacking of multi-merger events to boost SNR.
 
 \paragraph{Injection pipeline}
@@ -3372,6 +3371,28 @@ For $N_{\rm events}\sim 10^2$ and $\rho_i \sim 0.3$, the stacked SNR exceeds the
 We verify that off-source (time-shifted) data yields $\langle \rho_{\rm stack}^{\rm null}\rangle \approx 0$ with Gaussian fluctuations. Parameter-estimation biases induced by template mismatch are quantified via Fisher-matrix calculations and constrained by overlaps exceeding $0.97$. Residual instrumental glitches are vetoed using standard chi-squared and signal-consistency tests.
 
 This pipeline demonstrates that coherent multi-event stacking can elevate subdominant memory effects into the regime of statistical significance, provided the underlying kernel structure is informed by theoretical priors (\eg, from \HMC{} calculations).
+
+\section{Appendix L: EFT Matching and UV Completions}\label{app:new-physics-eft}
+
+\subsection{Tree-level matching examples}
+\paragraph{Heavy scalar.} Consider a neutral scalar $\varphi$ with
+\begin{equation}
+\mathcal{L}\supset -\frac{1}{2}(\partial\varphi)^2-\frac{1}{2}M^2\varphi^2+\frac{\alpha}{\Lambda}\,\varphi\,T^\mu{}_\mu\,.
+\end{equation}
+Integrating out $\varphi$ at tree level gives $\Delta\mathcal{L}_{\rm EFT}\sim +\frac{\alpha^2}{2\,\Lambda^2 M^2}(T^\mu{}_\mu)^2$, which fits the curvature-squared basis after using the semiclassical Einstein equation. Matching yields $c_i\sim \alpha^2(\Lambda M)^{-2}$ and hence $\epsilon_{\rm UV}\sim \alpha^2(\mathcal{E}/\Lambda)^2(M/\Lambda)^{-2}$.
+
+\paragraph{Heavy vector.} A $U(1)'$ boson $A'_\mu$ with mass $M'$ and coupling $g' J^\mu A'_\mu$ generates $(g'^2/M'^2)(J^\mu J_\mu)$ after integrating out $A'_\mu$. In the gravitational scattering regime this appears as an irrelevant contact deformation that corrects the eikonal kernel by $O(g'^2 \mathcal{E}^2/M'^2)$, again within the $\epsilon_{\rm UV}$ bookkeeping.
+
+\subsection{Comb distance bound: details}
+Let $\mathcal{C}_k$ be the $k$-round comb built from an isometric Stinespring representation of the Hawking map. If $\mathcal{N}_j$ and $\mathcal{N}'_j$ denote the $j^{\rm th}$ round channels in the EH and deformed theories, then
+\begin{equation}
+\big\|\mathcal{C}_k-\mathcal{C}_k'\big\|_\diamond \;\le\; \sum_{j=1}^k \big\|\mathcal{N}_j-\mathcal{N}'_j\big\|_\diamond \;\le\; 2\sum_{j=1}^k \big\|U_j-U'_j\big\|\,.
+\end{equation}
+Using the Duhamel estimate round-by-round and the energy-shell norm control discussed in Appendix~C gives \Cref{prop:robustness-uv}.
+
+\subsection{Higher-derivative gravity and the chaos bound}
+Curvature-squared terms shift the eikonal phase and scrambling rate by $O(\ell_\ast^2/L^2)$, with $L$ the near-horizon curvature radius and $\ell_\ast\sim \Lambda^{-1}$. Under standard analyticity/positivity conditions, these corrections cannot increase the Lyapunov exponent above $2\pi/\beta$, so the argument in Appendix~B that underlies \Cref{thm:EH-2design} is unaffected up to $\delta\to\delta'$.
+
 
 
 \acknowledgments

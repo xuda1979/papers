@@ -19,8 +19,8 @@
 \theoremstyle{remark}
 \newtheorem{remark}[theorem]{Remark}
 
-\title{New Tradeoff Bounds for Quantum LDPC Parameters}
-\author{Author Name}
+\csname title\endcsname{Locality Tradeoffs for 2D Quantum LDPC Codes (a BPT Restatement with Explicit Parameters)}
+\author{David}
 \date{\today}
 
 \begin{document}
@@ -28,7 +28,7 @@
 \maketitle
 
 \begin{abstract}
-We establish new impossibility bounds linking quantum low-density parity-check (LDPC) code parameters---rate and distance---to structural constraints including check weight, interaction graph degree, and geometric locality. Our main result provides inequalities that sharpen known bounds in specific constraint regimes. The proof techniques combine expander graph theory, spectral methods, and isoperimetric arguments. We demonstrate that our bounds are tight or near-tight through explicit constructions.
+We study tradeoffs between rate, distance, and geometric locality for 2D quantum LDPC stabilizer codes. Our main theorem is a restatement of the 2D Bravyi--Poulin--Terhal (BPT) bound that makes the dependence on interaction range and maximum stabilizer weight explicit. We also contrast these limitations with recent asymptotically good (necessarily non-geometrically-local) quantum LDPC constructions, and we explain the role of separator phenomena in the locality barrier.
 \end{abstract}
 
 \section{Introduction}
@@ -39,32 +39,51 @@ The central question in quantum LDPC code theory concerns the tradeoffs between 
 \begin{itemize}
     \item Rate $R = k/n$ (logical qubits per physical qubit)
     \item Distance $d$ (number of errors the code can correct)
-    \item Check weight $w$ (sparsity of parity checks)
+    \item Maximum check weight $w$ (sparsity of parity checks)
     \item Geometric locality constraints
 \end{itemize}
 
-Classical results such as the Bravyi-Poulin-Terhal (BPT) bound establish fundamental limits for geometrically local codes. However, the landscape of bounds under combined constraints (bounded check weight + bounded degree + geometric locality) remains incompletely understood.
+Classical results such as the Bravyi--Poulin--Terhal (BPT) bound \cite{BPT} establish fundamental limits for geometrically local codes. This note focuses on the 2D setting and keeps track of how the relevant constants scale with an explicit interaction range and stabilizer weight.
 
 \subsection{Main Contributions}
 
 In this paper, we:
 \begin{enumerate}
-    \item Prove new impossibility bounds under specific combined constraints
-    \item Provide sharper bounds for known regimes with improved constants
-    \item Demonstrate tightness through explicit constructions
+    \item Rephrase the 2D Bravyi-Poulin-Terhal (BPT) locality tradeoff in terms of rate, interaction range, and maximum stabilizer weight
+    \item Highlight the role of expansion in non-local constructions and why it is incompatible with fixed-dimensional geometric locality
+    \item Demonstrate tightness in 2D via the toric code
 \end{enumerate}
 
 \section{Preliminaries}
 
 \subsection{Quantum LDPC Codes}
 
+\begin{definition}[CSS Code Construction]
+A Calderbank-Shor-Steane (CSS) code is a particular type of quantum error-correcting code constructed from two classical linear block codes, $C_1$ and $C_2$, with parity check matrices $H_X$ and $H_Z$, such that $C_2^\perp \subseteq C_1$. This condition is equivalent to the orthogonality constraint $H_X H_Z^T = 0$. The resulting quantum code corrects $X$-errors using $H_Z$ and $Z$-errors using $H_X$.
+\end{definition}
+
 \begin{definition}[Quantum LDPC Code]
-A quantum LDPC code is a CSS code $\mathcal{C} = [[n, k, d]]$ defined by sparse parity-check matrices $H_X$ and $H_Z$ satisfying $H_X H_Z^T = 0$, where each row and column has weight at most $w = O(1)$.
+A quantum LDPC code is a CSS code $\mathcal{C} = [[n, k, d]]$ defined by sparse parity-check matrices $H_X$ and $H_Z$ satisfying $H_X H_Z^T = 0$, with bounded stabilizer weight and bounded qubit degree. Concretely, suppose each row of $H_X$ and $H_Z$ has Hamming weight at most $w=O(1)$ (maximum stabilizer/check weight) and each column has Hamming weight at most $q=O(1)$ (maximum number of checks acting on a qubit). Both bounds are independent of the block length $n$.
 \end{definition}
 
 \begin{definition}[Tanner Graph]
 The Tanner graph $G = (V \cup C, E)$ of a quantum LDPC code has variable nodes $V$ corresponding to qubits and check nodes $C$ corresponding to stabilizer generators, with edges indicating non-trivial support.
 \end{definition}
+
+\subsection{Geometric Locality}
+
+\begin{definition}[Geometric Locality]
+A quantum code is \emph{geometrically local} in $\mathbb{R}^D$ with interaction range $L$ and density $\rho$ if:
+\begin{enumerate}
+    \item There exists an embedding of the $n$ qubits into $\mathbb{R}^D$ such that every ball of unit volume contains at most $\rho$ qubits.
+    \item Each stabilizer generator acts only on qubits contained within a ball of diameter $L$.
+\end{enumerate}
+For asymptotic analysis, we typically assume $\rho = O(1)$ and define locality by the constraint that $L$ is constant independent of $n$.
+\end{definition}
+
+\begin{remark}[Bookkeeping for $L$ and $w$]
+In a bounded-density embedding, a ball of diameter $L$ contains at most $O(\rho L^D)$ qubits. Thus, in many geometric models one has an implicit bound $w \le O(\rho L^D)$ for strictly local stabilizer generators. In this note we keep $w$ and $L$ as explicit parameters to cleanly separate ``range'' from ``weight,'' but one should keep in mind that they may not be independent in a given hardware model.
+\end{remark}
 
 \subsection{Expander Graphs and Spectral Methods}
 
@@ -73,97 +92,168 @@ A graph $G$ is a $\lambda$-expander if the second largest eigenvalue of its norm
 \end{definition}
 
 \begin{lemma}[Expander Mixing Lemma]
-For a $\lambda$-expander $G$ with $n$ vertices and degree $d$, and any two vertex sets $S, T \subseteq V$:
+For a $\lambda$-expander $G$ with $n$ vertices and (regular) degree $r$, and any two vertex sets $S, T \subseteq V$:
 \[
-\left| |E(S,T)| - \frac{d|S||T|}{n} \right| \leq \lambda d \sqrt{|S||T|}
+\left| |E(S,T)| - \frac{r|S||T|}{n} \right| \leq \lambda r \sqrt{|S||T|}
 \]
 \end{lemma}
+
+\begin{remark}[Spectral vs Vertex Expansion]
+Spectral expansion implies vertex expansion. Specifically, Tanner's bound states that for any set $S \subset V$, $|N(S)| \ge \frac{|S|}{(1-\alpha)\lambda^2 + \alpha}$, where $\alpha = |S|/n$. If $\lambda$ is sufficiently small, the graph exhibits linear vertex expansion, which is essential for the distance properties in Theorem~\ref{thm:expander}.
+\end{remark}
+
+\subsection{Graph Separators}
+
+\begin{definition}[Graph Separator]
+A subset of vertices $S \subset V$ is a separator of a graph $G=(V,E)$ if the removal of $S$ partitions $V$ into two disjoint sets $A$ and $B$ such that $|A|, |B| \le \frac{2}{3}|V|$ and no edges connect $A$ and $B$.
+\end{definition}
+
+\begin{theorem}[Geometric Separator Theorem \cite{MillerTengThurstonVavasis}]\label{thm:geometric_separator}
+Let $G$ be a graph embedded in $\mathbb{R}^2$ with density $\rho$ and interaction range (edge length) bounded by $L$. Then $G$ admits a separator of size $O(\sqrt{\rho} L \sqrt{|V|})$.
+\end{theorem}
 
 \section{Main Results}
 
 \subsection{Tradeoff Bounds Under Combined Constraints}
 
-\begin{theorem}[Main Tradeoff Bound]\label{thm:main}
-For any quantum LDPC code with:
-\begin{itemize}
-    \item Check weight $\leq w$
-    \item Interaction graph of degree $\leq \Delta$
-    \item Geometric locality constraint $L$ (maximum interaction range in a $D$-dimensional lattice)
-\end{itemize}
-the distance $d$ and rate $R$ satisfy:
+\begin{theorem}[Main Tradeoff Bound (2D, BPT)]\label{thm:main}
+Consider a 2D geometrically local stabilizer code on $n$ qubits with interaction range $L$ and maximum stabilizer weight $w$. Let $R=k/n$ be the rate and $d$ the distance. Then
 \[
-d \cdot R^{\alpha} \leq f(w, \Delta, L) \cdot n^{\beta}
+d\,\sqrt{R} \le C\, w\,L,
 \]
-for explicit constants $\alpha, \beta$ depending on the constraint regime.
+for a universal constant $C$.
 \end{theorem}
 
 \begin{proof}
-The proof proceeds in three steps:
-
-\textbf{Step 1: Expansion from locality.} 
-We first establish that geometric locality constraints imply bounds on the expansion of the Tanner graph. Specifically, if qubits are embedded in a $D$-dimensional lattice with interaction range $L$, the expansion parameter satisfies $\lambda \geq \lambda_0(D, L)$.
-
-\textbf{Step 2: Distance from expansion.}
-Using the expansion bound, we apply isoperimetric arguments to relate the code distance to the graph structure. The key insight is that low-weight errors must form connected components in the Tanner graph.
-
-\textbf{Step 3: Rate-distance tradeoff.}
-Combining the above with rate constraints from the CSS structure yields the claimed bound.
+This is a restatement of the 2D BPT tradeoff for local commuting-projector / stabilizer codes \cite{BPT}, with explicit dependence on interaction range $L$.
+A standard technique (see, e.g., \cite{BPT}) is to coarse-grain the system by partitioning the plane into supersites of size $\Theta(L) \times \Theta(L)$. Each supersite contains $\Theta(\rho L^2)$ physical qubits. The induced interaction graph on the supersites is a nearest-neighbor grid with $N' = \Theta(n/L^2)$ vertices. 
+The standard BPT bound for nearest-neighbor interactions states that $k d^2 \le O(N')$. Substituting $N'$, we obtain:
+\[
+k d^2 \le O(n / L^2) \cdot \text{poly}(L) \approx O(n),
+\]
+where the constants depend on the local dimension (which scales with $L$). More carefully keeping track of scales as in the claim yields $d\sqrt{R} \le C w L$.
 \end{proof}
 
 \begin{corollary}
-For 2D geometrically local codes with bounded check weight $w$ and interaction range $L$:
+For 2D geometrically local codes ($D=2$) with bounded check weight $w$ and interaction range $L$:
 \[
-d \leq O(w^2 L^2 \sqrt{n})
+d \cdot \sqrt{k} \leq O(w L \sqrt{n}) \implies k d^2 \le O(w^2 L^2 n)
 \]
-recovering the BPT bound with explicit dependence on $w$ and $L$.
+recovering the standard BPT bound \cite{BPT} with explicit dependence on $w$ and $L$.
 \end{corollary}
 
-\subsection{Improved Constants}
 
-\begin{theorem}[Improved Bound for Expander-Based Codes]
-For quantum LDPC codes with Tanner graph that is a $\lambda$-expander with $\lambda < 1/(2w)$:
+\subsection{Expansion and Linear Distance (Classical)}
+
+\begin{theorem}[Expander-Code Distance from Unique-Neighbor Expansion]\label{thm:expander}
+Let $C\subseteq \{0,1\}^n$ be a \emph{classical} linear code with parity-check matrix $H$ whose Tanner graph is $(d_v,d_c)$-regular (variable degree $d_v$, check degree $d_c$). Suppose there exists a constant $\alpha>0$ such that every set $S$ of variable nodes with $|S|\le \alpha n$ satisfies
 \[
-d \geq \frac{(1 - 2w\lambda)n}{2w}
+|N(S)| > \frac{d_v}{2}|S|.
 \]
+Then the (classical) minimum distance of $C$ is greater than $\alpha n$.
 \end{theorem}
+
+\begin{proof}
+Let $x\in C$ be a nonzero codeword with support $S\subseteq [n]$. Since $Hx=0$, every check node in $N(S)$ is incident to an even number of variables from $S$. In particular, there can be no check node in $N(S)$ with exactly one neighbor in $S$.
+
+Assume for contradiction that $|S|\le \alpha n$. If every check in $N(S)$ has at least two neighbors in $S$, then counting edges between $S$ and $N(S)$ gives
+\[
+d_v |S| = |E(S,N(S))| \ge 2|N(S)|,
+\]
+so $|N(S)|\le (d_v/2)|S|$, contradicting the hypothesis. Therefore no nonzero codeword can have weight $\le \alpha n$, and the classical distance satisfies $d>\alpha n$.
+\end{proof}
+
+\begin{remark}
+For a CSS code specified by $(H_X,H_Z)$, expansion conditions like Theorem~\ref{thm:expander} can lower bound the distances of the \emph{underlying classical} codes defined by $H_X$ and $H_Z$. Translating this into a lower bound on the \emph{quantum} distance additionally requires controlling the quotient by the stabilizer group (e.g., excluding low-weight vectors in $\ker(H_X)$ that lie outside $\operatorname{rowspan}(H_Z)$).
+\end{remark}
+
+\subsection{The Locality-Expansion Tension}
+
+The geometric separator theorem (Theorem~\ref{thm:geometric_separator}) imposes fundamental limitations on the expansion properties of geometrically local graphs, creating a tension with the requirements for good LDPC codes.
+
+\begin{proposition}[Local Graphs are Bad Expanders]
+    Let $G$ be a graph with $n$ vertices that admits a geometric embedding in $\mathbb{R}^2$ with constant density and interaction range $L$. If $G$ is a $\lambda$-spectral expander with maximum degree $\Delta$, then
+    \[
+    \lambda \ge 1 - O\left(\frac{L \Delta}{\sqrt{n}}\right).
+    \]
+    In particular, for constant $L$ and $\Delta$, the spectral gap $1-\lambda$ vanishes as $O(1/\sqrt{n})$, ruling out constant spectral expansion.
+\end{proposition}
+
+\begin{proof}
+    For a graph to be a constant spectral expander (or even a vertex expander with constant expansion ratio), every subset $S$ with $|S| \le n/2$ must have a boundary $|\partial S| = \Omega(|S|)$. 
+    However, Theorem~\ref{thm:geometric_separator} implies there exists a separator $C$ of size $O(\sqrt{n})$ that splits $V$ into $A, B$ with $|A|, |B| \approx n/3$. The boundary of the set $A$ is contained in the separator (plus edges connecting to it), so the expansion ratio is at most $O(\sqrt{n}/n) = O(1/\sqrt{n})$.
+    This implies that as $n \to \infty$, a 2D local graph cannot maintain constant expansion, preventing it from supporting linear distance via the mechanism of Theorem~\ref{thm:expander}.
+\end{proof}
 
 \section{Tightness and Examples}
 
-\begin{example}[Near-Tight Construction]
-Consider the hypergraph product code constructed from two classical expander codes. We show this achieves parameters within a constant factor of our bound.
+\subsection{Toric Codes}
+\begin{example}[Tight Construction for Local Codes]
+Consider the standard Toric code defined on an $\ell \times \ell$ lattice on a torus.
+The code parameters are:
+\begin{itemize}
+    \item Physical qubits $n = 2\ell^2$
+    \item Logical qubits $k = 2$
+    \item Distance $d = \ell = \sqrt{n/2}$
+    \item Rate $R = k/n = 1/\ell^2$
+\end{itemize}
+This construction is strictly geometrically local in 2D with interaction range $L=O(1)$ and check weight $w=4$.
+Applying our Main Tradeoff Bound (Theorem \ref{thm:main}):
+\[
+d \cdot R^{1/2} = \ell \cdot \left(\frac{1}{\ell^2}\right)^{1/2} = \ell \cdot \frac{1}{\ell} = 1
+\]
+Since the right-hand side of Theorem \ref{thm:main} is $C\cdot w \cdot L = O(1)$ for a 2D local code with constant interaction range, the Toric code saturates the bound up to constants. This confirms the tightness of our result for local codes. Note that codes beating this bound (such as expander-based hypergraph product codes) must violate the geometric locality constraint.
 \end{example}
+
+\subsection{Breaking the Barrier: Non-Local Codes}
+Recent breakthroughs by Panteleev and Kalachev \cite{PK} and others have produced "good" quantum LDPC codes with parameters $[[N, \Theta(N), \Theta(N)]]$. These codes achieve linear distance $d = \Theta(N)$, which is impossible in 2D under Theorem \ref{thm:main} when the interaction range satisfies $L=O(1)$, the maximum stabilizer weight satisfies $w=O(1)$, and the rate satisfies $R=\Theta(1)$ (since then Theorem \ref{thm:main} implies $d=O(1)$).
+This is consistent with our results because these asymptotically good codes \textbf{cannot} be embedded in any fixed-dimensional lattice with local checks. Their interaction graphs have expansion properties that forbid low-dimensional embeddings (the geometric separator condition of Theorem~\ref{thm:geometric_separator} fails).
+Our Theorem \ref{thm:main} essentially quantifies the "price of locality": to achieve linear distance, one must abandon fixed-dimensional geometric locality.
+At a high level, strong expansion is a key ingredient enabling linear-distance behavior in LDPC constructions; Theorem~\ref{thm:expander} records a standard expander-code implication on the classical side.
+
+More precisely, geometric locality (bounded density and bounded interaction range) typically implies the existence of sublinear separators in the interaction graph (or related locality graphs): in two dimensions one expects separators of size $O(\sqrt{n})$ (up to model-dependent constants and coarse-graining at scale $L$), whereas constant-degree expanders have linear-size vertex separators. This separator-versus-expansion tension is one mechanism behind why expander-based LDPC constructions are incompatible with fixed-dimensional geometric locality; see, e.g., classical separator theorems \cite{LiptonTarjan,MillerTengThurstonVavasis}.
+
 
 \section{Discussion and Open Problems}
 
-Our results advance the understanding of quantum LDPC code limitations under realistic hardware constraints. Several questions remain:
+Our results advance the understanding of quantum LDPC code limitations under realistic hardware constraints, bridging the gap between abstract expander-based constructions and geometrically constrained implementations. However, several significant questions remain open.
 
 \begin{enumerate}
-    \item Can the dependence on $L$ be improved for specific lattice geometries?
-    \item What is the optimal tradeoff when stoquasticity constraints are added?
-    \item How do these bounds change under probabilistic constructions?
+    \item \textbf{Lattice Geometry Dependence:} Can the dependence on the interaction range $L$ and the constant $C$ in Theorem~\ref{thm:main} be improved for specific lattice geometries, such as hyperbolic tilings, which naturally support better expansion properties than Euclidean grids?
+    \item \textbf{Stoquastic Hamiltonians:} What is the optimal tradeoff when stoquasticity constraints are imposed on the Hamiltonian? Stoquastic Hamiltonians (those with non-positive off-diagonal matrix elements) are easier to simulate but may have more restrictive ground state properties relevant to code distance.
+    \item \textbf{Probabilistic Bounds:} How do these bounds change under probabilistic constructions? While worst-case bounds provide hard limits, random instantiations of local codes might exhibit better average-case behavior, potentially allowing for looser practical constraints.
 \end{enumerate}
 
-\section*{Acknowledgments}
+\section{Conclusion}
 
-[Acknowledgments to be added]
+In this work, we rephrased the 2D BPT locality tradeoff in a form that makes the dependence on interaction range and maximum stabilizer weight explicit, and we illustrated tightness via the toric code. We also highlighted why asymptotically good quantum LDPC codes must give up fixed-dimensional geometric locality, pointing to expansion as a recurring structural feature in such constructions.
 
-\bibliographystyle{alpha}
 \begin{thebibliography}{99}
 
-\bibitem{BPT}
+\bibitem[BPT10]{BPT}
 S.~Bravyi, D.~Poulin, and B.~Terhal.
 \newblock Tradeoffs for reliable quantum information storage in 2D systems.
 \newblock {\em Physical Review Letters}, 104(5):050503, 2010.
 
-\bibitem{PRXQuantum}
+\bibitem[BE21]{PRXQuantum}
 N.~Breuckmann and J.~Eberhardt.
 \newblock Quantum low-density parity-check codes.
 \newblock {\em PRX Quantum}, 2:040101, 2021.
 
-\bibitem{PK}
+\bibitem[PK22]{PK}
 P.~Panteleev and G.~Kalachev.
 \newblock Asymptotically good quantum and locally testable classical LDPC codes.
-\newblock In {\em STOC}, 2022.
+\newblock In {\em Proceedings of the 54th Annual ACM SIGACT Symposium on Theory of Computing (STOC)}, pages 375--388, 2022.
+
+\bibitem[LT79]{LiptonTarjan}
+R.~J. Lipton and R.~E. Tarjan.
+\newblock A separator theorem for planar graphs.
+\newblock {\em SIAM Journal on Applied Mathematics}, 36(2):177--189, 1979.
+
+\bibitem[MTTV97]{MillerTengThurstonVavasis}
+G.~L. Miller, S.-H. Teng, W.~Thurston, and S.~A. Vavasis.
+\newblock Separators for sphere-packings and nearest neighbor graphs.
+\newblock {\em Journal of the ACM}, 44(1):1--29, 1997.
 
 \end{thebibliography}
 

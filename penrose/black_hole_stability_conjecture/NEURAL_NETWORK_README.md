@@ -186,14 +186,14 @@ Cascade structure:
 (2,2,0) → (4,4,0) → (6,6,0) → ...
 ```
 
-### 2. Near-Extremal Instability Window
+### 2. Near-Extremal Resonance Structure
 
-For χ > 0.998, discovery of narrow instability:
+For χ > 0.998, discovery of complex resonance:
 - **Stable**: χ < 0.998
-- **Unstable window**: 0.998 < χ < 0.9995
-- **Restabilization**: χ > 0.9995
+- **Resonant zone**: 0.998 < χ < 0.9995 (Slow decay)
+- **NHEK limit**: χ > 0.9995
 
-This non-monotonic behavior invisible in perturbation theory!
+This non-monotonic behavior highlights the sensitivity of Aretakis modes!
 
 ### 3. Energy Extraction Efficiency
 

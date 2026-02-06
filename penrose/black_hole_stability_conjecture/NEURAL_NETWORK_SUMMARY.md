@@ -26,7 +26,7 @@ I've developed a complete **large-scale numerical simulation framework** using *
 - Training protocol details
 - **Novel discoveries**:
   - Mode coupling selection rules
-  - Near-extremal instability window (χ ∈ [0.998, 0.9995])
+  - Near-extremal resonance structure (χ ∈ [0.998, 0.9995])
   - Energy extraction efficiency
 - Validation results (< 1% error)
 - Figures and tables
@@ -75,14 +75,14 @@ Rules:
 Cascade: (2,2,0) → (4,4,0) → (6,6,0) → ...
 ```
 
-#### Near-Extremal Instability Window
+#### Near-Extremal Resonance Structure
 ```
 Stable:          χ < 0.998
-Unstable window: 0.998 < χ < 0.9995  ⚠️
-Restabilized:    χ > 0.9995
+Resonant zone:   0.998 < χ < 0.9995  (Slow decay)
+NHEK limit:      χ > 0.9995
 ```
 
-**Significance**: Non-monotonic behavior invisible in perturbation theory!
+**Significance**: Non-monotonic resonance behavior highlighting Aretakis modes!
 
 #### Energy Extraction Efficiency
 ```

@@ -333,9 +333,10 @@ class SpectralGapAnalysis:
     def beta_parameter(self, l_max=10):
         """
         Compute β = α/κ_- ratio for SCCC analysis.
-        
-        SCCC (C² version) likely holds if β < 1/2.
-        SCCC (C⁰ version) violated if β > 0 (perturbations survive).
+
+        Heuristic/linearized interpretation (common in the literature):
+        - If β < 1/2, blue-shift tends to dominate decay strongly enough to obstruct C² extendibility.
+        - If β > 1/2, decay can be fast enough to be compatible with C² extendibility (a potential C²-SCCC violation).
         
         Returns:
         --------
@@ -562,11 +563,11 @@ class PenroseInequalityCensorshipLink:
         """
         Novel stability index combining multiple factors.
         
-        CSI = (subextremality_margin/M²) × (1 - β) × (1/(1 + κ_- M))
+        CSI = (subextremality_margin/M²) × max(1 - 2β, 0) × (1/(1 + κ_- M))
         
         All factors are now dimensionless:
         - subextremality_margin/M² ∈ [0, 1]
-        - (1 - β) ∈ [0, 1] when β ∈ [0, 1]
+        - max(1 - 2β, 0) ∈ [0, 1]
         - 1/(1 + κ_- M) ∈ (0, 1]
         
         Higher CSI → more stable against censorship violation
@@ -586,7 +587,7 @@ class PenroseInequalityCensorshipLink:
         if beta is None:
             beta_factor = 1  # No Cauchy horizon
         else:
-            beta_factor = max(0, 1 - beta)
+            beta_factor = max(0, 1 - 2 * beta)
         
         # Blue-shift rate (now dimensionless: κ_- M)
         kappa_minus = self.bh.kappa.get('minus', 0)
@@ -1017,7 +1018,7 @@ def censorship_stability_comprehensive():
     print("=" * 70)
     
     print("\n=== Kerr Black Holes (Q=0) ===")
-    print("a/M        CSI       Subext.Margin   β        Error    Interpretation")
+    print("a/M        CSI       Subext.Margin   beta     rel.err  Interpretation")
     print("-" * 80)
     
     for a in [0, 0.3, 0.5, 0.7, 0.9, 0.95, 0.99]:
@@ -1037,8 +1038,8 @@ def censorship_stability_comprehensive():
             interp = "Near Critical"
         
         beta_str = f"{beta:.3f}" if beta is not None else "N/A"
-        error_str = f"±{beta_error:.0%}" if beta_error is not None else "N/A"
-        print(f"{a:.2f}       {csi:.3f}     {margin:.4f}         {beta_str}    {error_str:6s}   {interp}")
+        error_str = f"+/-{beta_error:.0%}" if beta_error is not None else "N/A"
+        print(f"{a:.2f}       {csi:.3f}     {margin:.4f}         {beta_str:6s}  {error_str:7s} {interp}")
     
     print("\n=== Kerr-Newman Black Holes (a=0.5) ===")
     print("Q/M        CSI       Subext.Margin   Interpretation")

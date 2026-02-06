@@ -93,14 +93,14 @@ def generate_table(spin_values):
     print(f"\n{'='*80}")
     print("Table: Kerr AM-Penrose Verification (M = 1)")
     print(f"{'='*80}")
-    print(f"{'a/M':<10} {'r_+':<12} {'A':<14} {'J':<10} {'B':<14} {'M/B':<18} {'A/(8πJ)':<12}")
+    print(f"{'a/M':<10} {'r_+':<12} {'A':<14} {'J':<10} {'B':<14} {'M/B':<18} {'A/(8*pi*J)':<12}")
     print("-"*80)
     
     results = []
     for a in spin_values:
         r = verify_kerr(1.0, a)
         results.append(r)
-        sub_ext = f"{r['sub_ext_ratio']:.6f}" if r['J'] != 0 else "∞"
+        sub_ext = f"{r['sub_ext_ratio']:.6f}" if r['J'] != 0 else "inf"
         print(f"{a:<10.4f} {r['r_plus']:<12.8f} {r['A']:<14.8f} {r['J']:<10.6f} "
               f"{r['bound']:<14.10f} {r['ratio']:<18.15f} {sub_ext:<12}")
     
@@ -109,7 +109,7 @@ def generate_table(spin_values):
 def main():
     print("AM-Penrose Inequality Verification for Kerr Black Holes")
     print("="*60)
-    print("Inequality: M_ADM >= sqrt(A/(16π) + 4πJ²/A)")
+    print("Inequality: M_ADM >= sqrt(A/(16*pi) + 4*pi*J^2/A)")
     print("For Kerr: equality holds (saturation)")
     
     # Example 1: M=1, a=0.6 (used in paper)
@@ -135,7 +135,7 @@ def main():
     print("All Kerr black holes satisfy M/B = 1 to machine precision.")
     print("This confirms the AM-Penrose inequality is SATURATED for Kerr.")
     print("\nKey values for paper:")
-    print(f"  Example 1 (a=0.6):   r_+ = {r1['r_plus']:.1f}, A = {r1['A']/np.pi:.1f}π, ratio = {r1['ratio']:.10f}")
+    print(f"  Example 1 (a=0.6):   r_+ = {r1['r_plus']:.1f}, A/pi = {r1['A']/np.pi:.1f}, ratio = {r1['ratio']:.10f}")
     print(f"  Example 2 (a=0.999): r_+ = {r2['r_plus']:.6f}, A = {r2['A']:.4f}, ratio = {r2['ratio']:.10f}")
 
 if __name__ == "__main__":

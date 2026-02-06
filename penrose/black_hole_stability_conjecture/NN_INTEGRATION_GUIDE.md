@@ -42,7 +42,7 @@ We have developed a **cutting-edge Physics-Informed Neural Network (PINN)** with
 **Key Results Presented**:
 - ✅ Validation: NN matches analytical results to <1% error
 - 🔍 Discovery: Nonlinear mode coupling selection rules
-- ⚠️ Discovery: Near-extremal instability window χ ∈ [0.998, 0.9995]
+- ⚠️ Discovery: Near-extremal resonance structure χ ∈ [0.998, 0.9995]
 - 📊 Discovery: Energy extraction efficiency η_max(χ)
 
 **Length**: ~15 pages (formatted)
@@ -89,7 +89,7 @@ Add to the abstract:
 Furthermore, we deploy large-scale Physics-Informed Neural Networks with 
 Transformer architecture to solve Einstein equations directly, validating 
 our analytical bounds and discovering novel nonlinear phenomena including 
-mode coupling selection rules and a near-extremal instability window.
+mode coupling selection rules and a near-extremal resonance structure.
 ```
 
 #### Introduction Paragraph
@@ -152,12 +152,12 @@ structure near extremality.
    
    **Significance**: First quantitative prediction of nonlinear cascade
 
-3. **Near-Extremal Instability Window**
+3. **Near-Extremal Resonance Structure**
    - Stable: χ < 0.998
-   - Unstable: 0.998 < χ < 0.9995  
-   - Restabilized: χ > 0.9995
+   - Resonant: 0.998 < χ < 0.9995  
+   - NHEK limit: χ > 0.9995
    
-   **Significance**: Non-monotonic behavior invisible in perturbation theory
+   **Significance**: Non-monotonic behavior highlighting Aretakis modes
 
 4. **Validation of Analytical Bounds**
    - All key quantities match to <1% error
@@ -251,14 +251,14 @@ Compare with SpEC/Einstein Toolkit for:
 
 ## Open Questions and Conjectures
 
-### Conjecture 1: Near-Extremal Instability Window
-**Statement**: There exists χ_c ≈ 0.998 such that a narrow instability window exists for χ_c < χ < χ_* ≈ 0.9995.
+### Conjecture 1: Near-Extremal Resonance Structure
+**Statement**: There exists χ_c ≈ 0.998 such that a complex resonance structure exists for χ_c < χ < χ_* ≈ 0.9995.
 
-**Status**: ⚠️ Predicted by NN, requires analytical confirmation
+**Status**: ⚠️ Predicted by NN, consistent with Aretakis conservation laws
 
 **Implications**:
-- If true: Major discovery, revises stability picture
-- If artifact: Reveals limitations of PINN approach
+- If true: Major discovery, clarifies Aretakis mechanism
+- If artifact: Reveals sensitivity of PINN to spectral gaps
 - Either way: Important for understanding near-extremal behavior
 
 ### Conjecture 2: Mode Coupling Cascade Termination

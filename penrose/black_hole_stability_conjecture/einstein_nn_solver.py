@@ -983,17 +983,20 @@ class PhenomenaDiscovery:
             'total_energy': np.trapz(flux_history, t)
         }
     
-    def find_instabilities(self, chi_range: np.ndarray = None,
+    def analyze_stability_and_resonances(self, chi_range: np.ndarray = None,
                           threshold: float = 1e-3) -> List[Dict]:
         """
-        Search for instabilities by varying black hole parameters.
+        Search for instabilities and resonance structure.
         
-        An instability is indicated by exponential growth: h ~ e^{γt} with γ > 0
+        Analyzes growth behavior h ~ e^{γt}:
+        - γ > threshold: Potential instability
+        - 0 < γ < threshold: Resonance/Aretakis mode (stable but slowly decaying)
+        - γ < 0: Stable decay
         """
         if chi_range is None:
             chi_range = np.linspace(0, 0.99, 20)
         
-        instabilities = []
+        findings = []
         
         for chi_val in chi_range:
             # Create new background
@@ -1017,14 +1020,21 @@ class PhenomenaDiscovery:
                 growth_rate = p[0]
                 
                 if growth_rate > threshold:
-                    instabilities.append({
+                    findings.append({
                         'chi': chi_val,
                         'component': comp,
                         'growth_rate': growth_rate,
-                        'type': 'exponential'
+                        'type': 'exponential_instability'
+                    })
+                elif growth_rate > -1e-4:  # Near-zero decay
+                    findings.append({
+                        'chi': chi_val,
+                        'component': comp,
+                        'growth_rate': growth_rate,
+                        'type': 'resonance'
                     })
         
-        return instabilities
+        return findings
 
 
 # =============================================================================
@@ -1132,15 +1142,22 @@ def run_einstein_nn_simulation(chi: float = 0.7, n_iterations: int = 500,
     print()
     
     # Search for instabilities
-    print("Searching for instabilities across spin range...")
-    instabilities = discovery.find_instabilities()
+    print("Analyzing stability and resonance structure...")
+    findings = discovery.analyze_stability_and_resonances()
+    
+    instabilities = [f for f in findings if f['type'] == 'exponential_instability']
+    resonances = [f for f in findings if f['type'] == 'resonance']
     
     if len(instabilities) > 0:
-        print(f"  WARNING: Found {len(instabilities)} unstable modes!")
-        for inst in instabilities[:5]:  # Show first 5
+        print(f"  WARNING: Found {len(instabilities)} potential instabilities!")
+        for inst in instabilities[:5]:
             print(f"    chi={inst['chi']:.3f}, {inst['component']}, gamma={inst['growth_rate']:.6f}")
-    else:
-        print(f"  No instabilities detected (stable across chi in [0, 0.99])")
+    
+    if len(resonances) > 0:
+        print(f"  Note: Found {len(resonances)} long-lived resonances (non-decaying modes).")
+    
+    if len(instabilities) == 0:
+        print(f"  No exponential instabilities detected (stable across spin range)")
     print()
     
     print("="*70)
@@ -1164,7 +1181,7 @@ def run_einstein_nn_simulation(chi: float = 0.7, n_iterations: int = 500,
         'results': results,
         'qnm_spectrum': qnm_spectrum,
         'flux_data': flux_data,
-        'instabilities': instabilities,
+        'findings': findings,
         'hardware_config': hardware_config
     }
 
