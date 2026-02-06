@@ -1,18 +1,19 @@
-import sys
 import os
-print("Hello World")
-try:
-    import numpy
-    print("Numpy OK")
-except ImportError as e:
-    print(e)
+import sys
+import unittest
 
-path = r'c:\Users\Lenovo\papers\yang\yang_mills\verification'
-if path not in sys.path:
-    sys.path.append(path)
 
-try:
-    import rigorous_constants_derivation
-    print("Rigorous Constants OK")
-except ImportError as e:
-    print(f"Rigorous Constants Fail: {e}")
+class TestEnvironment(unittest.TestCase):
+    def test_numpy_import(self):
+        import numpy  # noqa: F401
+
+    def test_rigorous_constants_import(self):
+        # Ensure local package/modules resolve even when invoked from repo root.
+        here = os.path.dirname(os.path.abspath(__file__))
+        if here not in sys.path:
+            sys.path.insert(0, here)
+        import rigorous_constants_derivation  # noqa: F401
+
+
+if __name__ == "__main__":
+    unittest.main()
