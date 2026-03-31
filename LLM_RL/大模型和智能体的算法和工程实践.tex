@@ -1925,6 +1925,14 @@ h_t = A(\Delta_t) h_{t-1} + B_t x_t,\qquad y_t = C_t h_t + D x_t,
 
 综上，长上下文能力并不只是“把窗口调大”那么简单，而是\textbf{缓存设计、注意力结构、内存分配和近似估计}四个层面的联合结果。对于做RL推理模型或Agent系统的团队，真正决定上限的往往不是优化器，而是这些底层系统算法。
 
+\paragraph{本节小结：系统算法对模型上限的决定作用}
+
+第6节前半部分讲的是“如何训练出更强策略”，而这一小节强调的是“强策略能否以现实成本跑起来”。对工业系统而言，真正的能力上限往往由以下链条共同决定：
+\begin{equation}
+\text{usable intelligence} = f(\text{policy quality}, \text{memory system}, \text{latency budget}, \text{tool runtime}).
+\end{equation}
+也就是说，一个理论上更强的模型，如果被KV cache、内存碎片、浏览器延迟或工具调用失败率压垮，最终在真实任务中的可用智能反而更低。
+
 \subsection{第一部分小结：RL方法对比}
 
 \begin{table}[H]
@@ -2804,6 +2812,14 @@ o^* = \arg\max_{o \in \{o_1, \ldots, o_N\}} R(q, o)
     \item 分层采样：先粗筛再精选
 \end{itemize}
 
+\paragraph{费曼式直观解释}
+
+Best-of-N像是让模型先写出$N$份草稿，再请一个评分老师挑出最好的那一份。它之所以经常有效，不是因为单次生成更聪明了，而是因为你给了系统“试错后再挑选”的机会。
+
+\paragraph{对实际开发的指导作用}
+
+工程上，Best-of-N最适合\textbf{可验证、可并行、错误代价低}的任务，例如数学、代码、结构化抽取。它不适合高延迟、昂贵工具调用密集的场景，因为候选数$N$会近似线性放大成本。
+
 \subsubsection{束搜索变体}
 
 \textbf{标准束搜索}：
@@ -2916,6 +2932,14 @@ r_{norm} = \frac{\text{rank}(r)}{N} - 0.5
 \mathbb{D}_{KL}^{token} = \sum_t \sum_v \pi_\theta(v|s_t) \log \frac{\pi_\theta(v|s_t)}{\pi_{ref}(v|s_t)}
 \end{equation}
 
+\paragraph{费曼式直观解释}
+
+KL控制就像给正在自学的学生系上一根安全绳。你希望他探索新解法，但不希望他为了短期高分突然变得满嘴胡话、格式崩坏或完全忘记原来的常识。绳子太短，学生学不会新东西；太长，又容易跑偏。自适应$\beta$的本质，就是根据“偏航程度”动态收紧或放松这根绳子。
+
+\paragraph{对实际开发的指导作用}
+
+做RL微调时，很多团队只盯奖励，不盯KL，最后得到的不是更强模型，而是更会投机的模型。实际工程上应把\textbf{KL、奖励、长度、拒绝率、格式合规率}一起监控，否则很难判断模型是在真正变强，还是在奖励函数漏洞上投机。
+
 \subsection{分布式训练}
 
 大规模RL训练需要分布式策略：
@@ -2976,6 +3000,14 @@ Actor使用稍旧的策略采样，Learner持续更新。
 \begin{equation}
 \text{IS correction} = \prod_{t} \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}
 \end{equation}
+
+\paragraph{费曼式直观解释}
+
+Actor-Learner像是一家公司里的“前线调研团队”和“总部分析团队”分工协作。前线负责快速采样、不断试错；总部负责集中学习、更新策略。如果总部更新太快，前线还在用旧手册干活，就会出现“政策滞后”。重要性采样修正做的，就是把旧手册带来的偏差尽量补回来。
+
+\paragraph{对实际开发的指导作用}
+
+真实训练系统里，采样吞吐和训练吞吐通常不是同一个瓶颈。因此一开始就应把“参数版本”“轨迹生成时间”“奖励评估时间”和“训练消费时间”打到日志里。否则系统慢下来的时候，你甚至不知道瓶颈是在生成、在评估，还是在学习器同步。
 
 \subsection{内存优化}
 
@@ -3218,6 +3250,10 @@ OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不
 \subsubsection{对实用Agent系统的结论}
 
 对于研究人员而言，训练更强的策略模型当然重要；但对真正可落地的智能体来说，\textbf{harness往往比模型本体更决定上限}。一个没有记忆压缩、审批边界、隔离浏览器、会话锁和流式可观测性的Agent，即使模型再强，也很难稳定部署。相反，一个设计良好的harness可以把中等能力模型提升到可靠可用的工程系统。
+
+\paragraph{本节小结：从训练系统到交付系统}
+
+第8节的核心信息可以压缩成一句话：\textbf{把模型训出来只是第一步，把它做成稳定交付系统才是真正困难的部分}。采样、KL控制、异步训练、上下文压缩、工具协议、沙箱、审批和遥测并不是分散的小技巧，而是同一个交付闭环上的不同环节。
 
 \subsection{超参数配置指南}
 
@@ -5968,6 +6004,10 @@ Agent Harness & 如何形式化工具策略、审批策略和失败恢复？ & �
 %===========================================
 \section*{参考文献}
 %===========================================
+
+\paragraph{参考文献导航}
+
+为便于使用，本报告的参考资料可以分为四类：一是RL/偏好优化与过程奖励论文，二是长上下文、注意力、量化与推理系统论文，三是OpenAI、Anthropic、Google DeepMind的系统卡、工程博客与开发文档，四是BitNet与高效推理相关资料。建议读者按自己的关注方向回溯，而不是机械地按编号顺序阅读。
 
 \begin{enumerate}[label={[\arabic*]}]
     \item DeepSeek-AI. DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. arXiv:2501.12948, 2025.
