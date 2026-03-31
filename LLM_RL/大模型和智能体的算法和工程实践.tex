@@ -3081,6 +3081,22 @@ OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不
     \item \textbf{事件可观测化}：保留tool stream、lifecycle、approval、compaction等事件。
 \end{enumerate}
 
+\paragraph{推荐的四层部署视图}
+
+一个可维护的agent系统，最好把运行栈拆成四层：
+\begin{enumerate}
+    \item \textbf{入口层（Ingress）}：CLI、桌面端、Web控制台、Webhook，负责用户身份、会话建立与消息流接入；
+    \item \textbf{控制层（Control Plane）}：Gateway、审批器、会话调度器、记忆压缩器，负责策略外部控制；
+    \item \textbf{执行层（Execution Plane）}：shell、浏览器、代码执行器、移动端节点、远程headless节点；
+    \item \textbf{观测层（Observability）}：事件日志、trace、session replay、失败样本库、指标告警。
+\end{enumerate}
+
+若用图模型表示，可写成
+\begin{equation}
+\mathcal{G}_{\text{agent}} = (\mathcal{V}_{in} \cup \mathcal{V}_{ctrl} \cup \mathcal{V}_{exec} \cup \mathcal{V}_{obs}, \mathcal{E}),
+\end{equation}
+其中边$\mathcal{E}$受权限策略约束。一个成熟部署的目标不是让任意层互相直连，而是让跨层流量尽量经过控制层和观测层，从而保证审计闭环。
+
 对生产部署而言，推荐的最小闭环是：
 \begin{itemize}
     \item 会话级串行队列，避免同一session下的工具竞态；
@@ -3089,6 +3105,27 @@ OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不
     \item 对`evaluate`、任意JS执行、内部地址访问设置默认关闭或严格白名单；
     \item 对长对话启用compaction与工作区摘要，避免上下文无限膨胀。
 \end{itemize}
+
+\paragraph{上线前检查表}
+
+\begin{table}[H]
+\centering
+\caption{Agent Harness / OpenClaw部署前最小检查表}
+\begin{tabular}{p{3.4cm}p{3.2cm}p{6.2cm}}
+\toprule
+\textbf{检查维度} & \textbf{最低要求} & \textbf{目的} \\
+\midrule
+身份与入口 & 私网入口、短期令牌、会话绑定 & 防止未授权接入Gateway或节点 \\
+工具权限 & 默认拒绝，高风险动作审批 & 降低shell、浏览器、外发操作的失控概率 \\
+浏览器隔离 & 独立profile、独立CDP、禁止复用个人profile & 防止泄露个人cookie与跨任务污染 \\
+网络边界 & 内网白名单、阻止metadata/内网探测 & 避免SSRF和横向访问 \\
+会话调度 & 同session串行、跨session限流 & 避免工具竞态和资源挤兑 \\
+记忆与压缩 & 开启compaction、限制持久化写入范围 & 控制上下文膨胀与记忆污染 \\
+日志与追踪 & 记录tool stream、approval、error trace & 支持审计、复盘与失败分析 \\
+回滚机制 & 工具开关、节点摘除、provider切换 & 出现异常时快速降级 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsubsection{对实用Agent系统的结论}
 
