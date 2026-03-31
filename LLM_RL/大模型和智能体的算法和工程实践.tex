@@ -42,7 +42,7 @@
 % 页眉页脚
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{大语言模型强化学习训练技术报告}
+\fancyhead[L]{大模型和智能体的算法和工程实践}
 \fancyhead[R]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
@@ -51,8 +51,8 @@
 \definecolor{deepgreen}{RGB}{0,102,51}
 \definecolor{deepred}{RGB}{153,0,0}
 
-\title{\textbf{大语言模型的强化学习训练}\\[0.5cm]
-\Large 提升推理、数学与代码能力的自我学习方法\\[0.3cm]
+\title{\textbf{大模型和智能体的算法和工程实践}\\[0.5cm]
+\Large 强化学习、长上下文记忆与智能体系统部署\\[0.3cm]
 \large 技术详细报告（扩展版）}
 \author{许达\\未来院三室}
 \date{\today}
@@ -70,8 +70,10 @@
     \item \textbf{采样筛选方法}：Rejection Sampling Fine-tuning (RSF)、RAFT等
     \item \textbf{过程奖励方法}：PRM、ORM、Math-Shepherd、PRIME等
     \item \textbf{搜索增强方法}：MCTS增强推理、Best-of-N采样等
+    \item \textbf{长上下文与系统算法}：KV Cache、隐式/隐含注意力、残差注意力、Titans长记忆、TurboQuant、FlashAttention、Mamba、PagedAttention等
+    \item \textbf{智能体工程体系}：agent harness理论、OpenClaw架构、隔离浏览器、工具调用、灰度部署与运维实践
 \end{itemize}
-报告深入分析了DeepSeek-R1的纯RL训练范式、OpenAI o1的推理模型架构、Qwen系列、WizardMath/WizardCoder、Marco-o1、Kimi k1.5等重要模型的技术方案。\textbf{特别地，本报告新增了对美国最前沿闭源大模型（GPT-5、GPT-5.1、o3、o4-mini、Gemini 3.0 Pro等）训练技术的深度逆向分析}，通过整合官方博客、技术报告、基准测试数据及行业专家推测，系统性地揭示了这些模型的核心算法秘密，包括大规模RL训练的Scaling Law、过程奖励模型（PRM）的精细设计、推理时计算的最优分配策略、以及多模态原生架构等关键技术。报告涵盖了核心算法的数学推导、实现细节、训练技巧以及主要研究机构的技术路线对比。此外，本报告创新性地提出了多种新型算法框架，包括：\textbf{自适应分层奖励优化（AHRO）}、\textbf{认知架构引导策略学习（CAPL）}、\textbf{动态思维链自演化（DCoT-SE）}、\textbf{多粒度推理一致性强化（MGRCR）}、\textbf{元认知反馈回路优化（MFLO）}等。本报告还深入介绍了\textbf{BitNet}系列1比特大语言模型技术，包括其训练推理机制、与传统LLM在内存消耗、能耗和性能方面的全面对比，旨在为研究人员和工程师提供全面的技术参考和未来研究方向。
+报告深入分析了DeepSeek-R1的纯RL训练范式、OpenAI o1的推理模型架构、Qwen系列、WizardMath/WizardCoder、Marco-o1、Kimi k1.5等重要模型的技术方案，并在系统层补充了\textbf{当前最关键的长上下文与推理基础设施算法}：包括KV cache的容量定律、DeepSeek系的低秩KV压缩思想、隐式注意力的统一核视角、RealFormer残差注意力、Google Titans长记忆模块、TurboQuant极限压缩框架，以及FlashAttention、Mamba、PagedAttention等对工业推理吞吐影响极大的算法。\textbf{特别地，本报告新增了对美国最前沿闭源大模型（GPT-5、GPT-5.1、o3、o4-mini、Gemini 3.0 Pro等）训练技术的深度逆向分析}，通过整合官方博客、技术报告、基准测试数据及行业专家推测，系统性地揭示了这些模型的核心算法秘密，包括大规模RL训练的Scaling Law、过程奖励模型（PRM）的精细设计、推理时计算的最优分配策略、以及多模态原生架构等关键技术。报告还将智能体系统视为\textbf{模型外部控制问题}，系统引入了agent harness的形式化定义、OpenClaw的Gateway/Node/Agent Loop架构、隔离浏览器与权限边界、以及本地与远程部署的工程实践。此外，本报告创新性地提出了多种新型算法框架，包括：\textbf{自适应分层奖励优化（AHRO）}、\textbf{认知架构引导策略学习（CAPL）}、\textbf{动态思维链自演化（DCoT-SE）}、\textbf{多粒度推理一致性强化（MGRCR）}、\textbf{元认知反馈回路优化（MFLO）}等。本报告还深入介绍了\textbf{BitNet}系列1比特大语言模型技术，包括其训练推理机制、与传统LLM在内存消耗、能耗和性能方面的全面对比，旨在为研究人员和工程师提供全面的技术参考和未来研究方向。
 \end{abstract}
 
 \tableofcontents
@@ -152,14 +154,26 @@
     \item \textbf{第3节}：核心算法详解（PPO、GRPO、DPO、RLAIF、奖励设计）
     \item \textbf{第4节}：DeepSeek-R1技术详解（训练流程、Zero实验、蒸馏）
     \item \textbf{第5节}：OpenAI o1技术分析（官方信息、技术推测、推理时Scaling）
-    \item \textbf{第6节}：其他主要研究方法（涵盖ReST、STaR、Expert Iteration、Self-Rewarding、REINFORCE/RLOO、RAFT/RSF、V-STaR、PRM/ORM、PRIME、Online DPO、WizardMath、Qwen系列、Marco-o1、Kimi k1.5等重要方法和模型）
+    \item \textbf{第6节}：其他主要研究方法与前沿系统算法（涵盖ReST、STaR、Expert Iteration、Self-Rewarding、REINFORCE/RLOO、RAFT/RSF、V-STaR、PRM/ORM、PRIME、Online DPO、WizardMath、Qwen系列、Marco-o1、Kimi k1.5，以及KV Cache、隐式注意力、残差注意力、Titans、TurboQuant等）
     \item \textbf{第7节}：创新算法框架（AHRO、CAPL、DCoT-SE、MGRCR、MFLO等）
-    \item \textbf{第8节}：实现细节与训练技巧
+    \item \textbf{第8节}：实现细节、训练技巧与智能体工程部署
     \item \textbf{第9节}：失败尝试与经验教训
     \item \textbf{第10节}：\textcolor{deepred}{\textbf{美国前沿闭源大模型训练技术深度逆向分析}}（GPT-5、o3、o4-mini、Gemini 3.0 Pro等核心算法秘密）
-    \item \textbf{第11节}：未来研究方向
-    \item \textbf{第12节}：BitNet系列1比特大语言模型
-    \item \textbf{第13节}：总结
+    \item \textbf{第11节}：组织与工程管理实践（面向研究组织、MLOps、安全流程和发布机制）
+    \item \textbf{第12节}：未来研究方向
+    \item \textbf{第13节}：BitNet系列1比特大语言模型
+    \item \textbf{第14节}：总结
+\end{itemize}
+
+\subsection{阅读路径建议}
+
+由于本文同时覆盖训练算法、系统基础设施与智能体工程，建议按需求阅读：
+\begin{itemize}
+    \item \textbf{若关注RL训练理论}：优先阅读第2-4节，再阅读第6节前半部分与第9节。
+    \item \textbf{若关注推理基础设施}：优先阅读第6节后半部分、第8节和第13节。
+    \item \textbf{若关注闭源模型技术判断}：优先阅读第5节、第10节与第11节。
+    \item \textbf{若关注Agent落地与部署}：优先阅读第8节、第11节和第12节的Agent相关部分。
+    \item \textbf{若只需要结论与建议}：直接阅读第14节，再按需回溯具体章节。
 \end{itemize}
 
 %===========================================
@@ -1080,6 +1094,8 @@ RL算法 & PPO（推测） & GRPO \\
 \section{其他主要研究方法}
 %===========================================
 
+本节分成两条主线：前半部分聚焦\textbf{RL、自训练与偏好优化方法}，后半部分聚焦\textbf{支撑长上下文与高吞吐推理的系统算法}。这样安排的目的是把“如何训练更强策略”与“如何让策略在长上下文和生产系统中真正跑起来”明确区分开。
+
 \subsection{Constitutional AI（Anthropic）}
 
 \subsubsection{核心思想}
@@ -1700,7 +1716,148 @@ Kimi k1.5针对长上下文场景优化RL训练：
     \item \textbf{多模态支持}：文本+视觉推理
 \end{itemize}
 
-\subsection{方法对比总结}
+\subsection{长上下文、缓存与前沿系统算法}
+
+\subsubsection{KV Cache的数学原理与容量瓶颈}
+
+在自回归解码中，第$t$步仅生成一个新token，其因果注意力输出为：
+\begin{equation}
+q_t = W_Q h_t,\quad
+K_{1:t} = [k_1,\ldots,k_t],\quad
+V_{1:t} = [v_1,\ldots,v_t],
+\end{equation}
+\begin{equation}
+o_t = \text{softmax}\left(\frac{q_t K_{1:t}^{\top}}{\sqrt{d_h}}\right)V_{1:t}.
+\end{equation}
+
+如果每一步都重新计算全部历史token的$key/value$投影，则第$t$步需要重复做历史前缀的线性映射，导致额外的投影开销与显存搬运。KV cache的核心思想是将历史的$K_{1:t-1}, V_{1:t-1}$直接缓存起来，只对当前token计算$(k_t, v_t)$并追加到缓存中。这样单步解码的主要代价退化为对长度$t$的向量检索与加权求和，而不是对整个前缀重新做投影。
+
+对一个拥有$L$层、$H$个头、头维度$d_h$、序列长度$T$、元素字节数$b$的模型，KV cache近似显存占用为：
+\begin{equation}
+M_{\text{KV}} \approx 2 L T H d_h b.
+\end{equation}
+其中系数2对应$key$与$value$两份缓存。这个公式解释了长上下文推理的根本瓶颈：当$T$从$8$K扩展到$128$K甚至更长时，显存占用随序列长度线性增长，实际服务系统往往首先被KV cache而不是参数本身限制。
+
+\textbf{工程上的三个主方向}：
+\begin{enumerate}
+    \item \textbf{共享头}：Multi-Query Attention (MQA)与Grouped-Query Attention (GQA)把多个查询头映射到更少的KV头，显存规模从$H$降低到$G \ll H$。
+    \item \textbf{低秩压缩}：以DeepSeek-V2的MLA为代表，将KV压缩到低维潜空间$c_t \in \mathbb{R}^r$，再通过投影恢复：
+    \begin{equation}
+    c_t = W_c h_t,\qquad k_t \approx W_k c_t,\qquad v_t \approx W_v c_t.
+    \end{equation}
+    当$r \ll H d_h$时，缓存规模由$O(H d_h)$降到$O(r)$。
+    \item \textbf{量化与分页管理}：通过量化减少每个元素的字节数$b$，通过PagedAttention一类分页式分配减少碎片和重复拷贝。
+\end{enumerate}
+
+\subsubsection{隐式（隐含）注意力：从状态空间到因果核}
+
+近年来大量高效序列模型不显式构造$T \times T$注意力矩阵，而是通过递推状态实现“隐式注意力”。统一写法可表示为：
+\begin{equation}
+s_t = \Lambda_t s_{t-1} + B_t x_t,\qquad y_t = C_t s_t,
+\end{equation}
+其中$s_t$是隐状态，$\Lambda_t, B_t, C_t$可以是常数，也可以像Mamba那样依赖当前输入$x_t$。将该递推展开，有：
+\begin{equation}
+y_t = \sum_{j=1}^{t} C_t \left(\prod_{k=j+1}^{t} \Lambda_k\right) B_j x_j
+= \sum_{j=1}^{t} A_{t,j} x_j.
+\end{equation}
+
+这里
+\begin{equation}
+A_{t,j} = C_t \left(\prod_{k=j+1}^{t} \Lambda_k\right) B_j
+\end{equation}
+扮演了\textbf{因果注意力核}的角色。与标准softmax注意力不同，$A_{t,j}$不是由$q_t^\top k_j$显式归一化得到，而是由状态转移与门控矩阵隐式诱导出来。因此，隐式注意力本质上是“\textbf{用递推动力系统近似或替代显式注意力图}”。
+
+这一视角解释了为什么Mamba、RWKV、门控线性RNN等“无注意力层”模型仍然具备内容选择能力：当$\Lambda_t, B_t, C_t$由输入驱动时，模型实际上对不同历史位置赋予了不同的衰减、注入与读取强度，相当于学习了一个依赖内容的动态核函数。它们的优势在于不需要物化完整的注意力矩阵，因此时间/空间复杂度可做到线性或次二次，更适合百万级上下文。
+
+\subsubsection{残差注意力：RealFormer的logit级跳连}
+
+残差注意力并不是对token表示做残差，而是直接对\textbf{注意力logits}做残差传递。令第$\ell$层的原始注意力分数为
+\begin{equation}
+\tilde{S}^{(\ell)} = \frac{Q^{(\ell)} K^{(\ell)\top}}{\sqrt{d_h}},
+\end{equation}
+则RealFormer类结构将上一层的注意力分数以跳连方式注入：
+\begin{equation}
+S^{(\ell)} = \tilde{S}^{(\ell)} + \alpha_\ell S^{(\ell-1)},\qquad
+A^{(\ell)} = \text{softmax}(S^{(\ell)}).
+\end{equation}
+在最简单的设置中$\alpha_\ell = 1$，也可使用running mean代替running sum来控制数值幅度。
+
+这种设计的数学含义是：\textbf{跨层保留配对关系的先验}。如果某些query-key对在浅层已被证明重要，那么深层就不必每次从零开始重新学习这一结构，而可以在已有亲和关系上做增量修正。其直接效果是：
+\begin{itemize}
+    \item 使注意力图跨层更加一致，降低训练初期的结构漂移；
+    \item 诱导更稀疏的注意力分布，缓解无效扩散；
+    \item 在不增加参数量的前提下提升优化稳定性。
+\end{itemize}
+
+\subsubsection{Google Titans：长期记忆作为测试时可学习模块}
+
+Titans的关键思想是把注意力视为\textbf{高精度短时记忆}，把神经记忆模块视为\textbf{可持续的长时记忆}。其记忆更新不直接依赖“存所有token”，而依赖\textbf{惊讶度（surprise）驱动}的梯度式写入。论文给出的核心递推为：
+\begin{equation}
+M_t = M_{t-1} + S_t,
+\end{equation}
+\begin{equation}
+S_t = \eta_t S_{t-1} - \theta_t \nabla \ell(M_{t-1}; x_t),
+\end{equation}
+其中$\nabla \ell(M_{t-1}; x_t)$刻画当前输入$x_t$相对于已有记忆$M_{t-1}$的“瞬时惊讶度”，而$\eta_t S_{t-1}$刻画最近一段时间的“过去惊讶度”。这相当于把优化中的动量项改造成跨时间的记忆追踪器。
+
+从机制上看，Titans并不是单纯把上下文窗口拉长，而是在测试时持续学习一个\textbf{外部长期记忆状态}。这使它在超长序列上不再依赖完整保留所有token，而是依赖“什么值得被记住”的可学习压缩。
+
+Titans提出了三种典型结构：
+\begin{itemize}
+    \item \textbf{MAC（Memory as Context）}：把长期记忆编码成额外上下文token，与当前窗口共同参与注意力；
+    \item \textbf{MAG（Memory as Gate）}：用门控机制融合短时注意力分支与长期记忆分支；
+    \item \textbf{MAL（Memory as Layer）}：把记忆模块作为注意力之前的独立层。
+\end{itemize}
+公开结果显示Titans可扩展到$2$M以上上下文，并在needle-in-a-haystack这类长程检索任务上明显优于传统Transformer与线性递推基线。
+
+\subsubsection{TurboQuant：极限压缩下的无偏内积估计}
+
+TurboQuant解决的是\textbf{高维向量在极低比特率下如何仍然准确保留点积}的问题，这对KV cache压缩和向量检索都极其关键。设键向量$k \in \mathbb{R}^d$，先做随机旋转：
+\begin{equation}
+u = Rk,
+\end{equation}
+随后用PolarQuant做主压缩，得到粗量化结果$\hat{u}=Q_{\text{polar}}(u)$；残差为
+\begin{equation}
+e = u - \hat{u}.
+\end{equation}
+TurboQuant再用1-bit的QJL（Quantized Johnson-Lindenstrauss）对残差做极低开销草图：
+\begin{equation}
+z = \text{sign}(Se),
+\end{equation}
+其中$S$是随机投影矩阵。对任意查询$q$，其与$k$的点积可分解为：
+\begin{equation}
+q^\top k = q^\top R^{-1} u \approx q^\top R^{-1}\hat{u} + \widehat{q^\top R^{-1} e}_{\text{QJL}}.
+\end{equation}
+
+这里第一项由PolarQuant捕获“主信号”，第二项用QJL对残差进行低比特无偏修正。这个“两阶段估计器”的价值在于：既保留了主方向信息，又避免了传统分块量化必须存储大量缩放常数所带来的额外元数据开销。对KV cache而言，这意味着在3-4 bit量级仍可较好地保留注意力分数$q^\top k$，从而显著降低长上下文服务的内存和带宽瓶颈。
+
+\subsubsection{其他关键系统算法：FlashAttention、Mamba与PagedAttention}
+
+\textbf{FlashAttention}的核心不是改变注意力公式，而是改变计算顺序。它把$Q,K,V$分块装入片上SRAM，在块内做online softmax，避免显式物化完整的$QK^\top$矩阵。设当前处理到第$i$个块时的运行最大值、归一化常数与输出累计量分别为$m_i,l_i,o_i$，则可以递推为：
+\begin{equation}
+m_i = \max(m_{i-1}, \max S_i),\qquad
+l_i = e^{m_{i-1}-m_i} l_{i-1} + \sum \exp(S_i - m_i),
+\end{equation}
+\begin{equation}
+o_i = e^{m_{i-1}-m_i} o_{i-1} + \sum \exp(S_i - m_i)V_i.
+\end{equation}
+因此它在数学上仍是\textbf{精确注意力}，但在系统上实现了对HBM读写次数的近最优控制。
+
+\textbf{Mamba}则将选择性状态空间模型写成：
+\begin{equation}
+h_t = A(\Delta_t) h_{t-1} + B_t x_t,\qquad y_t = C_t h_t + D x_t,
+\end{equation}
+其中$\Delta_t,B_t,C_t$由输入决定。它的关键突破是让状态更新对内容敏感，从而弥补传统SSM不擅长内容路由的弱点。Mamba的推理复杂度线性随序列增长，非常适合长上下文与流式场景。
+
+\textbf{PagedAttention}关注的是KV cache的\textbf{内存管理算法}。它把每个请求的逻辑KV序列拆成固定大小的页，并通过页表$\pi(r,i)$把请求$r$的第$i$个逻辑页映射到物理块：
+\begin{equation}
+\text{addr}(r,i,o) = \text{base}(\pi(r,i)) + o.
+\end{equation}
+这一设计把操作系统中的分页思想引入LLM serving，使KV缓存不再需要连续大块显存，从而显著减少碎片和冗余复制。在共享prompt、并发采样、多路beam search场景中，这种“逻辑连续、物理离散”的映射尤其关键。
+
+综上，长上下文能力并不只是“把窗口调大”那么简单，而是\textbf{缓存设计、注意力结构、内存分配和近似估计}四个层面的联合结果。对于做RL推理模型或Agent系统的团队，真正决定上限的往往不是优化器，而是这些底层系统算法。
+
+\subsection{第一部分小结：RL方法对比}
 
 \begin{table}[H]
 \centering
@@ -1727,7 +1884,7 @@ RAFT & 规则/模型 & 否 & 中 & 低 & 通用 \\
 }
 \end{table}
 
-\subsection{其他重要方法与研究}
+\subsection{第二部分：补充研究专题}
 
 \subsubsection{SPIN: Self-Play Fine-Tuning}
 
@@ -2451,6 +2608,8 @@ R_{novelty}(o) = \min_{o' \in \text{Archive}} d(o, o')
 \section{实现细节与训练技巧}
 %===========================================
 
+本节按照“\textbf{训练数据与采样} $\rightarrow$ \textbf{稳定训练} $\rightarrow$ \textbf{分布式与内存优化} $\rightarrow$ \textbf{智能体工程与部署}”的顺序展开，避免将训练细节和Agent基础设施混写在一起。
+
 \subsection{数据准备}
 
 \subsubsection{数学数据来源}
@@ -2783,6 +2942,130 @@ W' = W + \Delta W = W + BA
 其中$B \in \mathbb{R}^{d \times r}$，$A \in \mathbb{R}^{r \times k}$，$r \ll \min(d, k)$。
 
 \textbf{QLoRA}：在4-bit量化基础上使用LoRA。
+
+\subsection{智能体Harness理论与OpenClaw工程实践}
+
+\subsubsection{Harness的形式化定义}
+
+智能体系统中的\textbf{harness}可以理解为“包裹在基础模型外部的控制层”，它负责把LLM、工具、记忆、审批与环境交互编排成一个可执行系统。若仅有基础模型$\pi_\theta$，系统只能生成文本；而加入harness后，系统动作空间扩展为：
+\begin{equation}
+a_t \in \mathcal{A}_{\text{text}} \cup \mathcal{A}_{\text{tool}} \cup \mathcal{A}_{\text{delegate}} \cup \mathcal{A}_{\text{stop}}.
+\end{equation}
+
+我们可将一个agent harness形式化为六元组
+\begin{equation}
+\mathcal{H} = (\pi_{\text{plan}}, \pi_{\text{exec}}, g, u, \mathcal{T}, \mathcal{M}),
+\end{equation}
+其中：
+\begin{itemize}
+    \item $\pi_{\text{plan}}$：决定当前是直接回答、调用工具、还是转入子任务；
+    \item $\pi_{\text{exec}}$：在具体动作类型内生成参数，例如工具名、命令参数、子代理任务说明等；
+    \item $g$：安全守卫（guard），决定某动作是否允许直接执行、是否需要审批、是否必须拒绝；
+    \item $u$：记忆更新算子，决定什么应写入长期记忆、会话摘要或工作区；
+    \item $\mathcal{T}$：可用工具集合；
+    \item $\mathcal{M}$：可用记忆与上下文存储。
+\end{itemize}
+
+若系统状态写为
+\begin{equation}
+s_t = (x_{\leq t}, m_t, w_t, \sigma_t),
+\end{equation}
+其中$x_{\leq t}$是对话与工具轨迹，$m_t$是会话/长期记忆，$w_t$是工作区状态，$\sigma_t$是权限与环境状态，则harness的目标不应只优化任务正确率，而应优化：
+\begin{equation}
+J(\mathcal{H}) = \mathbb{E}\left[\sum_{t=0}^{T} \big(r^{\text{task}}_t - \lambda_c c(a_t) - \lambda_s \xi(s_t,a_t)\big)\right].
+\end{equation}
+这里$c(a_t)$表示时间/金钱/上下文消耗，$\xi(s_t,a_t)$表示风险代价。这个目标函数解释了为什么成熟的agent系统都不是“让模型自由调用所有工具”，而是必须在成功率、成本与安全性之间做显式权衡。
+
+\subsubsection{Harness中的工具调用、审批与安全边界}
+
+Anthropic在工程实践中区分了\textbf{workflow}与\textbf{agent}：前者沿着预定义代码路径执行，后者则由模型动态决定过程。对后者而言，harness最重要的不是“更多工具”，而是\textbf{可控的动作边界}。一种常见的门控写法是：
+\begin{equation}
+\Pr(a_t \text{ executes}) = g(s_t, a_t),
+\end{equation}
+其中
+\begin{equation}
+g(s_t, a_t) \in \{0, 1, \text{need-human-approval}\}.
+\end{equation}
+
+这意味着agent并不是直接拥有系统权限，而是通过guard函数被约束在一个安全可审计的动作域中。实践上，guard至少应覆盖：
+\begin{itemize}
+    \item \textbf{能力边界}：哪些shell、浏览器、网络、邮件、支付动作可执行；
+    \item \textbf{数据边界}：哪些路径、域名、账号、会话允许访问；
+    \item \textbf{审批边界}：哪些动作需要人工确认；
+    \item \textbf{持久化边界}：哪些工具输出可以写入记忆或工作区。
+\end{itemize}
+
+若把工具选择看作bandit或options问题，则一个实用的决策准则是最大化
+\begin{equation}
+Q_{\text{tool}}(s_t, a_t) = \mathbb{E}[R \mid s_t, a_t] - \alpha \cdot \text{latency}(a_t) - \beta \cdot \text{risk}(a_t),
+\end{equation}
+只有当预期收益显著高于文本内推理时，工具调用才真正有价值。
+
+\subsubsection{OpenClaw架构剖析}
+
+OpenClaw给出了一个比较清晰的agent runtime参考实现，其核心不是“一个神奇模型”，而是\textbf{分层的控制平面与执行平面}：
+\begin{equation}
+\text{message} \rightarrow \text{Gateway} \rightarrow \text{Context/Prompt} \rightarrow \text{Model} \rightarrow \text{Tools} \rightarrow \text{Stream/Persist}.
+\end{equation}
+
+结合其官方文档，OpenClaw的关键部件可以概括为：
+\begin{itemize}
+    \item \textbf{Gateway}：长驻守护进程，统一管理WebSocket消息面、provider连接、HTTP画布宿主与认证；
+    \item \textbf{Clients}：mac app、CLI、web admin等控制平面客户端；
+    \item \textbf{Nodes}：macOS/iOS/Android/headless等执行节点，通过`role: node`接入并暴露设备能力；
+    \item \textbf{Agent Loop}：单次agent运行的权威执行路径，覆盖请求接收、上下文装配、模型推理、工具事件流、持久化与重试；
+    \item \textbf{Session/Compaction}：会话级串行执行、自动压缩、长对话状态维持；
+    \item \textbf{Hook/Plugin}：在prompt构建、工具调用、会话起止等位置插入控制逻辑。
+\end{itemize}
+
+从理论上看，这相当于把智能体拆成两个耦合系统：
+\begin{enumerate}
+    \item \textbf{策略系统}：模型决定“下一步做什么”；
+    \item \textbf{运行时系统}：基础设施决定“这一步如何被安全、可靠、可观测地执行”。
+\end{enumerate}
+很多agent项目失败，不是因为模型不会规划，而是因为第二层缺失，导致上下文错乱、并发竞争、工具竞态、结果不可追踪。
+
+\subsubsection{OpenClaw中的受控浏览器、隔离与多节点}
+
+OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不是直接操控用户日常浏览器，而是维护一个独立的Chromium系profile，满足：
+\begin{itemize}
+    \item 独立user data目录，不触碰个人浏览器profile；
+    \item loopback-only控制服务，通过Gateway认证或node pairing访问；
+    \item 确定性的tab控制与快照/截图/PDF能力；
+    \item 可切换到远程CDP、Browserless、Browserbase等托管浏览器后端。
+\end{itemize}
+
+从安全角度看，这种设计把“浏览器工具”从高风险的全局桌面权限，降级成一个\textbf{隔离、可代理、可限域}的子系统。其数学上等价于把浏览器环境从单一状态空间$\Omega$拆成：
+\begin{equation}
+\Omega = \Omega_{\text{personal}} \cup \Omega_{\text{agent-safe}} \cup \Omega_{\text{remote}},
+\end{equation}
+并要求默认策略仅在$\Omega_{\text{agent-safe}}$中活动。只有在明确需要已有登录态时，才切换到`user` profile或远程CDP。
+
+多节点方面，OpenClaw通过Gateway统一接入不同设备节点，让agent可以把“工具调用”扩展为“设备能力路由”。这天然适合把桌面、手机、远程headless浏览器、乃至专用执行器都纳入同一控制面。
+
+\subsubsection{部署实践：从本地工作站到远程网关}
+
+\textbf{本地单机部署}适合研发阶段：Gateway、模型提供方、受控浏览器和工作区在一台机器上，路径最短、调试最直接。
+
+\textbf{远程网关部署}适合团队场景：将Gateway部署在私有网络或tailnet中，通过Tailscale/SSH隧道暴露控制面，把浏览器执行、设备执行、模型调用拆到不同节点。此时要坚持三条原则：
+\begin{enumerate}
+    \item \textbf{控制面私网化}：不要把Gateway或CDP端口直接暴露到公网；
+    \item \textbf{最小权限化}：只开放必要profile、必要host、必要工具；
+    \item \textbf{事件可观测化}：保留tool stream、lifecycle、approval、compaction等事件。
+\end{enumerate}
+
+对生产部署而言，推荐的最小闭环是：
+\begin{itemize}
+    \item 会话级串行队列，避免同一session下的工具竞态；
+    \item 审批门控，拦截高风险shell、浏览器注入、外发消息与持久化写入；
+    \item 远程浏览器使用短期token和私网通道；
+    \item 对`evaluate`、任意JS执行、内部地址访问设置默认关闭或严格白名单；
+    \item 对长对话启用compaction与工作区摘要，避免上下文无限膨胀。
+\end{itemize}
+
+\subsubsection{对实用Agent系统的结论}
+
+对于研究人员而言，训练更强的策略模型当然重要；但对真正可落地的智能体来说，\textbf{harness往往比模型本体更决定上限}。一个没有记忆压缩、审批边界、隔离浏览器、会话锁和流式可观测性的Agent，即使模型再强，也很难稳定部署。相反，一个设计良好的harness可以把中等能力模型提升到可靠可用的工程系统。
 
 \subsection{超参数配置指南}
 
@@ -4453,7 +4736,7 @@ RLAIF & AI反馈强化学习 & 使用AI生成奖励信号 \\
 \end{table}
 
 %===========================================
-\section{未来研究方向}
+\section{组织与工程管理实践}
 %===========================================
 
 % ------------------ 新增：组织与工程实践洞察 ------------------
@@ -5409,6 +5692,26 @@ LLM的RL训练正处于快速发展期，以下趋势值得关注：
     \item Ma, S., et al. BitNet a4.8: 4-bit Activations for 1-bit LLMs. arXiv:2411.04965, 2024.
     
     \item Microsoft. Bitnet.cpp: Efficient Edge Inference for Ternary LLMs. arXiv:2502.11880, 2025.
+
+    \item He, R., Ravula, A., Kanagal, B., and Ainslie, J. RealFormer: Transformer Likes Residual Attention. Findings of ACL-IJCNLP, 2021.
+
+    \item Behrouz, A., Zhong, P., Mirrokni, V., et al. Titans: Learning to Memorize at Test Time. NeurIPS, 2025.
+
+    \item Zandieh, A., Mirrokni, V., et al. TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate. arXiv:2504.19874, 2025.
+
+    \item Gu, A., and Dao, T. Mamba: Linear-Time Sequence Modeling with Selective State Spaces. arXiv:2312.00752, 2024.
+
+    \item Dao, T., Fu, D. Y., Ermon, S., Rudra, A., and Re, C. FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness. NeurIPS, 2022.
+
+    \item Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C. H., Gonzalez, J. E., Zhang, H., and Stoica, I. Efficient Memory Management for Large Language Model Serving with PagedAttention. SOSP, 2023.
+
+    \item DeepSeek-AI. DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model. arXiv:2405.04434, 2024.
+
+    \item Zimerman, I., Ali, A. A., and Wolf, L. Explaining Modern Gated-Linear RNNs via a Unified Implicit Attention Formulation. ICLR, 2025.
+
+    \item Anthropic. Building Effective Agents. Anthropic Engineering Blog, December 19, 2024.
+
+    \item OpenClaw Documentation. Gateway Architecture, Agent Loop, and Browser Tooling. docs.openclaw.ai, accessed March 31, 2026.
 \end{enumerate}
 
 %===========================================
