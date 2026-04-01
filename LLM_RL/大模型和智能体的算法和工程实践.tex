@@ -1,36 +1,133 @@
 \documentclass[12pt,a4paper]{article}
-\usepackage{ctex}
+\makeatletter
+\IfFileExists{ctex.sty}{
+    \usepackage{ctex}
+}{
+    \usepackage{fontspec}
+    \IfFontExistsTF{Hiragino Sans GB}{
+        \setmainfont[AutoFakeSlant=0.2]{Hiragino Sans GB}
+        \setmonofont[AutoFakeSlant=0.2,Scale=MatchLowercase]{Hiragino Sans GB}
+        \IfFontExistsTF{Arial Unicode MS}{
+            \newfontfamily\codefont[AutoFakeSlant=0.2,Scale=MatchLowercase]{Arial Unicode MS}
+        }{
+            \newfontfamily\codefont[AutoFakeSlant=0.2,Scale=MatchLowercase]{Hiragino Sans GB}
+        }
+    }{
+        \IfFontExistsTF{STHeiti Light}{
+            \setmainfont[AutoFakeSlant=0.2]{STHeiti Light}
+            \setmonofont[AutoFakeSlant=0.2,Scale=MatchLowercase]{STHeiti Light}
+            \IfFontExistsTF{Arial Unicode MS}{
+                \newfontfamily\codefont[AutoFakeSlant=0.2,Scale=MatchLowercase]{Arial Unicode MS}
+            }{
+                \newfontfamily\codefont[AutoFakeSlant=0.2,Scale=MatchLowercase]{STHeiti Light}
+            }
+        }{
+            \setmainfont[AutoFakeSlant=0.2]{Arial Unicode MS}
+            \setmonofont[AutoFakeSlant=0.2,Scale=MatchLowercase]{Arial Unicode MS}
+            \newfontfamily\codefont[AutoFakeSlant=0.2,Scale=MatchLowercase]{Arial Unicode MS}
+        }
+    }
+    \XeTeXlinebreaklocale "zh"
+    \XeTeXlinebreakskip = 0pt plus 1pt
+    \renewcommand{\contentsname}{目录}
+    \renewcommand{\abstractname}{摘要}
+    \renewcommand{\refname}{参考文献}
+}
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
+\usepackage[strings]{underscore}
 \usepackage{geometry}
-\usepackage{enumitem}
-\usepackage{algorithm}
-\usepackage{algorithmic}
+\IfFileExists{enumitem.sty}{
+    \usepackage{enumitem}
+}{
+    \usepackage{xparse}
+    \let\enumitem@enumerate\enumerate
+    \let\enumitem@endenumerate\endenumerate
+    \RenewDocumentEnvironment{enumerate}{o}{\enumitem@enumerate}{\enumitem@endenumerate}
+    \let\enumitem@itemize\itemize
+    \let\enumitem@enditemize\enditemize
+    \RenewDocumentEnvironment{itemize}{o}{\enumitem@itemize}{\enumitem@enditemize}
+}
+\IfFileExists{algorithm.sty}{
+    \usepackage{algorithm}
+}{
+    \usepackage{float}
+    \newfloat{algorithm}{tbp}{loa}
+    \floatname{algorithm}{Algorithm}
+}
+\IfFileExists{algorithmic.sty}{
+    \usepackage{algorithmic}
+}{
+    \newenvironment{algorithmic}[1][]%
+      {\begin{list}{}{\leftmargin=2em\itemsep=0.2em\parsep=0pt\topsep=0.2em}}%
+      {\end{list}}
+    \newcommand{\STATE}{\item[]}
+    \newcommand{\FOR}[1]{\item[]\textbf{for} ##1 \textbf{do}}
+    \newcommand{\ENDFOR}{\item[]\textbf{end for}}
+    \newcommand{\WHILE}[1]{\item[]\textbf{while} ##1 \textbf{do}}
+    \newcommand{\ENDWHILE}{\item[]\textbf{end while}}
+    \newcommand{\IF}[1]{\item[]\textbf{if} ##1 \textbf{then}}
+    \newcommand{\ELSIF}[1]{\item[]\textbf{else if} ##1 \textbf{then}}
+    \newcommand{\ELSE}{\item[]\textbf{else}}
+    \newcommand{\ENDIF}{\item[]\textbf{end if}}
+    \newcommand{\REQUIRE}{\item[]\textbf{Input: }}
+    \newcommand{\ENSURE}{\item[]\textbf{Output: }}
+    \newcommand{\RETURN}{\item[]\textbf{return} }
+}
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{tikz}
-\usepackage{pgfplots}
-\pgfplotsset{compat=1.17}
+\IfFileExists{pgfplots.sty}{
+    \usepackage{pgfplots}
+    \pgfplotsset{compat=1.17}
+}{
+    \makeatletter
+    \newenvironment{axis}[1][]%
+      {\begin{scope}[x=0.08cm,y=0.06cm]}%
+      {\end{scope}}
+    \def\pgfplotsset##1{}
+    \def\addplot{\@ifnextchar[{\pgfplots@addplot}{\pgfplots@addplot[]}}
+    \def\pgfplots@addplot[##1]##2;{}
+    \def\addlegendentry##1{}
+    \tikzdeclarecoordinatesystem{axis}{%
+      \pgfplots@parsecoord##1\pgf@stop}
+    \def\pgfplots@parsecoord##1,##2\pgf@stop{%
+      \pgfpointxy{##1}{##2}}
+    \makeatother
+}
 \usetikzlibrary{shapes,arrows,positioning,calc}
 \usepackage{float}
 \usepackage{subcaption}
 \usepackage{fancyhdr}
-\usepackage{titlesec}
+\IfFileExists{titlesec.sty}{
+    \usepackage{titlesec}
+}{}
+\makeatother
 
 \geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm,headheight=15pt}
+\emergencystretch=2em
+\providecommand{\codefont}{\ttfamily}
+\makeatletter
+\def\verbatim@font{\normalfont\codefont\small}
+\makeatother
 
 % 代码样式
 \lstset{
-    basicstyle=\ttfamily\small,
+    basicstyle=\codefont\small,
     breaklines=true,
+    breakatwhitespace=false,
+    columns=fullflexible,
+    keepspaces=true,
+    upquote=true,
+    showstringspaces=false,
     frame=single,
     backgroundcolor=\color{gray!10},
     keywordstyle=\color{blue},
     commentstyle=\color{green!60!black},
     stringstyle=\color{red},
-    literate={é}{{\'e}}1 {ö}{{\"o}}1 {ü}{{\"u}}1
+    literate={é}{{\'e}}1 {ö}{{\"o}}1 {ü}{{\"u}}1 {−}{{-}}1
 }
 
 % 定理环境
@@ -67,13 +164,13 @@
     \item \textbf{策略梯度方法}：PPO、GRPO、REINFORCE、RLOO等
     \item \textbf{自我训练方法}：ReST、ReST-EM、STaR、Quiet-STaR、V-STaR、Expert Iteration等
     \item \textbf{偏好优化方法}：DPO、Online DPO、IPO、Self-Rewarding等
-    \item \textbf{采样筛选方法}：Rejection Sampling Fine-tuning (RSF)、RAFT等
+    \item \textbf{采样筛选方法}：拒绝采样微调（RSF）、RAFT等
     \item \textbf{过程奖励方法}：PRM、ORM、Math-Shepherd、PRIME等
     \item \textbf{搜索增强方法}：MCTS增强推理、Best-of-N采样等
-    \item \textbf{长上下文与系统算法}：KV Cache、隐式/隐含注意力、残差注意力、Titans长记忆、TurboQuant、FlashAttention、Mamba、PagedAttention等
-    \item \textbf{智能体工程体系}：agent harness理论、OpenClaw架构、隔离浏览器、工具调用、灰度部署与运维实践
+    \item \textbf{长上下文与系统算法}：自注意力、FFN、交叉注意力、模态对齐、多模态Transformer统一骨干、KV缓存（KV cache）、隐式/隐含注意力、残差注意力、Titans长记忆、TurboQuant、FlashAttention、Mamba、PagedAttention等
+    \item \textbf{智能体工程体系}：智能体控制层（harness）理论、OpenClaw架构、隔离浏览器、工具调用、灰度部署与运维实践
 \end{itemize}
-报告深入分析了DeepSeek-R1的纯RL训练范式、OpenAI o1的推理模型架构、Qwen系列、WizardMath/WizardCoder、Marco-o1、Kimi k1.5等重要模型的技术方案，并在系统层补充了\textbf{当前最关键的长上下文与推理基础设施算法}：包括KV cache的容量定律、DeepSeek系的低秩KV压缩思想、隐式注意力的统一核视角、RealFormer残差注意力、Google Titans长记忆模块、TurboQuant极限压缩框架，以及FlashAttention、Mamba、PagedAttention等对工业推理吞吐影响极大的算法。\textbf{特别地，本报告新增了对美国最前沿闭源大模型（GPT-5、GPT-5.1、o3、o4-mini、Gemini 3.0 Pro等）训练技术的深度逆向分析}，通过整合官方博客、技术报告、基准测试数据及行业专家推测，系统性地揭示了这些模型的核心算法秘密，包括大规模RL训练的Scaling Law、过程奖励模型（PRM）的精细设计、推理时计算的最优分配策略、以及多模态原生架构等关键技术。报告还将智能体系统视为\textbf{模型外部控制问题}，系统引入了agent harness的形式化定义、OpenClaw的Gateway/Node/Agent Loop架构、隔离浏览器与权限边界、以及本地与远程部署的工程实践。此外，本报告创新性地提出了多种新型算法框架，包括：\textbf{自适应分层奖励优化（AHRO）}、\textbf{认知架构引导策略学习（CAPL）}、\textbf{动态思维链自演化（DCoT-SE）}、\textbf{多粒度推理一致性强化（MGRCR）}、\textbf{元认知反馈回路优化（MFLO）}等。本报告还深入介绍了\textbf{BitNet}系列1比特大语言模型技术，包括其训练推理机制、与传统LLM在内存消耗、能耗和性能方面的全面对比，旨在为研究人员和工程师提供全面的技术参考和未来研究方向。
+报告深入分析了DeepSeek-R1的纯RL训练范式、OpenAI o1的推理模型架构、Qwen系列、WizardMath/WizardCoder、Marco-o1、Kimi k1.5等重要模型的技术方案，并在系统层补充了\textbf{当前最关键的长上下文与推理基础设施算法}：包括KV缓存（KV cache）的容量定律、DeepSeek系的低秩KV压缩思想、隐式注意力的统一核视角、RealFormer残差注意力、Google Titans长记忆模块、TurboQuant极限压缩框架，以及FlashAttention、Mamba、PagedAttention等对工业推理吞吐影响极大的算法。\textbf{特别地，本报告新增了对美国最前沿闭源大模型（GPT-5、GPT-5.1、o3、o4-mini、Gemini 3.0 Pro等）训练技术的深度逆向分析}，通过整合官方博客、技术报告、基准测试数据及行业专家推测，系统性地揭示了这些模型的核心算法秘密，包括大规模RL训练的尺度定律（scaling law）、过程奖励模型（PRM）的精细设计、推理时计算的最优分配策略，以及多模态原生架构等关键技术。报告还将智能体系统视为\textbf{模型外部控制问题}，系统引入了智能体控制层（harness）的形式化定义、OpenClaw的Gateway/Node/Agent Loop架构、隔离浏览器与权限边界，以及本地与远程部署的工程实践。此外，本报告创新性地提出了多种新型算法框架，包括：\textbf{自适应分层奖励优化（AHRO）}、\textbf{认知架构引导策略学习（CAPL）}、\textbf{动态思维链自演化（DCoT-SE）}、\textbf{多粒度推理一致性强化（MGRCR）}、\textbf{元认知反馈回路优化（MFLO）}等。本报告还深入介绍了\textbf{BitNet}系列1比特（1-bit）大语言模型技术，包括其训练推理机制、与传统LLM在内存消耗、能耗和性能方面的全面对比，旨在为研究人员和工程师提供全面的技术参考和未来研究方向。
 \end{abstract}
 
 \tableofcontents
@@ -153,8 +250,8 @@
     \item \textbf{第2节}：强化学习基础理论（MDP、策略梯度、GAE等）
     \item \textbf{第3节}：核心算法详解（PPO、GRPO、DPO、RLAIF、奖励设计）
     \item \textbf{第4节}：DeepSeek-R1技术详解（训练流程、Zero实验、蒸馏）
-    \item \textbf{第5节}：OpenAI o1技术分析（官方信息、技术推测、推理时Scaling）
-    \item \textbf{第6节}：其他主要研究方法与前沿系统算法（涵盖ReST、STaR、Expert Iteration、Self-Rewarding、REINFORCE/RLOO、RAFT/RSF、V-STaR、PRM/ORM、PRIME、Online DPO、WizardMath、Qwen系列、Marco-o1、Kimi k1.5，以及KV Cache、隐式注意力、残差注意力、Titans、TurboQuant等）
+    \item \textbf{第5节}：OpenAI o1技术分析（官方信息、技术推测、推理时计算扩展）
+    \item \textbf{第6节}：其他主要研究方法与前沿系统算法（涵盖ReST、STaR、Expert Iteration、Self-Rewarding、REINFORCE/RLOO、RAFT/RSF、V-STaR、PRM/ORM、PRIME、Online DPO、WizardMath、Qwen系列、Marco-o1、Kimi k1.5，以及自注意力、FFN、交叉注意力、模态对齐、多模态Transformer统一骨干、KV缓存、隐式注意力、残差注意力、Titans、TurboQuant等）
     \item \textbf{第7节}：创新算法框架（AHRO、CAPL、DCoT-SE、MGRCR、MFLO等）
     \item \textbf{第8节}：实现细节、训练技巧与智能体工程部署
     \item \textbf{第9节}：失败尝试与经验教训
@@ -181,11 +278,11 @@
 5 & OpenAI o1技术分析 & 闭源推理模型可能采用了哪些训练与推理时计算策略？ \\
 6 & 其他主要研究方法与前沿系统算法 & 除主线方法外，还有哪些自训练方法、长上下文算法和缓存/注意力基础设施值得掌握？ \\
 7 & 创新算法框架 & 本文提出的扩展性算法设想分别试图解决哪些现有瓶颈？ \\
-8 & 实现细节、训练技巧与智能体工程部署 & 如何把算法落实到训练系统、serving系统和agent runtime中？ \\
+8 & 实现细节、训练技巧与智能体工程部署 & 如何把算法落实到训练系统、服务系统和智能体运行时（agent runtime）中？ \\
 9 & 失败尝试与经验教训 & 常见失败模式、reward hacking和规模化问题应如何识别？ \\
 10 & 美国前沿闭源大模型训练技术深度逆向分析 & GPT-5、o系列、Gemini 3.0 Pro等闭源系统的关键工程秘密是什么？ \\
 11 & 组织与工程管理实践 & 顶尖团队在MLOps、安全、红队、发布和组织协作上有哪些共性做法？ \\
-12 & 未来研究方向 & 接下来最值得投入的算法、Agent、多模态和安全问题是什么？ \\
+12 & 未来研究方向 & 接下来最值得投入的算法、智能体、多模态和安全问题是什么？ \\
 13 & BitNet：1比特大语言模型 & 极致压缩模型如何改变训练与部署成本结构？ \\
 14 & 总结 & 从研究到工程，哪些结论最值得直接执行？ \\
 \bottomrule
@@ -199,7 +296,7 @@
     \item \textbf{若关注RL训练理论}：优先阅读第2-4节，再阅读第6节前半部分与第9节。
     \item \textbf{若关注推理基础设施}：优先阅读第6节后半部分、第8节和第13节。
     \item \textbf{若关注闭源模型技术判断}：优先阅读第5节、第10节与第11节。
-    \item \textbf{若关注Agent落地与部署}：优先阅读第8节、第11节和第12节的Agent相关部分。
+    \item \textbf{若关注智能体落地与部署}：优先阅读第8节、第11节和第12节的智能体相关部分。
     \item \textbf{若只需要结论与建议}：直接阅读第14节，再按需回溯具体章节。
 \end{itemize}
 
@@ -245,7 +342,7 @@ POMDP定义为七元组$(\mathcal{S}, \mathcal{A}, P, R, \Omega, O, \gamma)$，�
 对于LLM，POMDP视角捕捉了以下现实约束：
 \begin{itemize}
     \item 模型无法直接观测用户真实意图
-    \item 问题的完整上下文可能超出context window
+    \item 问题的完整上下文可能超出上下文窗口（context window）
     \item 外部世界状态（如数据库、API）不完全可知
 \end{itemize}
 
@@ -620,7 +717,7 @@ G_q = G_{base} \cdot \exp\left(\alpha \cdot \text{difficulty}(q)\right)
 \end{equation}
 难题使用更大的组以获得更稳定的梯度估计。
 
-\subsection{Direct Preference Optimization (DPO)}
+\subsection{直接偏好优化（DPO）}
 
 DPO是另一种无需显式奖励模型的RL方法。
 
@@ -663,7 +760,7 @@ P(y_w \succ y_l | x) = \sigma(r(x, y_w) - r(x, y_l))
 \end{tabular}
 \end{table}
 
-\subsection{Reinforcement Learning from AI Feedback (RLAIF)}
+\subsection{基于AI反馈的强化学习（RLAIF）}
 
 \subsubsection{核心框架}
 
@@ -1081,9 +1178,9 @@ o1可能在推理时使用某种形式的搜索：
     \item 自适应计算量分配
 \end{itemize}
 
-\subsection{推理时Scaling}
+\subsection{推理时计算扩展}
 
-o1展示了一种新的scaling维度——推理时计算：
+o1展示了一种新的扩展维度，即推理时计算扩展：
 
 \begin{equation}
 \text{Performance} = f(\text{Model Size}, \text{Training Compute}, \textcolor{red}{\text{Inference Compute}})
@@ -1159,7 +1256,7 @@ Constitutional AI提出了RLAIF（RL from AI Feedback），用AI反馈替代人�
     \item 对基础模型能力有要求
 \end{itemize}
 
-\subsection{Self-Play与迭代改进}
+\subsection{自博弈与迭代改进}
 
 自博弈（Self-Play）方法让模型与自己对弈，不断迭代提升：
 
@@ -1180,7 +1277,7 @@ Constitutional AI提出了RLAIF（RL from AI Feedback），用AI反馈替代人�
     \item \textbf{SPIN}：自博弈迭代训练
 \end{itemize}
 
-\subsection{Google的推理研究}
+\subsection{Google推理研究}
 
 \subsubsection{Chain-of-Thought Prompting}
 
@@ -1215,7 +1312,7 @@ A: Let's think step by step.
 \hat{a} = \arg\max_a \sum_{i=1}^{N} \mathbf{1}[a_i = a]
 \end{equation}
 
-\subsection{STaR: Self-Taught Reasoner}
+\subsection{STaR：自教推理器（Self-Taught Reasoner）}
 
 \subsubsection{核心方法}
 
@@ -1381,7 +1478,7 @@ y^* = \arg\max_{y \in \{y_1, \ldots, y_N\}} R(x, y), \quad y_i \sim \pi_\theta(\
 y^* = \arg\max_{y \in \text{Beam}_k} \sum_{t} \log \pi_\theta(y_t|y_{<t}, x) + \alpha \cdot V(x, y)
 \end{equation}
 
-\subsection{Self-Rewarding Language Models}
+\subsection{自奖励语言模型（Self-Rewarding Language Models）}
 
 \subsubsection{核心创新}
 
@@ -1489,7 +1586,7 @@ RAFT（Reward rAnked FineTuning）是一种简化的RL方法：
     \item \textbf{RAFT}：使用相对排名筛选，保证每个问题都有训练样本
 \end{itemize}
 
-\subsection{Rejection Sampling Fine-tuning (RSF)}
+\subsection{拒绝采样微调（RSF）}
 
 \subsubsection{方法细节}
 
@@ -1743,6 +1840,129 @@ Kimi k1.5针对长上下文场景优化RL训练：
     \item \textbf{多模态支持}：文本+视觉推理
 \end{itemize}
 
+\subsection{Transformer统一骨干与多模态建模基础}
+
+本小节补足一个在工程实践中经常被默认、但实际上决定系统上限的事实：无论是纯文本LLM、视觉语言模型，还是带工具调用与外部记忆的复杂系统，其核心计算骨架通常仍然是Transformer。只要能把不同模态表示为一组可比较、可路由、可复用的token或latent token，\textbf{同一套“注意力 + 前馈网络 + 残差归一化”机制就能同时承担序列建模、跨模态检索与条件生成三类任务}。因此，要真正理解多模态系统，必须先从自注意力、FFN、交叉注意力和模态对齐的数学结构入手。
+
+\subsubsection{自注意力机制的数学原理}
+
+设输入序列表示为矩阵
+\begin{equation}
+X = [x_1; x_2; \ldots; x_n] \in \mathbb{R}^{n \times d}.
+\end{equation}
+自注意力的第一步是对同一组token分别做三组线性投影：
+\begin{equation}
+Q = XW_Q,\qquad K = XW_K,\qquad V = XW_V,
+\end{equation}
+其中$W_Q, W_K \in \mathbb{R}^{d \times d_k}$，$W_V \in \mathbb{R}^{d \times d_v}$。随后通过查询与键的内积构造两两相关性：
+\begin{equation}
+S = \frac{QK^\top}{\sqrt{d_k}} + M,
+\end{equation}
+其中$M$是掩码矩阵；在双向编码器中$M$可为零，在因果解码器中$M_{ij}=-\infty$（当$j>i$）以禁止看到未来token。经softmax归一化后得到注意力权重：
+\begin{equation}
+A = \text{softmax}(S),
+\end{equation}
+最终输出为
+\begin{equation}
+H = AV.
+\end{equation}
+
+这一机制的关键不在于“平均历史信息”，而在于它实现了\textbf{内容依赖的动态路由}：第$i$个位置到底从哪些位置读取信息、读取多少，不是由固定卷积核决定，而是由$q_i^\top k_j$在线计算出来。若第$i$个token与第$j$个token在当前任务中高度相关，则$A_{ij}$会变大；反之则自动衰减。因此，自注意力本质上是在序列内部学习一个随输入变化的完全图权重矩阵。
+
+多头注意力（Multi-Head Attention）进一步把这一过程并行化。对第$h$个头有：
+\begin{equation}
+\text{head}_h = \text{softmax}\left(\frac{XW_Q^{(h)} (XW_K^{(h)})^\top}{\sqrt{d_k}}\right)XW_V^{(h)},
+\end{equation}
+再将各头拼接并线性映射：
+\begin{equation}
+\text{MHA}(X) = \text{Concat}(\text{head}_1,\ldots,\text{head}_H)W_O.
+\end{equation}
+多头结构的数学价值在于，它允许模型在不同子空间中同时学习\textbf{语法依赖、实体对齐、位置关系、视觉局部模式与跨句约束}等不同类型的相关性，而不是把全部关系压缩到一个单一相似度度量里。
+
+\subsubsection{前馈网络（FFN）的设计原理}
+
+若说自注意力负责\textbf{token之间的信息交换}，则前馈网络（Feed-Forward Network, FFN）负责\textbf{单个token内部的非线性变换与特征重编码}。标准Transformer层中的FFN写为
+\begin{equation}
+\text{FFN}(h) = W_2 \,\phi(W_1 h + b_1) + b_2,
+\end{equation}
+其中$h \in \mathbb{R}^{d}$，$W_1 \in \mathbb{R}^{d_{ff} \times d}$，$W_2 \in \mathbb{R}^{d \times d_{ff}}$，且通常$d_{ff} \gg d$。这意味着FFN先把token表示升维到更宽的隐空间，在该空间中做坐标方向上的非线性筛选，再投影回模型维度。
+
+从函数逼近的角度看，FFN承担了两项作用。第一，它把注意力层形成的“读到的信息”转化为更适合下一层处理的表示；第二，它通过宽度$d_{ff}$提供了近似高维基函数展开的能力，使网络能在每个位置上学习复杂的局部决策边界。很多实践工作把FFN理解为一种\textbf{按token索引的参数化记忆}：注意力决定“读什么”，FFN决定“读到之后如何改写内部状态”。
+
+现代LLM中常见的SwiGLU/GeGLU等门控FFN，本质上是在升维后加入乘性选择机制。例如SwiGLU可写为
+\begin{equation}
+\text{SwiGLU}(h) = W_o \Big((W_v h) \odot \text{swish}(W_g h)\Big),
+\end{equation}
+其中$\odot$表示Hadamard逐元素乘积。与标准ReLU/GELU FFN相比，这类结构通过门控把“哪些通道应该被放大、哪些应被抑制”显式参数化，因此在相近参数量下往往具有更好的表达效率。换言之，FFN并不是注意力层后面一个可有可无的“MLP补丁”，而是Transformer能稳定表达复杂语义映射的另一半。
+
+\subsubsection{交叉注意力机制与条件信息注入}
+
+自注意力处理的是同一序列内部的信息交换，而交叉注意力（Cross-Attention）处理的是\textbf{一个序列如何按需读取另一个序列或另一种模态的表示}。设查询序列为$X^{(q)} \in \mathbb{R}^{n_q \times d}$，条件序列为$X^{(c)} \in \mathbb{R}^{n_c \times d}$，则交叉注意力定义为
+\begin{equation}
+Q = X^{(q)} W_Q,\qquad K = X^{(c)} W_K,\qquad V = X^{(c)} W_V,
+\end{equation}
+\begin{equation}
+\text{CrossAttn}(X^{(q)}, X^{(c)}) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V.
+\end{equation}
+这里查询来自“当前需要更新的表示”，而键和值来自“提供条件信息的外部上下文”。在经典编码器-解码器结构中，解码器token通过交叉注意力读取编码器输出；在视觉语言模型中，文本token可通过交叉注意力读取图像patch或压缩后的视觉latent；在检索增强生成中，问题token可通过交叉注意力读取外部文档表示。
+
+交叉注意力之所以重要，是因为它提供了一种比“直接拼接全部模态token”更精细的条件注入方式。若把所有视觉token和文本token直接合并做全局自注意力，虽然统一，但计算成本为$O((n_q+n_c)^2 d)$，且容易让无关模态过度干扰。交叉注意力则把代价控制在$O(n_q n_c d)$，并保持方向性：\textbf{谁是解释者、谁是被解释对象，谁在读、谁被读}，在算子层面是清楚的。这也是许多多模态架构选择“冻结视觉编码器 + 轻量桥接模块 + LLM解码器”的根本原因。
+
+\subsubsection{模态对齐技术：从表示空间到训练目标}
+
+要让文本、图像、音频等模态进入同一Transformer骨干，关键不只是“把它们都变成向量”，而是要让这些向量在几何上\textbf{可比较、可检索、可互相条件化}。形式上，设文本编码器、视觉编码器分别给出
+\begin{equation}
+u_i = E_{\text{text}}(x_i^{\text{text}}),\qquad
+v_i = E_{\text{img}}(x_i^{\text{img}}),
+\end{equation}
+再经过投影头映射到公共空间：
+\begin{equation}
+z_i^{\text{text}} = P_{\text{text}}(u_i),\qquad
+z_i^{\text{img}} = P_{\text{img}}(v_i).
+\end{equation}
+最常见的第一步对齐目标是对比学习，其代表性损失可写为
+\begin{equation}
+\mathcal{L}_{\text{clip}} =
+- \frac{1}{B}\sum_{i=1}^{B}
+\log
+\frac{\exp(\langle z_i^{\text{text}}, z_i^{\text{img}}\rangle/\tau)}
+{\sum_{j=1}^{B}\exp(\langle z_i^{\text{text}}, z_j^{\text{img}}\rangle/\tau)},
+\end{equation}
+并对文本到图像、图像到文本两个方向同时优化。其几何意义是：匹配样本在共享嵌入空间内靠近，不匹配样本被推远。这样做之后，模型至少学会“哪段文本对应哪张图、哪张图最支持哪句话”的粗粒度对齐。
+
+但仅有全局对齐还不够。复杂多模态推理还要求\textbf{细粒度对齐}，也就是词语、区域、对象、关系、动作之间的局部对应。工程上常见三种做法。第一，使用更细粒度的视觉token，如patch、region或object token，让文本可以注意到局部视觉证据。第二，引入桥接模块，例如Q-Former、Perceiver Resampler或轻量查询token，用少量可学习查询从高维视觉特征中提炼出适合语言模型消费的视觉摘要。第三，叠加生成式目标，即在共享表示基础上继续最小化条件语言模型损失：
+\begin{equation}
+\mathcal{L}_{\text{gen}} = - \sum_{t=1}^{T}\log p_\theta(y_t \mid y_{<t}, z^{\text{img}}, z^{\text{text}}).
+\end{equation}
+对比学习负责“放到同一几何空间里”，生成式训练负责“学会如何利用这个空间完成回答、描述与推理”。真正强的多模态系统通常两类目标都会用。
+
+\subsubsection{Transformer如何成为统一多模态基础架构}
+
+有了上述模块之后，Transformer之所以能成为文本、图像乃至更多模态的统一基础架构，就不再神秘。关键步骤可以概括为三层。
+
+第一层是\textbf{离散化或token化}。文本天然由token构成；图像可被切成patch token、region token或由视觉编码器输出latent token；音频可被表示为时间帧token、频谱token或离散声码token。于是不同模态都可写成
+\begin{equation}
+X^{(m)} = [x^{(m)}_1, \ldots, x^{(m)}_{n_m}].
+\end{equation}
+
+第二层是\textbf{投影到统一表示空间}。对每个模态使用专属前端$\Phi_m$和投影矩阵$P_m$，得到统一维度的token序列
+\begin{equation}
+H_0 = [P_{\text{text}}\Phi_{\text{text}}(X^{(\text{text})});
+P_{\text{img}}\Phi_{\text{img}}(X^{(\text{img})});
+\cdots] + E_{\text{pos}} + E_{\text{mod}},
+\end{equation}
+其中$E_{\text{pos}}$编码位置信息，$E_{\text{mod}}$编码模态身份。这样，后续骨干网络不再需要知道“这原来是一张图还是一句话”，它只需要在统一维度上学习如何路由信息。
+
+第三层是\textbf{用同一套堆叠层做融合与推理}。无论采用全局自注意力、局部稀疏注意力，还是“自注意力 + 交叉注意力”混合结构，核心更新都可写成
+\begin{equation}
+\tilde{H}_{\ell} = H_{\ell} + \text{Attn}(H_{\ell}),
+\qquad
+H_{\ell+1} = \tilde{H}_{\ell} + \text{FFN}(\tilde{H}_{\ell}).
+\end{equation}
+这意味着多模态系统真正共享的是\textbf{信息交换规则}，而不是共享原始传感器。文本token、图像token、工具返回token、记忆token在高层都被视为“可被注意、可被改写、可被再利用的状态单元”。一旦这个统一观点成立，Transformer就天然适合作为多模态统一骨干。
+
+从系统视角看，这一统一骨干还有三点额外价值。其一，训练与扩展路径统一，文本模型中成熟的预训练、蒸馏、量化、KV缓存和推理加速技术可以相对平滑地迁移到多模态模型。其二，外部工具与记忆更容易接入，因为它们也可以被编码成附加token或条件上下文。其三，推理链可以跨模态展开：模型不必先“看完图再说话”，而是能在若干层中反复执行“看图一部分 $\rightarrow$ 形成文本中间表示 $\rightarrow$ 再回到图像证据”的循环。这正是近年来多模态思维链、视觉工具调用与统一智能体系统能够快速发展的算子基础。
+
 \subsection{长上下文、缓存与前沿系统算法}
 
 \subsubsection{KV Cache的数学原理与容量瓶颈}
@@ -1923,7 +2143,7 @@ h_t = A(\Delta_t) h_{t-1} + B_t x_t,\qquad y_t = C_t h_t + D x_t,
 \end{equation}
 这一设计把操作系统中的分页思想引入LLM serving，使KV缓存不再需要连续大块显存，从而显著减少碎片和冗余复制。在共享prompt、并发采样、多路beam search场景中，这种“逻辑连续、物理离散”的映射尤其关键。
 
-综上，长上下文能力并不只是“把窗口调大”那么简单，而是\textbf{缓存设计、注意力结构、内存分配和近似估计}四个层面的联合结果。对于做RL推理模型或Agent系统的团队，真正决定上限的往往不是优化器，而是这些底层系统算法。
+综上，长上下文能力并不只是“把窗口调大”那么简单，而是\textbf{缓存设计、注意力结构、内存分配和近似估计}四个层面的联合结果。对于做RL推理模型或智能体系统的团队，真正决定上限的往往不是优化器，而是这些底层系统算法。
 
 \paragraph{本节小结：系统算法对模型上限的决定作用}
 
@@ -2023,7 +2243,7 @@ SimPO简化DPO，移除参考模型：
 R_{code}(x, y) = \alpha \cdot \text{compile\_success} + \beta \cdot \text{test\_pass\_rate} + \gamma \cdot \text{efficiency}
 \end{equation}
 
-\subsubsection{Tool Use与Agent RL}
+\subsubsection{工具使用与智能体强化学习}
 
 \textbf{ReAct框架}：交替进行推理（Reasoning）和行动（Acting）
 
@@ -2054,7 +2274,7 @@ rStar（Self-play mutual reasoning）通过自博弈提升推理：
     \item 迭代提升
 \end{enumerate}
 
-\subsubsection{Inference-Time Compute Scaling}
+\subsubsection{推理时计算扩展（inference-time scaling）}
 
 推理时计算扩展的方法：
 \begin{table}[H]
@@ -2684,7 +2904,7 @@ R_{novelty}(o) = \min_{o' \in \text{Archive}} d(o, o')
 \section{实现细节、训练技巧与智能体工程部署}
 %===========================================
 
-本节按照“\textbf{训练数据与采样} $\rightarrow$ \textbf{稳定训练} $\rightarrow$ \textbf{分布式与内存优化} $\rightarrow$ \textbf{智能体工程与部署}”的顺序展开，避免将训练细节和Agent基础设施混写在一起。
+本节按照“\textbf{训练数据与采样} $\rightarrow$ \textbf{稳定训练} $\rightarrow$ \textbf{分布式与内存优化} $\rightarrow$ \textbf{智能体工程与部署}”的顺序展开，避免将训练细节和智能体基础设施混写在一起。
 
 \subsection{数据准备}
 
@@ -3043,16 +3263,16 @@ W' = W + \Delta W = W + BA
 
 \textbf{QLoRA}：在4-bit量化基础上使用LoRA。
 
-\subsection{智能体Harness理论与OpenClaw工程实践}
+\subsection{智能体控制层（harness）理论与OpenClaw工程实践}
 
-\subsubsection{Harness的形式化定义}
+\subsubsection{控制层（harness）的形式化定义}
 
-智能体系统中的\textbf{harness}可以理解为“包裹在基础模型外部的控制层”，它负责把LLM、工具、记忆、审批与环境交互编排成一个可执行系统。若仅有基础模型$\pi_\theta$，系统只能生成文本；而加入harness后，系统动作空间扩展为：
+智能体系统中的\textbf{控制层（harness）}可以理解为“包裹在基础模型外部的控制层”，它负责把LLM、工具、记忆、审批与环境交互编排成一个可执行系统。若仅有基础模型$\pi_\theta$，系统只能生成文本；而加入控制层后，系统动作空间扩展为：
 \begin{equation}
 a_t \in \mathcal{A}_{\text{text}} \cup \mathcal{A}_{\text{tool}} \cup \mathcal{A}_{\text{delegate}} \cup \mathcal{A}_{\text{stop}}.
 \end{equation}
 
-我们可将一个agent harness形式化为六元组
+我们可将一个智能体控制层（harness）形式化为六元组
 \begin{equation}
 \mathcal{H} = (\pi_{\text{plan}}, \pi_{\text{exec}}, g, u, \mathcal{T}, \mathcal{M}),
 \end{equation}
@@ -3070,17 +3290,17 @@ a_t \in \mathcal{A}_{\text{text}} \cup \mathcal{A}_{\text{tool}} \cup \mathcal{A
 \begin{equation}
 s_t = (x_{\leq t}, m_t, w_t, \sigma_t),
 \end{equation}
-其中$x_{\leq t}$是对话与工具轨迹，$m_t$是会话/长期记忆，$w_t$是工作区状态，$\sigma_t$是权限与环境状态，则harness的目标不应只优化任务正确率，而应优化：
+其中$x_{\leq t}$是对话与工具轨迹，$m_t$是会话/长期记忆，$w_t$是工作区状态，$\sigma_t$是权限与环境状态，则控制层的目标不应只优化任务正确率，而应优化：
 \begin{equation}
 J(\mathcal{H}) = \mathbb{E}\left[\sum_{t=0}^{T} \big(r^{\text{task}}_t - \lambda_c c(a_t) - \lambda_s \xi(s_t,a_t)\big)\right].
 \end{equation}
-这里$c(a_t)$表示时间/金钱/上下文消耗，$\xi(s_t,a_t)$表示风险代价。这个目标函数解释了为什么成熟的agent系统都不是“让模型自由调用所有工具”，而是必须在成功率、成本与安全性之间做显式权衡。
+这里$c(a_t)$表示时间/金钱/上下文消耗，$\xi(s_t,a_t)$表示风险代价。这个目标函数解释了为什么成熟的智能体系统都不是“让模型自由调用所有工具”，而是必须在成功率、成本与安全性之间做显式权衡。
 
 \paragraph{费曼式直观解释}
 
-harness之于模型，就像操作系统之于CPU。CPU本身能执行指令，但如果没有进程调度、权限管理、文件系统和中断机制，它很难安全地支持复杂软件。LLM也是一样。模型能生成下一步动作，但如果没有harness，它并不知道哪些工具能用、什么时候该停、什么信息该保存、什么行为必须审批。
+控制层之于模型，就像操作系统之于CPU。CPU本身能执行指令，但如果没有进程调度、权限管理、文件系统和中断机制，它很难安全地支持复杂软件。LLM也是一样。模型能生成下一步动作，但如果没有控制层，它并不知道哪些工具能用、什么时候该停、什么信息该保存、什么行为必须审批。
 
-\subsubsection{Harness的理论深化：约束POMDP与层级控制}
+\subsubsection{控制层（harness）的理论深化：约束POMDP与层级控制}
 
 在真实智能体中，环境通常是部分可观测且带安全约束的，因此更精确的建模方式是\textbf{约束POMDP}。设系统在每一步除了任务奖励$r_t$外，还会产生风险代价$d_t$，则目标可写为：
 \begin{equation}
@@ -3093,7 +3313,7 @@ harness之于模型，就像操作系统之于CPU。CPU本身能执行指令，�
 \mathcal{L}(\pi,\lambda) = \mathbb{E}_{\pi}\left[\sum_{t=0}^{T} (r_t - \lambda d_t)\right] + \lambda \kappa.
 \end{equation}
 
-这说明guard、审批器和权限边界并不是“额外的产品逻辑”，而是优化问题本身的一部分。一个没有风险约束的agent，理论上会倾向于调用所有高收益工具，即使这些动作不可逆、不可审计或不可恢复。
+这说明guard、审批器和权限边界并不是“额外的产品逻辑”，而是优化问题本身的一部分。一个没有风险约束的智能体，理论上会倾向于调用所有高收益工具，即使这些动作不可逆、不可审计或不可恢复。
 
 进一步地，智能体通常天然是\textbf{层级策略}。记高层策略负责选择子任务或模式$o_t$，低层策略负责在模式内执行动作，则有：
 \begin{equation}
@@ -3112,12 +3332,12 @@ o_t \sim \pi_H(o \mid s_t), \qquad a_t \sim \pi_L(a \mid s_t, o_t),
 \begin{enumerate}
     \item 不要把“规划”和“执行”塞进同一条提示词里，最好拆成高层决策与低层执行两个环节；
     \item 不要把“权限控制”视为后处理，应该在动作采样前就作为约束注入；
-    \item 不要只记录最终答案，必须记录子任务切换、工具调用和终止原因，否则无法复盘agent失败。
+    \item 不要只记录最终答案，必须记录子任务切换、工具调用和终止原因，否则无法复盘智能体失败。
 \end{enumerate}
 
-\subsubsection{Harness中的工具调用、审批与安全边界}
+\subsubsection{控制层（harness）中的工具调用、审批与安全边界}
 
-Anthropic在工程实践中区分了\textbf{workflow}与\textbf{agent}：前者沿着预定义代码路径执行，后者则由模型动态决定过程。对后者而言，harness最重要的不是“更多工具”，而是\textbf{可控的动作边界}。一种常见的门控写法是：
+Anthropic在工程实践中区分了\textbf{workflow}与\textbf{agent}：前者沿着预定义代码路径执行，后者则由模型动态决定过程。对后者而言，控制层最重要的不是“更多工具”，而是\textbf{可控的动作边界}。一种常见的门控写法是：
 \begin{equation}
 \Pr(a_t \text{ executes}) = g(s_t, a_t),
 \end{equation}
@@ -3126,7 +3346,7 @@ Anthropic在工程实践中区分了\textbf{workflow}与\textbf{agent}：前者�
 g(s_t, a_t) \in \{0, 1, \text{need-human-approval}\}.
 \end{equation}
 
-这意味着agent并不是直接拥有系统权限，而是通过guard函数被约束在一个安全可审计的动作域中。实践上，guard至少应覆盖：
+这意味着智能体并不是直接拥有系统权限，而是通过guard函数被约束在一个安全可审计的动作域中。实践上，guard至少应覆盖：
 \begin{itemize}
     \item \textbf{能力边界}：哪些shell、浏览器、网络、邮件、支付动作可执行；
     \item \textbf{数据边界}：哪些路径、域名、账号、会话允许访问；
@@ -3142,11 +3362,11 @@ Q_{\text{tool}}(s_t, a_t) = \mathbb{E}[R \mid s_t, a_t] - \alpha \cdot \text{lat
 
 \paragraph{费曼式直观解释}
 
-一个成熟的agent不应该像实习生第一次拿到公司全部系统权限那样工作。更合理的方式是：先告诉它“哪些门能进、哪些按钮能按、哪些操作必须上报”。guard的存在，不是为了限制聪明，而是为了让聪明不会在错误地方造成高代价后果。
+一个成熟的智能体不应该像实习生第一次拿到公司全部系统权限那样工作。更合理的方式是：先告诉它“哪些门能进、哪些按钮能按、哪些操作必须上报”。guard的存在，不是为了限制聪明，而是为了让聪明不会在错误地方造成高代价后果。
 
 \subsubsection{OpenClaw架构剖析}
 
-OpenClaw给出了一个比较清晰的agent runtime参考实现，其核心不是“一个神奇模型”，而是\textbf{分层的控制平面与执行平面}：
+OpenClaw给出了一个比较清晰的智能体运行时（agent runtime）参考实现，其核心不是“一个神奇模型”，而是\textbf{分层的控制平面与执行平面}：
 \begin{equation}
 \text{message} \rightarrow \text{Gateway} \rightarrow \text{Context/Prompt} \rightarrow \text{Model} \rightarrow \text{Tools} \rightarrow \text{Stream/Persist}.
 \end{equation}
@@ -3156,7 +3376,7 @@ OpenClaw给出了一个比较清晰的agent runtime参考实现，其核心不�
     \item \textbf{Gateway}：长驻守护进程，统一管理WebSocket消息面、provider连接、HTTP画布宿主与认证；
     \item \textbf{Clients}：mac app、CLI、web admin等控制平面客户端；
     \item \textbf{Nodes}：macOS/iOS/Android/headless等执行节点，通过`role: node`接入并暴露设备能力；
-    \item \textbf{Agent Loop}：单次agent运行的权威执行路径，覆盖请求接收、上下文装配、模型推理、工具事件流、持久化与重试；
+    \item \textbf{Agent Loop}：单次智能体运行的权威执行路径，覆盖请求接收、上下文装配、模型推理、工具事件流、持久化与重试；
     \item \textbf{Session/Compaction}：会话级串行执行、自动压缩、长对话状态维持；
     \item \textbf{Hook/Plugin}：在prompt构建、工具调用、会话起止等位置插入控制逻辑。
 \end{itemize}
@@ -3166,11 +3386,11 @@ OpenClaw给出了一个比较清晰的agent runtime参考实现，其核心不�
     \item \textbf{策略系统}：模型决定“下一步做什么”；
     \item \textbf{运行时系统}：基础设施决定“这一步如何被安全、可靠、可观测地执行”。
 \end{enumerate}
-很多agent项目失败，不是因为模型不会规划，而是因为第二层缺失，导致上下文错乱、并发竞争、工具竞态、结果不可追踪。
+很多智能体项目失败，不是因为模型不会规划，而是因为第二层缺失，导致上下文错乱、并发竞争、工具竞态、结果不可追踪。
 
 \paragraph{对实际开发的指导作用}
 
-这段架构的核心启示是：\textbf{Agent runtime必须像后端系统一样设计，而不是像prompt脚本一样拼接}。也就是说，你需要会话状态机、消息总线、工具事件流、失败重试、权限门控和持久化日志，而不只是“一个大prompt + 一堆函数调用描述”。
+这段架构的核心启示是：\textbf{智能体运行时（agent runtime）必须像后端系统一样设计，而不是像prompt脚本一样拼接}。也就是说，你需要会话状态机、消息总线、工具事件流、失败重试、权限门控和持久化日志，而不只是“一个大prompt + 一堆函数调用描述”。
 
 \subsubsection{OpenClaw中的受控浏览器、隔离与多节点}
 
@@ -3188,7 +3408,7 @@ OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不
 \end{equation}
 并要求默认策略仅在$\Omega_{\text{agent-safe}}$中活动。只有在明确需要已有登录态时，才切换到`user` profile或远程CDP。
 
-多节点方面，OpenClaw通过Gateway统一接入不同设备节点，让agent可以把“工具调用”扩展为“设备能力路由”。这天然适合把桌面、手机、远程headless浏览器、乃至专用执行器都纳入同一控制面。
+多节点方面，OpenClaw通过Gateway统一接入不同设备节点，让智能体可以把“工具调用”扩展为“设备能力路由”。这天然适合把桌面、手机、远程headless浏览器、乃至专用执行器都纳入同一控制面。
 
 \subsubsection{部署实践：从本地工作站到远程网关}
 
@@ -3203,7 +3423,7 @@ OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不
 
 \paragraph{推荐的四层部署视图}
 
-一个可维护的agent系统，最好把运行栈拆成四层：
+一个可维护的智能体系统，最好把运行栈拆成四层：
 \begin{enumerate}
     \item \textbf{入口层（Ingress）}：CLI、桌面端、Web控制台、Webhook，负责用户身份、会话建立与消息流接入；
     \item \textbf{控制层（Control Plane）}：Gateway、审批器、会话调度器、记忆压缩器，负责策略外部控制；
@@ -3230,7 +3450,7 @@ OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不
 
 \begin{table}[H]
 \centering
-\caption{Agent Harness / OpenClaw部署前最小检查表}
+\caption{智能体控制层（harness）/ OpenClaw部署前最小检查表}
 \begin{tabular}{p{3.4cm}p{3.2cm}p{6.2cm}}
 \toprule
 \textbf{检查维度} & \textbf{最低要求} & \textbf{目的} \\
@@ -3247,9 +3467,9 @@ OpenClaw的一个很实用的设计是\textbf{openclaw-managed browser}。它不
 \end{tabular}
 \end{table}
 
-\subsubsection{对实用Agent系统的结论}
+\subsubsection{对实用智能体系统的结论}
 
-对于研究人员而言，训练更强的策略模型当然重要；但对真正可落地的智能体来说，\textbf{harness往往比模型本体更决定上限}。一个没有记忆压缩、审批边界、隔离浏览器、会话锁和流式可观测性的Agent，即使模型再强，也很难稳定部署。相反，一个设计良好的harness可以把中等能力模型提升到可靠可用的工程系统。
+对于研究人员而言，训练更强的策略模型当然重要；但对真正可落地的智能体来说，\textbf{智能体控制层（harness）往往比模型本体更决定上限}。一个没有记忆压缩、审批边界、隔离浏览器、会话锁和流式可观测性的智能体，即使模型再强，也很难稳定部署。相反，一个设计良好的控制层可以把中等能力模型提升到可靠可用的工程系统。
 
 \paragraph{本节小结：从训练系统到交付系统}
 
@@ -3656,7 +3876,7 @@ GPT-5于2025年发布，被OpenAI定位为"最智能、最快、最有用的模�
     \item \textbf{Minimal Reasoning模式}：API提供"minimal"推理选项，平衡响应速度与推理质量
     \item \textbf{Verbosity参数}：可控制输出详细程度，实现个性化响应
     \item \textbf{多模态原生支持}：文本、图像、代码统一处理架构
-    \item \textbf{长链工具调用}：支持执行复杂的多步骤Agent任务
+    \item \textbf{长链工具调用}：支持执行复杂的多步骤智能体任务
 \end{enumerate}
 
 \subsubsection{GPT-5训练Pipeline推测}
@@ -3762,11 +3982,11 @@ o系列（o1、o3、o4-mini）是OpenAI在推理能力上的突破性工作，�
 
 官方展示了o1在AIME数学竞赛上的性能随训练计算量对数增长。这表明：
 \begin{itemize}
-    \item RL训练存在类似预训练的Scaling Law
-    \item 但Scaling的约束条件与预训练不同（更依赖奖励信号质量）
+    \item RL训练存在类似预训练的尺度定律（scaling law）
+    \item 但其扩展约束条件与预训练不同（更依赖奖励信号质量）
 \end{itemize}
 
-\paragraph{核心发现2：推理时Scaling}
+\paragraph{核心发现2：推理时计算扩展}
 
 \begin{equation}
 \text{Accuracy} = g(\text{Thinking Tokens})
@@ -3787,7 +4007,7 @@ o系列（o1、o3、o4-mini）是OpenAI在推理能力上的突破性工作，�
 \midrule
 AIME 2024 & 83.3\% (cons@64) & 98.4\% (w/ tools) & 99.5\% (w/ tools) \\
 Codeforces Elo & 1673 & SOTA & SOTA \\
-工具使用 & 有限 & 全面Agent能力 & 全面Agent能力 \\
+工具使用 & 有限 & 全面智能体能力 & 全面智能体能力 \\
 多模态推理 & 文本为主 & 图像集成到CoT & 图像集成到CoT \\
 推理可见性 & 隐藏 & 摘要可见 & 摘要可见 \\
 \bottomrule
@@ -4343,7 +4563,7 @@ Gemini 3.0 Pro是Google DeepMind于2025年发布的最强模型，官方定位�
 \begin{itemize}
     \item \textbf{世界领先的多模态理解}：文本、图像、视频、音频、代码统一处理
     \item \textbf{卓越的Vibe Coding能力}：前端开发和Agent编程
-    \item \textbf{改进的Agent能力}：更好的工具使用、多步骤任务执行
+    \item \textbf{改进的智能体能力}：更好的工具使用、多步骤任务执行
     \item \textbf{1M+ 上下文窗口}：支持超长文档处理
 \end{itemize}
 
@@ -4468,11 +4688,11 @@ Google通过多渠道部署Gemini：
     \item Cloud Vertex AI（企业级API）
 \end{itemize}
 
-\subsection{推理时Scaling的技术深度分析}
+\subsection{推理时计算扩展的技术深度分析}
 
 推理时计算扩展(Test-Time Compute Scaling)是2024-2025年最重要的技术突破之一，值得深入分析。
 
-\subsubsection{推理时Scaling的理论基础}
+\subsubsection{推理时计算扩展的理论基础}
 
 传统的Scaling Law关注预训练计算与性能的关系：
 
@@ -4480,7 +4700,7 @@ Google通过多渠道部署Gemini：
 L(C) = \alpha C^{-\beta} + L_\infty
 \end{equation}
 
-推理时Scaling揭示了新的维度：
+推理时计算扩展揭示了新的维度：
 
 \begin{equation}
 \text{Performance}(C_{\text{train}}, C_{\text{test}}) = f(C_{\text{train}}) \cdot g(C_{\text{test}})
@@ -4545,7 +4765,7 @@ OpenAI展示了o1在不同思考时间下的性能：
 \caption{思考时间与性能的关系（示意图）}
 \end{figure}
 
-\subsubsection{推理时Scaling的局限性}
+\subsubsection{推理时计算扩展的局限性}
 
 \begin{enumerate}
     \item \textbf{延迟问题}：更长的思考时间意味着更高的响应延迟
@@ -4556,7 +4776,7 @@ OpenAI展示了o1在不同思考时间下的性能：
 
 \subsection{工具使用RL训练的技术细节}
 
-o3/o4-mini展示了通过RL训练工具使用能力的可行性，这是Agent能力的关键突破。
+o3/o4-mini展示了通过RL训练工具使用能力的可行性，这是智能体能力的关键突破。
 
 \subsubsection{工具使用的RL形式化}
 
@@ -4784,10 +5004,10 @@ Gemini和GPT-4o/5的多模态能力来自：
 通过对闭源模型的深入分析，我们可以提炼出以下对开源社区有价值的洞察：
 
 \begin{enumerate}
-    \item \textbf{RL训练是可Scaling的}：o系列证明了推理RL存在类似预训练的Scaling Law
+    \item \textbf{RL训练具有尺度扩展性}：o系列证明了推理RL存在类似预训练的尺度定律
     \item \textbf{数据质量优先于数量}：高质量数据的价值远超规模
-    \item \textbf{推理时Scaling是新方向}：不必追求更大模型，可以让模型"思考更久"
-    \item \textbf{工具使用可以RL训练}：Agent能力可以通过强化学习系统优化
+    \item \textbf{推理时计算扩展是新方向}：不必追求更大模型，可以让模型"思考更久"
+    \item \textbf{工具使用可以RL训练}：智能体能力可以通过强化学习系统优化
     \item \textbf{安全与能力可以协同}：Constitutional AI表明安全对齐不必牺牲能力
     \item \textbf{多模态需要原生设计}：后期添加视觉能力不如原生多模态架构
 \end{enumerate}
@@ -4801,9 +5021,9 @@ Gemini和GPT-4o/5的多模态能力来自：
 \midrule
 大规模高质量预训练数据 & 极高 & 极难 \\
 精细PRM训练数据 & 高 & 难 \\
-Scaling Law参数化 & 高 & 中等 \\
+尺度定律参数化 & 高 & 中等 \\
 多目标奖励设计 & 高 & 中等 \\
-推理时Scaling & 中高 & 较易 \\
+推理时计算扩展 & 中高 & 较易 \\
 工具使用RL & 中等 & 较易 \\
 多模态对齐 & 中等 & 中等 \\
 \bottomrule
@@ -4841,7 +5061,7 @@ Scaling Law参数化 & 高 & 中等 \\
     \item \textbf{Learning to Reason with LLMs} (OpenAI Blog, 2024)
     \begin{itemize}
         \item 贡献：首次公开披露o1训练方法
-        \item 关键发现：RL训练和推理时计算都存在Scaling Law
+        \item 关键发现：RL训练和推理时计算都存在尺度定律
     \end{itemize}
     
     \item \textbf{o1 System Card} (OpenAI, 2024)
@@ -4893,6 +5113,9 @@ GPT-5介绍 & openai.com/gpt-5/ \\
 o1 System Card & openai.com/index/openai-o1-system-card/ \\
 Gemini 3.0发布 & deepmind.google/technologies/gemini/ \\
 Constitutional AI & anthropic.com/research/constitutional-ai \\
+claw-code重构仓库 & github.com/instructkr/claw-code \\
+Claude Code官方文档 & docs.anthropic.com/en/docs/claude-code/overview \\
+Claude Code Hooks文档 & docs.anthropic.com/en/docs/claude-code/hooks \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -4934,7 +5157,7 @@ RLAIF & AI反馈强化学习 & 使用AI生成奖励信号 \\
 这一判断并非抽象口号，而是可以从公开系统卡、工程博客和开发文档中看到的共同结构：
 \begin{itemize}
     \item 先把\textbf{评测和风险门槛}定义清楚，再决定能否发布；
-    \item 把\textbf{agent runtime}视为产品核心，而不是模型附件；
+    \item 把\textbf{智能体运行时（agent runtime）}视为产品核心，而不是模型附件；
     \item 通过\textbf{远程浏览器、受限终端、连接器、工具协议}把模型能力接入现实系统；
     \item 用\textbf{灰度发布、持续监控、人工确认和复盘}控制真实世界风险；
     \item 用\textbf{自动评测器、回归集和可验证任务}驱动模型与工具共同优化。
@@ -4942,16 +5165,26 @@ RLAIF & AI反馈强化学习 & 使用AI生成奖励信号 \\
 
 \subsection{统一的软件工程闭环：从需求到上线后的学习}
 
-如果把这些公司的公开实践抽象成一条统一流程，可以得到一个面向大模型/Agent系统的软件工程闭环：
-\begin{equation}
-\text{Problem Framing} \rightarrow \text{Tool Contract} \rightarrow \text{Eval Suite} \rightarrow \text{Runtime Guardrails} \rightarrow \text{Staged Release} \rightarrow \text{Telemetry} \rightarrow \text{Postmortem}.
-\end{equation}
+如果把这些公司的公开实践抽象成一条统一流程，可以得到一个面向大模型/智能体系统的软件工程闭环：
+\[
+\resizebox{0.9\linewidth}{!}{$
+\begin{aligned}
+\text{Problem Framing}
+&\rightarrow \text{Tool Contract}
+\rightarrow \text{Eval Suite} \\
+&\rightarrow \text{Runtime Guardrails}
+\rightarrow \text{Staged Release} \\
+&\rightarrow \text{Telemetry}
+\rightarrow \text{Postmortem}
+\end{aligned}
+$}
+\]
 
 它和传统Web系统开发最大的区别在于：\textbf{LLM模块是非确定性的}，因此测试目标不再只是“函数是否返回正确值”，而是“系统在分布变化、提示注入、工具异常和长任务中是否仍然可控”。
 
 \paragraph{费曼式直观解释}
 
-传统软件工程像是造一台按说明书运行的机器；而Agent工程更像训练一个会与外界互动的新人同事。你不能只给他一份岗位说明书就指望万无一失，还必须给他工具手册、审批流程、试用期考核、现场监督和事后复盘。也正因此，软件工程方法在Agent时代不是变得不重要，而是变得更重要。
+传统软件工程像是造一台按说明书运行的机器；而智能体工程更像训练一个会与外界互动的新人同事。你不能只给他一份岗位说明书就指望万无一失，还必须给他工具手册、审批流程、试用期考核、现场监督和事后复盘。也正因此，软件工程方法在智能体时代不是变得不重要，而是变得更重要。
 
 \subsection{三家公司的工程实践对照}
 
@@ -4963,7 +5196,7 @@ RLAIF & AI反馈强化学习 & 使用AI生成奖励信号 \\
 \textbf{维度} & \textbf{OpenAI} & \textbf{Anthropic} & \textbf{Google DeepMind} \\
 \midrule
 发布治理 & Preparedness阈值、系统卡、能力分级 & 安全优先、逐步开放、明确workflow/agent边界 & 责任分层、研究预览、受控试点 \\
-Agent执行环境 & 远程浏览器、受限终端、人工确认 & 简洁可组合架构、工具契约与上下文控制 & 虚拟机浏览器、受控设备与远程执行平面 \\
+智能体执行环境 & 远程浏览器、受限终端、人工确认 & 简洁可组合架构、工具契约与上下文控制 & 虚拟机浏览器、受控设备与远程执行平面 \\
 开发主轴 & 评测驱动上线和风险门控 & 工具/API设计与context engineering & 自动评测器、进化优化、虚拟环境执行 \\
 工程方法 & 系统卡、灰度发布、审计 & 先简单后复杂、协议化工具接入 & 评测闭环、责任分层、平台化整合 \\
 对我们的启发 & 先定义上线阈值 & 先把工具和上下文设计清楚 & 先做自动评测器和虚拟执行环境 \\
@@ -4992,7 +5225,7 @@ OpenAI在Preparedness Framework中公开了\textbf{能力阈值、风险类别�
     \item 一个可以阻止上线的审核节点，而不是把审核写成上线后的建议。
 \end{enumerate}
 
-\subsubsection{经验二：Agent能力必须运行在受控环境中}
+\subsubsection{经验二：智能体能力必须运行在受控环境中}
 
 Operator与ChatGPT agent的公开资料表明，OpenAI并没有把“Computer Use”做成模型直接控制用户真实机器，而是通过\textbf{远程视觉浏览器、受限终端、有限网络和用户确认机制}来构造执行环境。这其实是一个经典的软件隔离思想：把高能力模型放进一个\textbf{可恢复、可观察、可限制的沙箱}。
 
@@ -5004,7 +5237,7 @@ Operator与ChatGPT agent的公开资料表明，OpenAI并没有把“Computer Us
 
 \paragraph{开发启示}
 
-如果要做能访问浏览器、终端或企业系统的Agent，最重要的不是“多会操作”，而是：
+如果要做能访问浏览器、终端或企业系统的智能体，最重要的不是“多会操作”，而是：
 \begin{itemize}
     \item 默认运行在隔离环境，而不是直接碰生产终端；
     \item 敏感动作必须显式确认；
@@ -5062,7 +5295,7 @@ Anthropic在工具和MCP文档中反复强调，工具要像写给初级工程�
 
 \subsubsection{经验三：上下文工程比提示词技巧更重要}
 
-MCP与Claude Code文档体现出Anthropic一个很强的观点：真正影响Agent效果的，经常不是提示词本身，而是\textbf{上下文如何被组织、注入和限域}。从软件工程角度看，这就是context engineering。若总上下文预算为$B$，可把上下文分为：
+MCP与Claude Code文档体现出Anthropic一个很强的观点：真正影响智能体效果的，经常不是提示词本身，而是\textbf{上下文如何被组织、注入和限域}。从软件工程角度看，这就是context engineering。若总上下文预算为$B$，可把上下文分为：
 \begin{equation}
 B = B_{task} + B_{memory} + B_{tool} + B_{state} + B_{trace}.
 \end{equation}
@@ -5070,7 +5303,7 @@ B = B_{task} + B_{memory} + B_{tool} + B_{state} + B_{trace}.
 
 \paragraph{开发启示}
 
-这意味着开发Agent时要把“上下文管理”当成系统模块：
+这意味着开发智能体时要把“上下文管理”当成系统模块：
 \begin{enumerate}
     \item 任务描述、工作记忆、工具说明、历史轨迹应分层存放；
     \item 长会话要有压缩器，而不是简单截断；
@@ -5078,17 +5311,282 @@ B = B_{task} + B_{memory} + B_{tool} + B_{state} + B_{trace}.
     \item 任何能减少上下文歧义的结构化状态，都比追加自然语言更可靠。
 \end{enumerate}
 
+\subsubsection{Claude Code设计：基于claw-code重构的架构剖析}
+
+本小节从系统设计角度分析Claude Code。需要先说明的是：`instructkr/claw-code`并不是Anthropic官方代码库，而是一个\textbf{clean-room Python重构工程}。根据其README，当前Python工作区主要\textbf{镜像了归档源码的入口面、顶层子系统名以及命令/工具清单}，但\textbf{尚不是完整的运行时等价替代物}。因此，本节并不把该仓库当作“官方源码替身”，而是把它视为一种\textbf{结构信号}：借助其暴露出的控制流、模块边界和运行时抽象，再结合Anthropic官方文档，可归纳Claude Code一类终端智能体系统的典型架构轮廓。
+
+从`bootstrap_graph.py`、`setup.py`、`runtime.py`、`query_engine.py`与`remote_runtime.py`可抽象出如下统一结构：
+\begin{equation}
+\mathcal{C}_{\text{ClaudeCode}}
+=
+(\mathcal{P}, \mathcal{G}, \mathcal{C}, \mathcal{T}, \mathcal{Q}, \mathcal{S}, \mathcal{R}),
+\end{equation}
+其中$\mathcal{P}$表示启动预取（prefetch）层，$\mathcal{G}$表示信任与权限门控（guard/trust gate），$\mathcal{C}$表示命令图（command graph），$\mathcal{T}$表示工具池（tool pool），$\mathcal{Q}$表示查询与回合引擎（query engine），$\mathcal{S}$表示转录与会话持久层（session/transcript store），$\mathcal{R}$表示本地、远程、SSH、Teleport、direct-connect与deep-link等运行模式分支。
+
+\begin{figure}[H]
+\centering
+\resizebox{0.9\linewidth}{!}{%
+\begin{tikzpicture}[
+    scale=0.9,
+    transform shape,
+    node distance=1.2cm,
+    box/.style={rectangle, draw, rounded corners, align=center, minimum width=2.5cm, minimum height=0.9cm, fill=blue!6},
+    side/.style={rectangle, draw, rounded corners, align=center, minimum width=2.4cm, minimum height=0.82cm, fill=green!8},
+    warn/.style={rectangle, draw, rounded corners, align=center, minimum width=2.5cm, minimum height=0.9cm, fill=red!7}
+]
+\node[box] (cli) {CLI入口\\Parser / Mode Select};
+\node[warn, below of=cli] (trust) {信任门控\\Trust Gate / Guards};
+\node[box, below of=trust] (setup) {启动与预取\\Setup + Prefetch};
+\node[box, below left=1.05cm and 1.8cm of setup] (cmd) {命令图\\Built-in / Plugin / Skill};
+\node[box, below right=1.05cm and 1.8cm of setup] (tool) {工具池\\Simple / MCP / Filtered};
+\node[box, below=2.2cm of setup] (runtime) {运行时路由层\\PortRuntime / Registry};
+\node[box, below of=runtime] (query) {查询引擎\\Submit / Stream / Budget};
+\node[side, left=2.1cm of query] (transcript) {转录层\\Compact / Flush / Replay};
+\node[side, right=2.1cm of query] (session) {会话层\\Persist / Load};
+\node[side, below left=1.1cm and 1.8cm of query] (remote) {远程模式\\Remote / SSH / Teleport};
+\node[side, below right=1.1cm and 1.8cm of query] (direct) {直连模式\\Direct Connect / Deep Link};
+
+\draw[->, thick] (cli) -- (trust);
+\draw[->, thick] (trust) -- (setup);
+\draw[->, thick] (setup) -- (cmd);
+\draw[->, thick] (setup) -- (tool);
+\draw[->, thick] (cmd) -- (runtime);
+\draw[->, thick] (tool) -- (runtime);
+\draw[->, thick] (runtime) -- (query);
+\draw[->, thick] (query) -- (transcript);
+\draw[->, thick] (query) -- (session);
+\draw[->, thick] (query) -- (remote);
+\draw[->, thick] (query) -- (direct);
+\end{tikzpicture}
+}
+\caption{基于claw-code重构的Claude Code控制层架构图}
+\end{figure}
+
+\paragraph{关键技术1：信任门控后的延迟初始化}
+
+`bootstrap_graph.py`给出的阶段顺序具有代表性：\textbf{先做顶层预取、副作用启动和环境守卫，再经过CLI前置的trust gate，最后才进入deferred init与模式分支}。`setup.py`与`deferred_init.py`显示，插件初始化、skill初始化、MCP预取和session hook都被建模成\textbf{仅在trusted路径中启用}。若用指示函数表示，可写为
+\begin{equation}
+I_{\text{deferred}}(x) = \mathbf{1}[x=\text{trusted}],
+\end{equation}
+则实际启用集合为
+\begin{equation}
+\mathcal{D}_{\text{active}} = I_{\text{deferred}}(\tau)\cdot
+\{\text{plugin\_init},\text{skill\_init},\text{mcp\_prefetch},\text{session\_hooks}\}.
+\end{equation}
+由此可见，Claude Code式系统遵循一个核心原则：\textbf{高风险或高副作用组件不应在解析命令行之前就全部激活}。系统先判断“是否信任、是否允许、是否进入受控模式”，再释放更强执行能力，这与传统CLI工具“启动即装载全部能力”的做法明显不同。
+
+\paragraph{关键技术2：命令图与工具池的双层动作空间}
+
+`command_graph.py`把命令表分成built-in、plugin-like、skill-like三类；`tool_pool.py`则把工具选择建模为`simple_mode`、`include_mcp`与`permission_context`共同作用下的过滤结果。这意味着系统不是只有一层“工具调用”，而是存在两层动作空间：
+\begin{equation}
+\mathcal{A} = \mathcal{A}_{cmd} \cup \mathcal{A}_{tool}.
+\end{equation}
+其中命令可视为\textbf{宏观控制动作}，例如切换模式、触发特定工作流；工具则对应\textbf{细粒度执行动作}，例如读文件、跑shell、连接MCP服务。若权限上下文为$\Pi$，则有效工具集合满足
+\begin{equation}
+\mathcal{T}_{\text{eff}}(\Pi) = \{t \in \mathcal{T} : \neg \text{blocks}_{\Pi}(t)\}.
+\end{equation}
+其中`permissions.py`的`blocks()`逻辑按工具名和前缀做拒绝匹配。这种设计意味着：命令图负责\textbf{策略组织}，工具池负责\textbf{能力暴露}，二者解耦后，既容易做权限裁剪，也便于挂接插件命令与MCP工具。
+
+\paragraph{关键技术3：基于镜像清单的轻量路由与执行注册表}
+
+`runtime.py`中的`route_prompt()`对应一种典型的Claude Code式路由思路：系统不必把所有工具说明都塞进一次大prompt，而是先做一轮\textbf{词法级候选筛选}。对模块$m$与用户提示$x$，可把其打分抽象为
+\begin{equation}
+s(m;x)=\sum_{u \in \text{Tok}(x)}
+\mathbf{1}[u \subset \text{name}(m)\;\vee\;
+u \subset \text{source\_hint}(m)\;\vee\;
+u \subset \text{responsibility}(m)].
+\end{equation}
+系统随后优先选择高分命令与高分工具，再把剩余候选按分数排序补齐。这一策略并不追求最复杂的语义匹配，而是把\textbf{大动作空间压缩成可解释的小候选集}，从而缩短后续query engine的上下文并提高决策稳定性。`execution_registry.py`进一步把“清单镜像”与“执行shim”分开：前者负责表达系统表面，后者负责提供受控执行接口。对于clean-room重构而言，这种分层尤其重要，因为它允许工程师先复原\textbf{动作接口与控制边界}，再逐步补运行时实现。
+
+\paragraph{关键技术4：查询引擎、转录压缩与会话持久化}
+
+`query_engine.py`是整个设计里最像“Claude Code内核”的部分。它显式维护
+\[
+\resizebox{0.72\linewidth}{!}{$
+\theta =
+\left(
+\begin{array}{l}
+\text{max\_turns}, \\
+\text{max\_budget\_tokens}, \\
+\text{compact\_after\_turns}, \\
+\text{structured\_output}, \\
+\text{structured\_retry\_limit}
+\end{array}
+\right)
+$}
+\]
+并把一次回合的返回结构规范化为
+\[
+\resizebox{0.68\linewidth}{!}{$
+y_t =
+\left(
+\begin{array}{l}
+\text{matched\_commands}, \\
+\text{matched\_tools}, \\
+\text{permission\_denials}, \\
+\text{usage}, \\
+\text{stop\_reason}
+\end{array}
+\right)
+$}
+\]
+当累计token超出预算时，停止原因从`completed`切换为`max_budget_reached`；当消息数过长时，`compact_messages_if_needed()`把消息窗口与转录层同时裁剪到最近$k$轮，可写为
+\begin{equation}
+|M_{t+1}| = \min(|M_t|+1, k).
+\end{equation}
+`transcript.py`与`session_store.py`进一步把会话分成两层：\textbf{转录层}用于append、compact、flush、replay；\textbf{持久层}负责把`session_id`、消息、输入输出token写成JSON会话文件。也就是说，Claude Code式系统不是把“历史”当成一块无限增长的prompt文本，而是把它视作\textbf{可压缩、可回放、可落盘的运行时对象}。
+
+\paragraph{关键技术5：事件流输出与多模式运行时分支}
+
+`stream_submit_message()`会把一次提交拆成多个细粒度事件，例如`message_start`、`command_match`、`tool_match`、`permission_denial`、`message_delta`与`message_stop`。与此同时，`remote_runtime.py`与`direct_modes.py`表明系统从一开始就把\textbf{本地终端、远程控制、SSH、Teleport、direct-connect、deep-link}当成并列的运行模式。这意味着Claude Code不应被理解为“只能在本地shell里回答问题的聊天程序”，而应被理解为一个\textbf{控制面统一、执行面可切换}的agent runtime。若记模式集合为
+\begin{equation}
+\mathcal{R}=
+\{\text{local},\text{remote},\text{ssh},
+\text{teleport},\text{direct-connect},\text{deep-link}\},
+\end{equation}
+则运行时选择可视为
+\begin{equation}
+r_t \sim \pi_R(r \mid s_t),
+\end{equation}
+其中$r_t$决定后续动作被投递到哪一类执行环境。这一抽象的重要性在于，它把Claude Code从“终端助手”提升成了“多执行平面的统一调度器”。
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.05cm,
+    flowstep/.style={rectangle, draw, rounded corners, align=center, minimum width=5.0cm, minimum height=0.85cm, fill=orange!8}
+]
+\node[flowstep] (p0) {用户提示 / CLI子命令};
+\node[flowstep, below of=p0] (p1) {Trust Gate判断是否进入受控初始化路径};
+\node[flowstep, below of=p1] (p2) {Setup + Prefetch + Deferred Init};
+\node[flowstep, below of=p2] (p3) {装载命令图与工具池};
+\node[flowstep, below of=p3] (p4) {PortRuntime路由候选命令/工具};
+\node[flowstep, below of=p4] (p5) {权限推断与执行注册表分发};
+\node[flowstep, below of=p5] (p6) {QueryEngine提交并生成事件流};
+\node[flowstep, below of=p6] (p7) {Transcript追加/压缩/flush};
+\node[flowstep, below of=p7] (p8) {Session持久化或切换远程模式};
+
+\draw[->, thick] (p0) -- (p1);
+\draw[->, thick] (p1) -- (p2);
+\draw[->, thick] (p2) -- (p3);
+\draw[->, thick] (p3) -- (p4);
+\draw[->, thick] (p4) -- (p5);
+\draw[->, thick] (p5) -- (p6);
+\draw[->, thick] (p6) -- (p7);
+\draw[->, thick] (p7) -- (p8);
+\end{tikzpicture}
+\caption{基于claw-code重构的Claude Code回合流程图}
+\end{figure}
+
+\paragraph{设计结论}
+
+综合来看，`claw-code`重构所揭示的Claude Code设计，并不是“更会写prompt的CLI”，而是一个具有如下特征的系统：\textbf{信任门控后的延迟初始化、命令图与工具池分离、候选路由先于模型长上下文决策、可流式可压缩的会话层，以及面向多执行平面的统一运行时}。其关键技术并不集中在某一个神秘模型技巧上，而在于\textbf{把模型能力嵌入一个具备安全边界、状态管理、执行注册和模式分支的软件工程骨架之中}。这也解释了为什么Claude Code类系统的核心竞争力，越来越不只是“会不会回答”，而是“能否在受控环境里持续完成真实工作”。
+
+\paragraph{与Anthropic官方公开文档的对应关系}
+
+如果把上述clean-room重构与Anthropic官方Claude Code文档对照，可以看到两类信号是相互加强的。第一，官方MCP文档明确表明Claude Code把外部能力接入建模为\textbf{标准化工具平面}：它既能消费外部MCP server，也能把Claude Code自身以`claude mcp serve`形式暴露为MCP server。这与`claw-code`中“命令图 + 工具池 + 运行时注册表”的分层高度一致，说明Claude Code不是把工具视为若干临时函数描述，而是把它们视为\textbf{具有统一命名、统一权限与统一输出预算的能力接口}。
+
+第二，官方hooks文档明确公开了\textbf{SessionStart、UserPromptSubmit、PreToolUse、PermissionRequest、PostToolUse、SubagentStart/Stop、WorktreeCreate}等生命周期事件，并允许hook在运行时返回批准、拒绝、补充上下文或工作树路径。这意味着Claude Code在官方层面就已经把“会话启动、工具前置校验、权限交互、子智能体生命周期、隔离工作树创建”显式建模成控制平面事件。形式上，若把事件集合写为
+\[
+\resizebox{0.86\linewidth}{!}{$
+\mathcal{E}_{\text{hook}}=
+\left\{
+\begin{array}{l}
+\text{SessionStart},\text{UserPromptSubmit},\text{PreToolUse}, \\
+\text{PermissionRequest},\text{PostToolUse},\text{SubagentStart}, \\
+\text{SubagentStop},\text{WorktreeCreate},\ldots
+\end{array}
+\right\}
+$}
+\]
+则Claude Code运行时更像是在执行一个带事件回调的状态机，而不是单轮问答：
+\begin{equation}
+s_{t+1} = F(s_t, a_t, e_t),\qquad e_t \in \mathcal{E}_{\text{hook}}.
+\end{equation}
+这与`claw-code`重构中出现的session hook、permission denial、stream event与远程模式分支高度同构。也就是说，`claw-code`有助于显化\textbf{控制流骨架}，而Anthropic官方文档则进一步确认了\textbf{工具平面、权限平面、子智能体平面和工作树隔离平面}确实是Claude Code的第一等设计对象。
+
+\subsubsection{Claude Code与OpenClaw的结构对照}
+
+将Claude Code与前文讨论的OpenClaw并置，可以更清楚地看出两类系统的共同点与差异。它们都属于\textbf{控制层先行}的智能体运行时，但优化重点并不完全相同：Claude Code更强调\textbf{开发工作流中的终端、工具、会话与hooks编排}，OpenClaw则更强调\textbf{跨设备节点、受控浏览器与远程执行平面的统一控制}。
+
+\begin{table}[H]
+\centering
+\caption{Claude Code与OpenClaw的结构对照}
+\begin{tabular}{p{2.8cm}p{4.3cm}p{4.3cm}}
+\toprule
+\textbf{维度} & \textbf{Claude Code} & \textbf{OpenClaw} \\
+\midrule
+系统定位 & 面向开发者终端工作流的智能体运行时，强调CLI、MCP、hooks、worktree与会话控制 & 面向多节点与多执行面的智能体运行时，强调Gateway、Node、受控浏览器与远程控制平面 \\
+控制入口 & CLI子命令、trust gate、deferred init、mode select & Gateway统一入口、Clients接入、Session/Agent Loop调度 \\
+动作组织 & 命令图与工具池分层，先路由候选再进入查询引擎 & Agent Loop统一调度，工具事件流与会话状态机更突出 \\
+工具接入 & MCP server、内建工具、权限过滤、hooks前后置拦截 & 浏览器、shell、设备能力、插件与节点能力统一挂接 \\
+权限机制 & PermissionRequest、PreToolUse/PostToolUse、拒绝事件、工作树与会话级控制 & guard、审批门控、节点权限、浏览器隔离与私网控制 \\
+状态管理 & transcript压缩、session落盘、结构化输出与预算上限 & session compaction、tool stream、持久化日志与观测闭环 \\
+执行模式 & 本地、远程、SSH、Teleport、direct-connect、deep-link并列路由 & 本地工作站、远程网关、远程CDP、Browserless、Browserbase、多设备节点 \\
+浏览器设计 & 官方文档更强调工具/hook/worktree平面，浏览器不是唯一中心 & 受控浏览器是核心子系统，强调独立profile、CDP隔离与节点代理 \\
+适用场景 & 代码修改、终端任务、开发者助手、受控子智能体协作 & 浏览器任务、跨设备任务、远程执行、统一控制平面编排 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{比较结论}
+
+二者的共同点在于：都把模型能力置于\textbf{显式控制层}之下，而不是让模型直接触碰全部系统权限；都强调会话状态、权限边界、工具契约与可观测性。差异在于：Claude Code更像\textbf{开发工作流中的受控终端编排器}，OpenClaw更像\textbf{跨节点与跨执行面的智能体控制总线}。从工程借鉴角度看，如果目标是提升研发任务中的代码、shell与MCP协同效率，Claude Code的设计更有参考价值；如果目标是统一浏览器、移动端、远程节点与受控执行环境，OpenClaw的架构更具代表性。
+
+\subsubsection{Claude Code、OpenClaw与ChatGPT agent的三方对照}
+
+如果再把OpenAI官方的ChatGPT agent纳入同一坐标系，则三者分别代表了三种不同的智能体产品取向。根据OpenAI于2025年7月17日发布的\textit{ChatGPT agent System Card}，ChatGPT agent把\textbf{deep research、多步研究、远程视觉浏览器、受限终端、连接器以及用户接管机制}组合进同一产品。其核心特点是：\textbf{执行环境默认远程化、权限确认产品化、连接器集成一体化、任务完成时间面向分钟级而不是秒级交互}。因此，三者虽然都可归入agent runtime范畴，但其最优设计目标并不相同。
+
+\begin{table}[H]
+\centering
+\caption{Claude Code、OpenClaw与ChatGPT agent的三方对照}
+\small
+\begin{tabular}{p{2.3cm}p{2.95cm}p{2.95cm}p{2.95cm}}
+\toprule
+\textbf{维度} & \textbf{Claude Code} & \textbf{OpenClaw} & \textbf{ChatGPT agent} \\
+\midrule
+产品定位 & 开发终端工作流中的智能体运行时 & 自托管多节点智能体控制平面 & 面向终端用户的远程执行型智能体产品 \\
+主要入口 & CLI、hooks、MCP、worktree、会话文件 & Gateway、Clients、Nodes、受控浏览器 & ChatGPT内的agent mode、远程浏览器、连接器、终端 \\
+核心执行面 & 本地shell、MCP、插件式工具与模式路由 & 本地/远程节点、浏览器、设备能力、插件 & 远程视觉浏览器、受限终端、第一方连接器、文件分析工具 \\
+权限形态 & hooks、PermissionRequest、工作树与工具级边界 & guard、审批门控、节点与浏览器隔离 & 用户接管、敏感操作确认、有限网络、产品级 safeguard \\
+状态管理 & transcript压缩、session落盘、结构化回合预算 & session compaction、事件流、持久化与观测闭环 & 长任务状态、工具回合、连接器上下文、产品级安全日志 \\
+系统优势 & 开发者控制强、终端协同效率高、上下文工程细致 & 可自托管、跨设备、跨节点、跨浏览器执行面统一 & 产品集成度高、研究/浏览/终端/连接器能力整合度高 \\
+典型短板 & 更偏开发场景，对通用终端用户产品化较弱 & 平台搭建与运维复杂度更高 & 用户可控性受产品边界约束，自定义执行面较弱 \\
+更适合的场景 & 代码修改、仓库分析、开发自动化与MCP协作 & 个人或团队自托管的多端智能体系统 & 面向最终用户的在线任务执行、研究、表格与网页操作 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{三方比较的工程含义}
+
+从工程视角看，Claude Code强调\textbf{开发环境内的受控自治}，OpenClaw强调\textbf{执行平面的可编排性与可自托管性}，ChatGPT agent则强调\textbf{产品级远程执行、连接器整合与用户可接管交互}。因此，这三种系统不是简单的“谁更强”关系，而是分别优化了三类目标函数。若记目标向量为
+\[
+\resizebox{0.72\linewidth}{!}{$
+J =
+\left(
+\begin{array}{l}
+\text{dev\_efficiency}, \\
+\text{execution\_coverage}, \\
+\text{product\_integration}, \\
+\text{self\_hosting}, \\
+\text{safety\_controls}
+\end{array}
+\right)
+$}
+\]
+则Claude Code在$\text{dev\_efficiency}$上更强，OpenClaw在$\text{execution\_coverage} + \text{self\_hosting}$上更强，ChatGPT agent在$\text{product\_integration}$与\textbf{面向最终用户的安全交互产品化}上更强。这种差异提醒我们：设计智能体系统时，首先要确定是要做\textbf{开发者工具}、\textbf{自托管控制总线}，还是\textbf{面向大众的远程执行产品}；一旦目标不同，控制层、权限层和执行层的最优架构也会随之改变。
+
 \subsection{Google DeepMind：自动评测器、虚拟执行环境与责任分层}
 
 Google DeepMind在Gemini、Project Mariner、AlphaEvolve和机器人安全资料中展示的经验，也非常接近现代软件平台工程。
 
-\subsubsection{经验一：把Agent执行放进虚拟环境，而不是直接碰真实世界}
+\subsubsection{经验一：把智能体执行放进虚拟环境，而不是直接碰真实世界}
 
-Project Mariner展示了一个非常清晰的设计：浏览器Agent运行在\textbf{虚拟机中的浏览器环境}里，模型负责观察、计划和执行，用户可以随时接管。这本质上是把agent action映射到一个可暂停、可恢复、可替换的虚拟执行平面。
+Project Mariner展示了一个非常清晰的设计：浏览器智能体运行在\textbf{虚拟机中的浏览器环境}里，模型负责观察、计划和执行，用户可以随时接管。这本质上是把智能体动作映射到一个可暂停、可恢复、可替换的虚拟执行平面。
 
 \paragraph{开发启示}
 
-对企业内部Agent系统，这意味着：
+对企业内部智能体系统，这意味着：
 \begin{itemize}
     \item 尽量使用远程浏览器、远程runner和临时环境；
     \item 不要让模型直接绑定个人桌面会话；
@@ -5112,14 +5610,14 @@ p_{t+1} \sim \Pi(\mathcal{D}_t), \qquad
 
 对我们的研发团队，这一经验几乎可以直接照搬：
 \begin{enumerate}
-    \item 能自动验证的任务，最适合优先交给Agent；
-    \item 先做评测器，再做复杂agent loop；
-    \item 没有自动评测器的多步Agent，维护成本会高得多。
+    \item 能自动验证的任务，最适合优先交给智能体；
+    \item 先做评测器，再做复杂智能体循环（agent loop）；
+    \item 没有自动评测器的多步智能体，维护成本会高得多。
 \end{enumerate}
 
 \subsubsection{经验三：安全应该是分层的，而不是单点的}
 
-DeepMind在机器人安全资料中用“Swiss cheese”模型解释安全框架，这对Agent系统同样适用。设多层防护的漏失概率分别为$p_1,\ldots,p_k$，则风险贯通的近似概率为：
+DeepMind在机器人安全资料中用“Swiss cheese”模型解释安全框架，这对智能体系统同样适用。设多层防护的漏失概率分别为$p_1,\ldots,p_k$，则风险贯通的近似概率为：
 \begin{equation}
 P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 \end{equation}
@@ -5127,7 +5625,7 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 
 \paragraph{开发启示}
 
-对Agent系统，至少应叠四层：
+对智能体系统，至少应叠四层：
 \begin{itemize}
     \item \textbf{模型层}：拒绝危险任务、对齐训练；
     \item \textbf{工具层}：最小权限、参数校验、白名单；
@@ -5142,7 +5640,7 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 \begin{enumerate}
     \item \textbf{评测优先}：先定义回归集、失败集、风险集，再讨论模型升级。
     \item \textbf{工具契约优先}：工具说明、作用域、参数结构要像API设计一样严谨。
-    \item \textbf{运行时优先}：Agent系统的真正核心是runtime，而不是单次prompt。
+    \item \textbf{运行时优先}：智能体系统的真正核心是runtime，而不是单次prompt。
     \item \textbf{隔离优先}：浏览器、终端、连接器必须放在受控环境里。
     \item \textbf{灰度优先}：先小流量、先研究预览、先限制能力，再逐步放开。
     \item \textbf{复盘优先}：每次失败都要留下trace、状态和审批记录，否则系统只会重复犯错。
@@ -5165,7 +5663,46 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 \section{未来研究方向}
 %===========================================
 
+本章不把未来方向理解为互不相关的“问题清单”，而把它们视为同一条技术主线的不同层面：\textbf{训练算法决定能力如何获得，推理时计算决定能力如何按需释放，多模态与智能体决定能力如何嵌入真实环境，理论研究决定我们如何解释这些能力，而安全与对齐决定这些能力能否稳定部署}。从这个角度看，未来几年最重要的并不是某一个孤立模型分数，而是能否把这几层同时推进并形成闭环。
+
+\begin{figure}[H]
+\centering
+\resizebox{0.9\linewidth}{!}{%
+\begin{tikzpicture}[
+    scale=0.92,
+    transform shape,
+    node distance=1.3cm,
+    main/.style={rectangle, draw, rounded corners, align=center, minimum width=2.6cm, minimum height=0.95cm, fill=blue!8},
+    side/.style={rectangle, draw, rounded corners, align=center, minimum width=2.45cm, minimum height=0.9cm, fill=green!8},
+    risk/.style={rectangle, draw, rounded corners, align=center, minimum width=2.5cm, minimum height=0.9cm, fill=red!8}
+]
+\node[main] (alg) {训练算法\\RL / 奖励 / 混合骨干};
+\node[main, right=1.6cm of alg] (infer) {推理时计算\\搜索 / 早停 / 潜空间推理};
+\node[side, below left=1.4cm and 0.5cm of alg] (multi) {多模态\\视觉 / 跨模态 / 世界模型};
+\node[side, below right=1.4cm and 0.5cm of infer] (agent) {智能体\\工具 / 执行 / 工作流};
+\node[main, below=2.9cm of $(alg)!0.5!(infer)$] (theory) {理论基础\\泛化 / 尺度定律 / 后Transformer};
+\node[risk, below=1.6cm of theory] (safety) {安全与对齐\\可监控性 / 权限 / 风险控制};
+
+\draw[->, thick] (alg) -- (infer);
+\draw[->, thick] (alg) -- (multi);
+\draw[->, thick] (infer) -- (agent);
+\draw[->, thick] (multi) -- (theory);
+\draw[->, thick] (agent) -- (theory);
+\draw[->, thick] (theory) -- (safety);
+\draw[->, thick, dashed] (alg) to[bend right=20] (theory);
+\draw[->, thick, dashed] (infer) to[bend left=20] (theory);
+\end{tikzpicture}
+}
+\caption{未来研究方向的整体研究地图}
+\end{figure}
+
+\paragraph{阅读提示}
+
+若关注近期最可能落地的方向，可优先阅读算法改进、推理时计算扩展与智能体工具使用三部分；若关注中长期基础突破，则应重点阅读理论研究中的“后Transformer突破”部分，并与多模态推理部分合并理解；若关注真实部署，则安全与对齐部分不能被视为附属约束，而应视为所有方向的共同终点。
+
 \subsection{算法改进}
+
+训练算法层面的核心问题，是如何在不牺牲稳定性与可解释性的前提下，提高样本效率、降低训练成本，并把奖励设计从“结果打分”推进到“过程级与系统级信用分配”。
 
 \subsubsection{更高效的RL算法}
 
@@ -5223,10 +5760,12 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
     \item RL + 符号推理结合
     \item RL + 检索增强
     \item RL + 工具使用
-    \item RL + 多Agent协作
+    \item RL + 多智能体协作
 \end{itemize}
 
-\subsection{推理时Scaling}
+\subsection{推理时计算扩展}
+
+推理时计算扩展的研究重点，不再是单纯“让模型想更久”，而是学习何时该多算、何时该早停、何时该调用验证器或外部工具，从而把额外计算真正转化为更高的单位任务收益。
 
 \subsubsection{高效搜索算法}
 
@@ -5256,7 +5795,7 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 \subsubsection{动态计算分配}
 
 \begin{itemize}
-    \item \textbf{Adaptive Computation}：
+    \item \textbf{自适应计算}：
     \begin{equation}
     \text{compute}(q) = f(\text{difficulty}(q), \text{confidence}(\pi, q))
     \end{equation}
@@ -5271,12 +5810,14 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 \subsubsection{推理优化方法}
 
 \begin{itemize}
-    \item \textbf{思维链压缩}：保持推理质量的同时减少token
+    \item \textbf{思维链压缩}：保持推理质量的同时减少中间词元
     \item \textbf{增量推理}：复用之前的计算
     \item \textbf{推理缓存}：相似问题共享推理
 \end{itemize}
 
 \subsection{多模态推理}
+
+多模态推理的下一步，不只是把图像或音频接入语言模型，而是让不同模态在统一状态空间中参与推理、验证、计划与行动建模。
 
 \subsubsection{视觉推理}
 
@@ -5305,7 +5846,9 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
     \item \textbf{具身推理}：结合物理世界交互
 \end{itemize}
 
-\subsection{Agent与工具使用}
+\subsection{智能体与工具使用}
+
+当模型从“回答问题”转向“完成任务”时，工具选择、动作排序、外部状态读写与多智能体协作就从附属能力转变为主干研究问题。
 
 \subsubsection{工具增强推理}
 
@@ -5322,7 +5865,7 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 \pi_{tool}(t | s) = \text{softmax}(f_{tool}(s, t))
 \end{equation}
 
-\subsubsection{多Agent推理}
+\subsubsection{多智能体推理}
 
 \begin{itemize}
     \item \textbf{辩论}：多个模型辩论得出结论
@@ -5333,33 +5876,221 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 
 \subsection{理论研究}
 
+理论研究的价值，不在于事后解释已有现象，而在于给出可迁移的判断标准：什么能力来自规模，什么能力来自结构，什么能力来自训练目标与运行时耦合。
+
 \subsubsection{推理能力的本质}
 
 \begin{itemize}
-    \item 模型真的在"推理"还是在模式匹配？
-    \item 涌现能力的机制是什么？
-    \item 推理能力的可迁移性边界？
-    \item 训练数据如何影响推理能力？
+    \item 推理究竟是可组合计算，还是大规模模式匹配的统计表象
+    \item 涌现能力形成的结构条件与训练条件
+    \item 推理能力在新任务、新领域中的可迁移边界
+    \item 训练数据分布对推理风格与可靠性的决定作用
 \end{itemize}
 
-\subsubsection{Scaling Laws}
+\subsubsection{尺度定律（Scaling Laws）}
 
 \begin{itemize}
-    \item 推理能力如何随模型大小scaling？
-    \item 推理时计算的scaling law？
-    \item RL训练的样本效率scaling？
-    \item 最优资源分配策略？
+    \item 推理能力如何随模型规模扩展？
+    \item 推理时计算的尺度定律是什么？
+    \item RL训练的样本效率如何随规模变化？
+    \item 最优资源分配策略应如何刻画？
 \end{itemize}
 
 \subsubsection{泛化理论}
 
 \begin{itemize}
-    \item OOD推理能力的理论保证
+    \item 分布外（OOD）推理能力的理论保证
     \item 组合泛化的条件
     \item 长度泛化的机制
 \end{itemize}
 
+\subsubsection{后Transformer突破：结构判断与技术预测}
+
+截至\textbf{2026年4月1日}，我未检索到OpenAI官方博客或系统卡中存在Sam Altman关于“超越Transformer”的完整同句原话。较可靠的近期公开信号主要来自两个时间点：第一，\textbf{2026年2月3日}《Forbes》专访\textit{Sam Altman Explains Our AI Future}中，Altman明确表示实现AGI更可能依赖“\textbf{很多中等规模突破}”，而不是单一奇迹式架构替换；第二，\textbf{2026年2月15日}《Stanford Daily》对TreeHacks 2026演讲的报道显示，他把当前阶段描述为技术前沿仍然开放、产品形态仍将持续重构的时期。后续在\textbf{2026年3月}出现的二手科技报道把这一判断进一步概括为“可能接近一次超越Transformer的架构跃迁”。因此，更稳妥的解读不是“Transformer会被单点淘汰”，而是：\textbf{未来的下一次突破更可能由多项中等规模架构改进叠加而成，并最终把Transformer从唯一骨干降级为混合系统中的一个部件}。
+
+\begin{table}[H]
+\centering
+\caption{关于“后Transformer突破”的近期公开信号}
+\begin{tabular}{p{2.2cm}p{2.0cm}p{3.6cm}p{5.0cm}}
+\toprule
+\textbf{日期} & \textbf{来源} & \textbf{公开标题} & \textbf{可支持的稳妥判断} \\
+\midrule
+2026-02-03 & Forbes & \textit{Sam Altman Explains Our AI Future} & 更接近“多项中等规模突破叠加”，而不是单一架构奇迹式替换。 \\
+2026-02-15 & Stanford Daily & \textit{Sam Altman Projects AGI Development, AI Integration at TreeHacks} & 当前技术前沿与产品形态仍在快速重构，下一代系统可能表现为混合式演进而非单点切代。 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+这一判断背后有明确的工程动因。标准Transformer虽然在统一建模上极其成功，但其长期瓶颈同样明显：第一，长上下文推理的显存和带宽开销仍然主要受注意力与KV缓存约束；第二，模型缺乏\textbf{可写入、可长期保持、可测试时更新}的状态机制；第三，词元级显式链式推理成本较高，难以支撑分钟级、小时级的复杂任务；第四，模型在真实环境中的状态转移更多依赖外部工具和工作区，而不是纯文本上下文。因此，若把下一代骨干网络的目标函数写成
+\[
+\resizebox{0.76\linewidth}{!}{$
+\begin{aligned}
+J_{\text{arch}}
+=\;& \alpha \cdot \text{quality}
+- \beta \cdot \text{latency}
+- \gamma \cdot \text{memory\_cost} \\
+&+ \delta \cdot \text{persistent\_state}
++ \eta \cdot \text{test\_time\_adaptation} \\
+&+ \zeta \cdot \text{action\_grounding}
+\end{aligned}
+$}
+\]
+则未来架构并不会只追求语言建模精度，而必须同时优化\textbf{长期记忆、测试时适应、行动条件化以及系统级成本}。
+
+基于当前研究脉络，我认为最可能出现的“后Transformer突破”并不是完全抛弃注意力，而是出现一种\textbf{异构混合骨干}。Mamba、Titans、RWKV等路线虽然机制不同，但都在共同推动一个方向：让“全局注意力、持续状态、长期记忆与条件路由”不再由单一算子独占，而是按职责分层协作。其一般形式可写为
+\[
+\resizebox{0.74\linewidth}{!}{$
+\begin{aligned}
+h_{t+1}
+=\;& f_{\text{attn}}(h_{\le t}, M_t)
++ f_{\text{state}}(s_t, x_t) \\
+&+ f_{\text{mem}}(M_t, x_t)
++ f_{\text{route}}(x_t)
+\end{aligned}
+$}
+\]
+其中$f_{\text{attn}}$负责高价值稀疏检索与全局对齐，$f_{\text{state}}$对应Mamba一类选择性状态空间更新，$f_{\text{mem}}$对应Titans一类可写长期记忆，$f_{\text{route}}$负责决定当前信息应进入哪条计算路径。也就是说，注意力不会立刻消失，但它更可能从“唯一计算原语”退居为“高带宽全局检索模块”，而持续状态、外部记忆和模式路由将承担越来越多的主干计算。
+
+我对未来三到五年的第一个具体预测是：\textbf{可写记忆与测试时学习会成为比纯注意力更重要的突破轴}。其核心原因在于，长任务失败往往不是因为模型不会下一步，而是因为系统不能把重要信息稳定地写入和再次读取。未来更有潜力的更新式不是单纯扩大窗口，而是显式维护记忆状态：
+\begin{equation}
+M_{t+1} = M_t + u_t,\qquad
+u_t = g_{\text{write}}(x_t, h_t, \text{surprise}_t),
+\end{equation}
+并在需要时通过交叉注意力或键值检索读取
+\begin{equation}
+r_t = \text{Read}(M_t, q_t).
+\end{equation}
+一旦这种记忆写入策略学得足够好，模型就不必把全部历史都保存在KV缓存中，而是可以把“窗口”与“记忆”明确分层。Transformer时代的核心单位是词元间两两交互；后Transformer时代更可能把\textbf{记忆写入与读取决策}提升为同等重要的一等对象。
+
+第二个预测是：\textbf{显式词元级思维链会逐步让位于潜空间推理与稀疏解码}。当前很多推理模型仍然依赖把中间过程展开成大量可见或不可见词元，这在训练与推理时都成本高昂。更可能的下一步是让模型在潜变量空间中迭代若干步内部状态，再只在必要时解码为语言：
+\begin{equation}
+z_{k+1} = F_\theta(z_k, c_k), \qquad
+y = \text{Decode}(z_K).
+\end{equation}
+这类方法的价值不只是节省词元，而是在于把“内部推理状态”与“对外可读文本”解耦。若这一方向成熟，那么“思考更久”将不再等于“输出更多中间词元”，而是等于\textbf{做更多潜空间计算、只在边界处暴露结果}。这也更符合闭源前沿模型当前对思维链可见性的控制趋势。
+
+第三个预测是：\textbf{真正超越Transformer的系统，很可能是世界模型、动作模型与多模态骨干的结合体，而不是单一语言骨干的升级版}。对于浏览器、机器人、代码执行和科研自动化任务，更核心的问题并不是“下一句文字是什么”，而是“采取动作后环境会怎样变化”。因此下一代基础模型更可能显式学习
+\begin{equation}
+p(s_{t+1}, o_t, r_t \mid s_t, a_t),
+\end{equation}
+其中$s_t$表示内部状态或外部工作区状态，$a_t$表示动作，$o_t$表示观测，$r_t$表示任务反馈。这样的模型更接近“世界模型 + 控制器”的统一体，而不是仅仅把视觉token接进语言模型。若这一趋势成立，则“后Transformer突破”不只是神经网络算子的变化，更是\textbf{训练目标从静态序列预测转向行动条件化建模}。
+
+第四个预测是：\textbf{产业界最终胜出的不会是“纯替代Transformer”的新架构，而是“混合注意力 + 持续状态 + 长期记忆 + 外部工具”的系统级组合}。这与Altman在2026年2月3日强调的“很多中等规模突破”逻辑一致。也就是说，下一次真正的代际提升更像从LSTM到Transformer那种“单论文切代”，还是更像从单机程序到现代分布式系统那样的“多组件共同成熟”，我更倾向于后者。届时决定胜负的，将不是某一个模块单独更优，而是以下组合是否同时成立：
+\begin{equation}
+\text{Breakthrough} =
+\text{混合骨干}
+\cap \text{持续记忆}
+\cap \text{潜空间推理}
+\cap \text{行动落地}
+\cap \text{可扩展运行时}.
+\end{equation}
+
+\begin{table}[H]
+\centering
+\caption{后Transformer突破的候选方向与个人判断}
+\begin{tabular}{p{3.3cm}p{3.0cm}p{2.0cm}p{3.7cm}}
+\toprule
+\textbf{方向} & \textbf{核心机制} & \textbf{主观概率} & \textbf{主要障碍} \\
+\midrule
+混合注意力 + 状态空间模型 & 用选择性状态更新承担长序列主干计算，注意力承担高价值全局检索 & 高 & 训练稳定性、工具链迁移、与现有LLM堆栈兼容性 \\
+可写长期记忆 / 测试时学习 & 显式记忆写入、读取与测试时参数或状态适应 & 很高 & 写入策略难学、记忆污染、信用分配困难 \\
+潜空间推理 / 稀疏解码 & 在潜变量空间迭代推理，只在边界处解码文本 & 中高 & 可训练性、可解释性、监督信号设计 \\
+世界模型 + 动作建模统一体 & 显式建模动作导致的环境变化与反馈 & 中高 & 高质量交互数据难得、环境接口不统一 \\
+完全抛弃注意力的单一新骨干 & 以新算子彻底替代注意力主导的建模方式 & 中低 & 生态迁移成本极高，短期内难以全面替换 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{判断结论}
+
+如果必须给出一句最凝练的预测，我的判断是：\textbf{下一次真正“超越Transformer”的突破，不会表现为“注意力机制已死”，而会表现为“注意力机制不再独自承担全部计算职责”}。注意力仍将长期存在，但它会从唯一骨干退化为若干子模块之一；真正决定下一代能力上限的，将是\textbf{持续状态、长期记忆、潜空间推理、行动建模与运行时协同}能否被统一到同一个训练与部署体系中。
+
+\subsubsection{更激进的基础设施假说：四种超越现有神经骨干的方向}
+
+如果进一步追问“什么才算\textbf{彻底}超出Transformer”，那么仅仅把Mamba、MoE、Titans等视为候选还不够。因为它们虽然在状态压缩、专家路由和外部记忆上提供了重要进展，但仍然共享若干更底层的约束：\textbf{同步、层级式的前向计算}，\textbf{以欧氏向量为基本数据类型}，以及\textbf{以矩阵乘法为主要数值核心}。从这一角度看，真正的“后Transformer”不一定只是更好的注意力变体，而可能涉及\textbf{数学基元、计算拓扑与执行物理}的同时变更。下面给出四种更激进、但值得严肃思考的基础设施假说。
+
+\paragraph{一、谱相位干涉网络（Spectral Phase-Interference Networks）}
+
+这一方向的核心思想，是把序列交互从空间域中的两两点积，转移到频域中的波相干涉。设token序列$x_1,\ldots,x_N$先映射为复频谱表示
+\begin{equation}
+\hat{x}_i(\omega) = a_i(\omega)e^{j\phi_i(\omega)},
+\end{equation}
+再把整个上下文叠加为总谱场
+\begin{equation}
+\hat{X}(\omega) = \sum_{i=1}^{N}\hat{x}_i(\omega).
+\end{equation}
+一个查询$q$不再直接对全部token做注意力打分，而是形成频域滤波或相位调制核$G_q(\omega)$，最终读取可写为
+\begin{equation}
+y_q = \mathcal{F}^{-1}\big(G_q(\omega)\hat{X}(\omega)\big).
+\end{equation}
+若这一设想成立，则“相关概念被读出”的过程更接近共振与干涉，而不是显式的KV检索。其吸引力在于，FFT类算子具有$O(N\log N)$复杂度，且在现代GPU上已高度优化，因此它为\textbf{超长上下文的低功耗处理}提供了一个值得探索的方向。
+
+不过，必须谨慎对待其中最强的表述。频域叠加并不自动等于“无限、无损上下文”；真正困难的是\textbf{如何在相位空间中稳定编码组合结构、位置信息与可逆检索}。一旦不同语义在频谱上发生严重混叠，所谓“共振读取”就可能退化为不可控的相位污染。因此，这一方向在数学上富有吸引力，但距离工程上可验证的通用语言骨干仍有显著距离。
+
+\paragraph{二、连续热力学平衡求解器（Continuous Thermodynamic Equilibrium Solvers）}
+
+第二个方向是否定“固定层数前向传播”这一前提，把推理视作连续时间中的能量最小化或平衡求解问题。其数学原型可以写成深平衡模型（DEQ）或更一般的隐式系统：
+\begin{equation}
+z^\star = F_\theta(z^\star, x),
+\end{equation}
+或者等价地写为根求解
+\begin{equation}
+G_\theta(z^\star, x)=0.
+\end{equation}
+如果进一步引入连续时间动力学，则可写成
+\begin{equation}
+\frac{dz(t)}{dt} = - \nabla_z E_\theta(z(t), x),
+\end{equation}
+系统在给定输入$x$后不断演化，直到到达稳态$z^\star$，而稳态本身即为推理结果。这类方法的最大价值在于：\textbf{计算深度不再由网络层数静态决定，而由问题难度与收敛过程动态决定}。配合隐式微分，可把训练时的显存需求压到接近$O(1)$量级，这对长时间“系统2式推理”尤其有吸引力。
+
+但其挑战同样明确。连续平衡求解需要\textbf{可控的收敛性、稳定的数值求解器和良好的硬件利用率}。如果平衡过程容易陷入坏局部极小值，或者求解器迭代本身难以并行加速，那么其理论优点未必能转化为实际吞吐。因此，这一方向非常值得研究，而且比纯猜想更接近现有可训练数学框架；但它离大规模工业级替代仍有一段工程鸿沟。
+
+\paragraph{三、Clifford代数底层（Clifford Algebraic Substrates）}
+
+第三个方向挑战的是神经网络最基本的数据类型。现有模型以实向量$x \in \mathbb{R}^d$为基元，而Clifford代数（几何代数）主张把基本对象升级为\textbf{多向量（multivector）}。若$X,Y \in \mathrm{Cl}(p,q)$，其基本相互作用不再只是点积，而是几何乘积：
+\begin{equation}
+XY = X \cdot Y + X \wedge Y,
+\end{equation}
+其中内积项编码平行关系，外积项编码正交关系与更高维几何结构。这样，尺度、方向、平面、旋转等几何信息不再需要完全靠参数暴力拟合，而可直接写入数学基元本身。
+
+这一方向的理论价值在于，它可能为\textbf{空间推理、关系建模与对称性表达}提供更强归纳偏置，从而降低模型为了“学会几何”所付出的参数成本。对于机器人、多模态三维感知和复杂关系建模，这确实是一个有吸引力的假说。但必须看到，Clifford代数的主要难点不在定义，而在于\textbf{如何形成大规模可训练、可初始化、可高效实现的网络族}。也就是说，这条路可能带来强归纳偏置，却未必能自动转化为“1B参数等于100B Transformer”的数量级优势。更合理的判断是：它更可能先在\textbf{强几何结构任务}中出现局部突破，再逐步验证能否外推到通用语言智能。
+
+\paragraph{四、异步拓扑网格（Asynchronous Topological Meshes）}
+
+第四个方向挑战的是同步全局前向传播本身。设整个系统不再是按层执行的单一计算图，而是一个由大量微单元组成的图结构
+\begin{equation}
+\mathcal{G} = (\mathcal{V}, \mathcal{E}),
+\end{equation}
+每个单元$i \in \mathcal{V}$只维护局部状态$h_i$，并异步接收邻居消息：
+\begin{equation}
+h_i^{(t+1)} = f_i\Big(h_i^{(t)}, \{m_{j \rightarrow i}^{(t)} : j \in \mathcal{N}(i)\}\Big).
+\end{equation}
+此时token或任务状态更像是图中的活动包，而不是必须同步通过所有层的序列。只有局部被激活的路径会消耗能量，其余单元保持静默。
+
+这一方向最吸引人的地方，在于它直接对准了\textbf{内存墙与全局同步墙}。如果计算是局部异步传播而不是整层同步矩阵乘法，那么系统也许更适配晶圆级计算、近存计算、局部SRAM乃至分布式边缘设备网络。然而，它同时也是训练最困难的一类方案，因为异步图上的\textbf{信用分配、稳定训练、全局一致性与调试可观测性}都远比同步网络更困难。因此，这一方向从系统架构角度非常革命，但从“短期替代现有LLM训练堆栈”的角度看，工程风险也最大。
+
+\begin{table}[H]
+\centering
+\caption{四种更激进的后Transformer基础设施假说}
+\begin{tabular}{p{3.0cm}p{3.4cm}p{2.2cm}p{3.3cm}}
+\toprule
+\textbf{方向} & \textbf{试图突破的底层约束} & \textbf{近期可行性判断} & \textbf{主要不确定性} \\
+\midrule
+谱相位干涉网络 & 从空间点积转向频域干涉，降低长上下文检索成本 & 中低 & 语义混叠、位置信息编码、可逆读写机制 \\
+连续热力学平衡求解器 & 从固定层深转向连续求解与能量稳态 & 中高 & 收敛性、求解器开销、工业并行效率 \\
+Clifford代数底层 & 从欧氏向量转向多向量与几何乘积 & 中 & 泛化到通用语言任务的有效性、内核实现复杂度 \\
+异步拓扑网格 & 从同步全局前向传播转向局部异步消息传递 & 中低 & 训练稳定性、信用分配、系统调试难度 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{我的判断}
+
+如果从\textbf{五年内最可能形成产业级影响}的角度排序，我会把“连续平衡求解 + 可写记忆 + 混合骨干”看得比其余三项更近，因为它们与现有深度学习工具链的距离最小；而“谱相位干涉网络”“Clifford代数底层”“异步拓扑网格”更像\textbf{具有潜在革命性的长线方向}。它们真正有价值的地方，不是今天就宣布替代Transformer，而是迫使我们重新思考：\textbf{智能计算的基本单元是否一定是欧氏向量、同步层结构与矩阵乘法流水线}。一旦这个问题被重新打开，后Transformer时代的想象空间才算真正展开。
+
 \subsection{安全与对齐}
+
+随着模型逐步接入工具、浏览器、终端和连接器，安全与对齐不再只是输出过滤问题，而必须上升为训练目标、运行时权限与部署流程的统一设计问题。
 
 \subsubsection{安全推理}
 
@@ -5379,6 +6110,8 @@ P(\text{failure}) \approx \prod_{i=1}^{k} p_i.
 \end{itemize}
 
 \subsection{开放问题}
+
+前述各条研究主线最终都汇聚为一些尚未被解决的基础问题。它们之所以重要，不是因为“足够难”，而是因为它们直接决定推理模型与智能体系统能否从演示阶段走向长期、稳定、低成本的真实部署。
 
 \begin{enumerate}
     \item \textbf{泛化性}：如何让推理能力迁移到新领域？当前的推理模型在训练域外问题上表现如何？
@@ -5838,12 +6571,12 @@ BitNet代表了LLM效率优化的重要方向：
         \item 实现简单，效果良好
     \end{itemize}
     
-    \item \textbf{推理时Scaling开辟新维度}
+    \item \textbf{推理时计算扩展开辟新维度}
     \begin{itemize}
         \item 更多思考=更好结果
-        \item Test-time compute很重要
+        \item 推理时计算很重要
         \item 为提升能力提供新途径
-        \item 与模型大小scaling互补
+        \item 与模型规模扩展互补
     \end{itemize}
     
     \item \textbf{涌现现象值得深入研究}
@@ -5930,7 +6663,7 @@ BitNet代表了LLM效率优化的重要方向：
 
 \subsection{未来发展趋势与研究路线图}
 
-最后一章不应只回顾已有结果，还应给出未来几年最值得投入的方向。综合本文对RL训练、长上下文系统、闭源模型工程以及Agent runtime的分析，可以把未来发展概括为以下七条主线：
+最后一章不应只回顾已有结果，还应给出未来几年最值得投入的方向。综合本文对RL训练、长上下文系统、闭源模型工程以及智能体运行时（agent runtime）的分析，可以把未来发展概括为以下七条主线：
 
 \begin{enumerate}
     \item \textbf{从“更大模型”走向“更强系统”}
@@ -5939,19 +6672,19 @@ BitNet代表了LLM效率优化的重要方向：
     
     \item \textbf{从静态对话走向可执行智能体}
     
-    下一代模型会更深地嵌入浏览器、shell、代码执行器、检索与企业工作流。研究重点将从“生成一个好答案”转向“在权限边界内完成一个真实任务”。这意味着agent harness、审批机制、工具策略、失败恢复与可观测性将成为核心研究对象，而不仅仅是附属工程。
+    下一代模型会更深地嵌入浏览器、shell、代码执行器、检索与企业工作流。研究重点将从“生成一个好答案”转向“在权限边界内完成一个真实任务”。这意味着智能体控制层（harness）、审批机制、工具策略、失败恢复与可观测性将成为核心研究对象，而不仅仅是附属工程。
     
     \item \textbf{从长上下文走向分层记忆体系}
     
-    单纯扩大context window并不能根治记忆问题。更有前途的方向是形成\textbf{窗口记忆 + KV cache + 压缩记忆 + 外部长期记忆}的分层体系。Titans、MLA、TurboQuant、PagedAttention代表的正是这一方向：不是无差别保留全部历史，而是学习“什么值得存、存成什么形式、何时读取”。
+    单纯扩大上下文窗口（context window）并不能根治记忆问题。更有前途的方向是形成\textbf{窗口记忆 + KV缓存（KV cache）+ 压缩记忆 + 外部长期记忆}的分层体系。Titans、MLA、TurboQuant、PagedAttention代表的正是这一方向：不是无差别保留全部历史，而是学习“什么值得存、存成什么形式、何时读取”。
     
-    \item \textbf{从训练时Scaling走向训练-推理协同Scaling}
+    \item \textbf{从训练时尺度扩展走向训练-推理协同扩展}
     
-    未来的关键问题不再是“参数和训练算力是否足够”，而是如何在训练时学习\textbf{推理时计算分配策略}。也就是说，模型既要学会解题，还要学会判断何时该多想、何时该调用工具、何时该早停。训练时RL与推理时search/verifier/工具策略会越来越紧密地耦合。
+    未来的关键问题不再是“参数和训练算力是否足够”，而是如何在训练时学习\textbf{推理时计算分配策略}。也就是说，模型既要学会解题，还要学会判断何时该多想、何时该调用工具、何时该早停。训练时RL与推理时搜索、验证器和工具策略会越来越紧密地耦合。
     
     \item \textbf{从粗粒度奖励走向过程级、结构级和系统级奖励}
     
-    仅靠最终答案奖励仍然有效，但对于复杂Agent任务，奖励会向三层扩展：
+    仅靠最终答案奖励仍然有效，但对于复杂智能体任务，奖励会向三层扩展：
     \begin{itemize}
         \item \textbf{过程级奖励}：步骤正确性、验证一致性、反思有效性；
         \item \textbf{结构级奖励}：工具调用顺序、计划分解质量、上下文压缩质量；
@@ -5961,11 +6694,11 @@ BitNet代表了LLM效率优化的重要方向：
     
     \item \textbf{从能力评测走向评测驱动开发（Evaluation-Driven Development）}
     
-    顶尖团队已经证明，真正可持续的进步依赖\textbf{规范化评测、灰度发布、在线监控与事后复盘}。未来研究不应只发布基准分数，更应发布失败类型、环境分布、风险边界、回滚策略与修复周期。对开源团队而言，最具杠杆的投入之一，就是建立任务集、回归集、Agent trace回放集与安全红队集。
+    顶尖团队已经证明，真正可持续的进步依赖\textbf{规范化评测、灰度发布、在线监控与事后复盘}。未来研究不应只发布基准分数，更应发布失败类型、环境分布、风险边界、回滚策略与修复周期。对开源团队而言，最具杠杆的投入之一，就是建立任务集、回归集、智能体轨迹回放集与安全红队集。
     
     \item \textbf{从通用高成本推理走向高效可部署推理}
     
-    BitNet、量化KV cache、MoE、Mamba、FlashAttention、投机解码等路线共同指向一个现实：真正影响产业落地的，是\textbf{单位正确答案的成本}，而不是某个离线基准上的极限分数。未来研究会更强调tokens/s、joules/task、memory/request、tool-success-rate等系统指标。
+    BitNet、量化KV缓存（KV cache）、MoE、Mamba、FlashAttention、投机解码等路线共同指向一个现实：真正影响产业落地的，是\textbf{单位正确答案的成本}，而不是某个离线基准上的极限分数。未来研究会更强调每秒词元数（tokens/s）、单任务能耗（joules/task）、单请求内存占用（memory/request）、工具调用成功率（tool-success-rate）等系统指标。
 \end{enumerate}
 
 \paragraph{未来最值得投入的研究问题}
@@ -5977,13 +6710,13 @@ BitNet代表了LLM效率优化的重要方向：
 \toprule
 \textbf{方向} & \textbf{核心研究问题} & \textbf{实际开发意义} \\
 \midrule
-长记忆系统 & 如何联合优化窗口注意力、外部记忆和缓存压缩？ & 决定Agent是否能完成长流程任务而不遗忘上下文 \\
+长记忆系统 & 如何联合优化窗口注意力、外部记忆和缓存压缩？ & 决定智能体是否能完成长流程任务而不遗忘上下文 \\
 推理时计算 & 如何学习何时搜索、何时验证、何时早停？ & 直接影响成本、延迟和正确率的平衡 \\
-Agent Harness & 如何形式化工具策略、审批策略和失败恢复？ & 决定系统能否安全上线，而不是只在demo中工作 \\
+智能体控制层 & 如何形式化工具策略、审批策略和失败恢复？ & 决定系统能否安全上线，而不是只在演示系统中工作 \\
 过程奖励 & 如何用低成本方式获得步骤级信用分配？ & 提高复杂任务中的稳定性和可解释性 \\
-评测工程 & 如何构建覆盖真实生产故障的Agent评测集？ & 减少回归事故和线上不可控行为 \\
+评测工程 & 如何构建覆盖真实生产故障的智能体评测集？ & 减少回归事故和线上不可控行为 \\
 效率算法 & 如何在低比特、稀疏化和新硬件上保持推理质量？ & 决定是否能以合理成本大规模部署 \\
-安全对齐 & 如何验证推理与计划过程本身不发生欺骗与越权？ & 决定高能力Agent能否进入高风险工作流 \\
+安全对齐 & 如何验证推理与计划过程本身不发生欺骗与越权？ & 决定高能力智能体能否进入高风险工作流 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -5993,104 +6726,111 @@ Agent Harness & 如何形式化工具策略、审批策略和失败恢复？ & �
 如果只能优先做少数几件事，建议按以下顺序投入：
 \begin{enumerate}
     \item 先建立\textbf{可复现评测和回归集}，再追求更强模型。
-    \item 先把\textbf{harness、权限边界和失败恢复}做好，再扩大工具能力。
+    \item 先把\textbf{智能体控制层（harness）、权限边界和失败恢复}做好，再扩大工具能力。
     \item 先解决\textbf{长上下文的缓存和记忆成本}，再盲目扩窗口。
     \item 先优化\textbf{单位任务成本}，再追逐少量榜单提升。
     \item 先把\textbf{真实任务完成率}做稳，再追求更长、更复杂的思维链。
 \end{enumerate}
 
-简言之，未来真正有决定性的方向不是某一个孤立算法，而是\textbf{RL训练、长记忆系统、Agent harness、评测工程与安全部署}五者的合流。谁能最早把这五件事做成统一闭环，谁就更可能在下一阶段取得优势。
+简言之，未来真正有决定性的方向不是某一个孤立算法，而是\textbf{RL训练、长记忆系统、智能体控制层（harness）、评测工程与安全部署}五者的合流。谁能最早把这五件事做成统一闭环，谁就更可能在下一阶段取得优势。
 
 %===========================================
 \section*{参考文献}
 %===========================================
 
-\paragraph{参考文献导航}
+\paragraph{编排说明}
 
-为便于使用，本报告的参考资料可以分为四类：一是RL/偏好优化与过程奖励论文，二是长上下文、注意力、量化与推理系统论文，三是OpenAI、Anthropic、Google DeepMind的系统卡、工程博客与开发文档，四是BitNet与高效推理相关资料。建议读者按自己的关注方向回溯，而不是机械地按编号顺序阅读。
+为便于学术检索与主题回溯，本报告将参考资料按研究脉络重组为五个专题：强化学习与偏好优化、推理与自我改进、多模态Transformer与系统基础设施、智能体工程与治理文档，以及高效训练与低比特推理。编号在各组之间保持连续，便于全文统一引用。
 
+\begingroup
+\small
+\sloppy
+
+\subsection*{一、强化学习、偏好优化与奖励建模}
 \begin{enumerate}[label={[\arabic*]}]
     \item DeepSeek-AI. DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. arXiv:2501.12948, 2025.
-    
+
     \item DeepSeek-AI. DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models. arXiv:2402.03300, 2024.
-    
+
     \item Lightman, H., et al. Let's Verify Step by Step. arXiv:2305.20050, 2023.
-    
+
     \item Bai, Y., et al. Constitutional AI: Harmlessness from AI Feedback. arXiv:2212.08073, 2022.
-    
+
     \item Ouyang, L., et al. Training Language Models to Follow Instructions with Human Feedback. NeurIPS, 2022.
-    
+
     \item OpenAI. Learning to Reason with LLMs. OpenAI Blog, 2024.
-    
+
     \item Schulman, J., et al. Proximal Policy Optimization Algorithms. arXiv:1707.06347, 2017.
-    
-    \item Wei, J., et al. Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. NeurIPS, 2022.
-    
-    \item Wang, X., et al. Self-Consistency Improves Chain of Thought Reasoning in Language Models. ICLR, 2023.
-    
-    \item Cobbe, K., et al. Training Verifiers to Solve Math Word Problems. arXiv:2110.14168, 2021.
-    
-    \item Gao, L., et al. Scaling Laws for Reward Model Overoptimization. ICML, 2023.
-    
-    \item Touvron, H., et al. LLaMA: Open and Efficient Foundation Language Models. arXiv:2302.13971, 2023.
-    
-    \item Zelikman, E., et al. STaR: Self-Taught Reasoner. NeurIPS, 2022.
-    
-    \item Zelikman, E., et al. Quiet-STaR: Language Models Can Teach Themselves to Think Before Speaking. arXiv:2403.09629, 2024.
-    
+
     \item Rafailov, R., et al. Direct Preference Optimization: Your Language Model is Secretly a Reward Model. NeurIPS, 2023.
-    
+
     \item Lee, H., et al. RLAIF: Scaling Reinforcement Learning from Human Feedback with AI Feedback. arXiv:2309.00267, 2023.
-    
-    \item Chen, X., et al. Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models. arXiv:2401.01335, 2024.
-    
-    \item Kojima, T., et al. Large Language Models are Zero-Shot Reasoners. NeurIPS, 2022.
-    
-    \item Yao, S., et al. Tree of Thoughts: Deliberate Problem Solving with Large Language Models. NeurIPS, 2023.
-    
-    \item Silver, D., et al. Mastering the Game of Go with Deep Neural Networks and Tree Search. Nature, 2016.
-    
-    \item Hu, E., et al. LoRA: Low-Rank Adaptation of Large Language Models. ICLR, 2022.
-    
-    \item Dettmers, T., et al. QLoRA: Efficient Finetuning of Quantized LLMs. NeurIPS, 2023.
-    
-    \item Rajbhandari, S., et al. ZeRO: Memory Optimizations Toward Training Trillion Parameter Models. SC, 2020.
-    
-    \item Shinn, N., et al. Reflexion: Language Agents with Verbal Reinforcement Learning. NeurIPS, 2023.
-    
-    \item Anthropic. Claude 3 Model Card. Anthropic, 2024.
-    
-    \item Google. Gemini: A Family of Highly Capable Multimodal Models. arXiv:2312.11805, 2023.
-    
+
     \item Yuan, W., et al. Self-Rewarding Language Models. arXiv:2401.10020, 2024.
-    
+
+    \item Gao, L., et al. Scaling Laws for Reward Model Overoptimization. ICML, 2023.
+\end{enumerate}
+
+\subsection*{二、推理、自我改进与评测基准}
+\begin{enumerate}[label={[\arabic*]}, resume]
+    \item Wei, J., et al. Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. NeurIPS, 2022.
+
+    \item Wang, X., et al. Self-Consistency Improves Chain of Thought Reasoning in Language Models. ICLR, 2023.
+
+    \item Zelikman, E., et al. STaR: Self-Taught Reasoner. NeurIPS, 2022.
+
+    \item Zelikman, E., et al. Quiet-STaR: Language Models Can Teach Themselves to Think Before Speaking. arXiv:2403.09629, 2024.
+
+    \item Chen, X., et al. Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models. arXiv:2401.01335, 2024.
+
+    \item Kojima, T., et al. Large Language Models are Zero-Shot Reasoners. NeurIPS, 2022.
+
+    \item Yao, S., et al. Tree of Thoughts: Deliberate Problem Solving with Large Language Models. NeurIPS, 2023.
+
+    \item Silver, D., et al. Mastering the Game of Go with Deep Neural Networks and Tree Search. Nature, 2016.
+
+    \item Shinn, N., et al. Reflexion: Language Agents with Verbal Reinforcement Learning. NeurIPS, 2023.
+
     \item Wang, P., et al. Self-Instruct: Aligning Language Models with Self-Generated Instructions. ACL, 2023.
-    
+
     \item Havrilla, A., et al. Teaching Large Language Models to Self-Debug. arXiv:2304.05128, 2023.
-    
+
     \item Madaan, A., et al. Self-Refine: Iterative Refinement with Self-Feedback. NeurIPS, 2023.
-    
+
     \item Hendrycks, D., et al. Measuring Mathematical Problem Solving With the MATH Dataset. NeurIPS, 2021.
-    
+
     \item Cobbe, K., et al. GSM8K: Training Verifiers to Solve Math Word Problems. arXiv:2110.14168, 2021.
-    
+
+    \item Zhou, D., et al. Least-to-Most Prompting Enables Complex Reasoning in Large Language Models. ICLR, 2023.
+
     \item Chen, M., et al. Evaluating Large Language Models Trained on Code. arXiv:2107.03374, 2021.
-    
+
     \item Austin, J., et al. Program Synthesis with Large Language Models. arXiv:2108.07732, 2021.
-    
+\end{enumerate}
+
+\subsection*{三、多模态Transformer、长上下文与系统基础设施}
+\begin{enumerate}[label={[\arabic*]}, resume]
+    \item Vaswani, A., et al. Attention Is All You Need. NeurIPS, 2017.
+
+    \item Touvron, H., et al. LLaMA: Open and Efficient Foundation Language Models. arXiv:2302.13971, 2023.
+
+    \item Google. Gemini: A Family of Highly Capable Multimodal Models. arXiv:2312.11805, 2023.
+
+    \item Radford, A., et al. Learning Transferable Visual Models From Natural Language Supervision. ICML, 2021.
+
+    \item Alayrac, J.-B., et al. Flamingo: a Visual Language Model for Few-Shot Learning. NeurIPS, 2022.
+
+    \item Li, J., Li, D., Savarese, S., and Hoi, S. C. H. BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models. ICML, 2023.
+
     \item Kaplan, J., et al. Scaling Laws for Neural Language Models. arXiv:2001.08361, 2020.
-    
+
     \item Hoffmann, J., et al. Training Compute-Optimal Large Language Models. NeurIPS, 2022.
-    
-    \item Wang, H., et al. BitNet: Scaling 1-bit Transformers for Large Language Models. arXiv:2310.11453, 2023.
-    
-    \item Ma, S., et al. The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits. arXiv:2402.17764, 2024.
-    
-    \item Wang, J., et al. 1-bit AI Infra: Part 1.1, Fast and Lossless BitNet b1.58 Inference on CPUs. arXiv:2410.16144, 2024.
-    
-    \item Ma, S., et al. BitNet a4.8: 4-bit Activations for 1-bit LLMs. arXiv:2411.04965, 2024.
-    
-    \item Microsoft. Bitnet.cpp: Efficient Edge Inference for Ternary LLMs. arXiv:2502.11880, 2025.
+
+    \item Bai, S., Kolter, J. Z., and Koltun, V. Deep Equilibrium Models. NeurIPS, 2019.
+
+    \item Gu, A., Goel, K., and Re, C. Efficiently Modeling Long Sequences with Structured State Spaces. ICLR, 2022.
+
+    \item Peng, B., Alcaide, E., Anthony, Q., et al. RWKV: Reinventing RNNs for the Transformer Era. Findings of ACL: EMNLP, 2023.
 
     \item He, R., Ravula, A., Kanagal, B., and Ainslie, J. RealFormer: Transformer Likes Residual Attention. Findings of ACL-IJCNLP, 2021.
 
@@ -6107,10 +6847,23 @@ Agent Harness & 如何形式化工具策略、审批策略和失败恢复？ & �
     \item DeepSeek-AI. DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model. arXiv:2405.04434, 2024.
 
     \item Zimerman, I., Ali, A. A., and Wolf, L. Explaining Modern Gated-Linear RNNs via a Unified Implicit Attention Formulation. ICLR, 2025.
+\end{enumerate}
+
+\subsection*{四、智能体工程、系统卡与治理文档}
+\begin{enumerate}[label={[\arabic*]}, resume]
+    \item Anthropic. Claude 3 Model Card. Anthropic, 2024.
 
     \item Anthropic. Building Effective Agents. Anthropic Engineering Blog, December 19, 2024.
 
     \item Anthropic. Model Context Protocol Documentation. Anthropic Developer Documentation, 2025.
+
+    \item Anthropic. Claude Code Overview. Anthropic Developer Documentation, accessed April 1, 2026.
+
+    \item Anthropic. Claude Code Hooks. Anthropic Developer Documentation, accessed April 1, 2026.
+
+    \item Nieva, R., and Tong, A. Sam Altman Explains Our AI Future. Forbes, February 3, 2026.
+
+    \item Jester, K. Sam Altman Projects AGI Development, AI Integration at TreeHacks. The Stanford Daily, February 15, 2026.
 
     \item OpenAI. Updating Our Preparedness Framework. OpenAI, 2025.
 
@@ -6125,7 +6878,30 @@ Agent Harness & 如何形式化工具策略、审批策略和失败恢复？ & �
     \item Google DeepMind. AlphaEvolve: A Gemini-powered Coding Agent for Designing Advanced Algorithms. Google DeepMind Blog, 2025.
 
     \item OpenClaw Documentation. Gateway Architecture, Agent Loop, and Browser Tooling. docs.openclaw.ai, accessed March 31, 2026.
+
+    \item instructkr. claw-code: Clean-room Python Reconstruction of a Claude Code-like Agent Runtime. GitHub repository, accessed April 1, 2026.
 \end{enumerate}
+
+\subsection*{五、高效训练、模型压缩与低比特推理}
+\begin{enumerate}[label={[\arabic*]}, resume]
+    \item Hu, E., et al. LoRA: Low-Rank Adaptation of Large Language Models. ICLR, 2022.
+
+    \item Dettmers, T., et al. QLoRA: Efficient Finetuning of Quantized LLMs. NeurIPS, 2023.
+
+    \item Rajbhandari, S., et al. ZeRO: Memory Optimizations Toward Training Trillion Parameter Models. SC, 2020.
+
+    \item Wang, H., et al. BitNet: Scaling 1-bit Transformers for Large Language Models. arXiv:2310.11453, 2023.
+
+    \item Ma, S., et al. The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits. arXiv:2402.17764, 2024.
+
+    \item Wang, J., et al. 1-bit AI Infra: Part 1.1, Fast and Lossless BitNet b1.58 Inference on CPUs. arXiv:2410.16144, 2024.
+
+    \item Ma, S., et al. BitNet a4.8: 4-bit Activations for 1-bit LLMs. arXiv:2411.04965, 2024.
+
+    \item Microsoft. Bitnet.cpp: Efficient Edge Inference for Ternary LLMs. arXiv:2502.11880, 2025.
+\end{enumerate}
+
+\endgroup
 
 %===========================================
 \section*{附录A：代码示例}
