@@ -4,6 +4,8 @@ Default mode uses dense diagonalization (exact trace) and is only feasible for
 moderate R. Use --hutch to estimate Tr(L^{-1}) with Hutchinson + CG for larger R.
 """
 
+from __future__ import annotations
+
 import argparse
 import math
 import sys

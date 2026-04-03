@@ -426,19 +426,21 @@ X = [x_1; x_2; \ldots; x_n] \in \mathbb{R}^{n \times d}.
 \end{equation}
 自注意力的第一步是对同一组token分别做三组线性投影：
 \begin{equation}
-Q = XW_Q,\qquad K = XW_K,\qquad V = XW_V,
+Q = XW_Q \in \mathbb{R}^{n \times d_k},\qquad K = XW_K \in \mathbb{R}^{n \times d_k},\qquad V = XW_V \in \mathbb{R}^{n \times d_v},
 \end{equation}
 其中$W_Q, W_K \in \mathbb{R}^{d \times d_k}$，$W_V \in \mathbb{R}^{d \times d_v}$。随后通过查询与键的内积构造两两相关性：
 \begin{equation}
-S = \frac{QK^\top}{\sqrt{d_k}} + M,
+S = \frac{QK^\top}{\sqrt{d_k}} + M \in \mathbb{R}^{n \times n},
 \end{equation}
-其中$M$是掩码矩阵；在双向编码器中$M$可为零，在因果解码器中$M_{ij}=-\infty$（当$j>i$）以禁止看到未来token。经softmax归一化后得到注意力权重：
+其中$M \in \mathbb{R}^{n \times n}$是掩码矩阵；在双向编码器中$M$可为零，在因果解码器中$M_{ij}=-\infty$（当$j>i$）以禁止看到未来token。$S$矩阵的第$(i,j)$元素$S_{ij} = q_i^\top k_j / \sqrt{d_k} + M_{ij}$称为\textbf{注意力分数（attention score）}，它衡量的是位置$i$的查询与位置$j$的键之间的匹配程度。除以$\sqrt{d_k}$是为了防止内积值随维度增大而增大——当$q$和$k$的各分量独立采样自均值为0、方差为1的分布时，$q^\top k$的方差为$d_k$，除以$\sqrt{d_k}$后方差回到$O(1)$，避免softmax进入梯度消失的饱和区。
+
+经softmax按行归一化后得到注意力权重：
 \begin{equation}
-A = \text{softmax}(S),
+A = \text{softmax}(S) \in \mathbb{R}^{n \times n},
 \end{equation}
-最终输出为
+其中每一行$A_{i,:}$是一个概率分布，满足$\sum_j A_{ij}=1$。直观地说，若注意力分数$S_{ij}$远大于同行中其他位置的分数，则$A_{ij}$趋近于1，输出几乎只读取位置$j$的信息（"尖锐"注意力）；若所有分数接近相等，则$A_{ij} \approx 1/n$，输出退化为对所有位置的均匀平均（"平坦"注意力）。最终输出为
 \begin{equation}
-H = AV.
+H = AV \in \mathbb{R}^{n \times d_v}.
 \end{equation}
 
 这一机制的关键不在于“平均历史信息”，而在于它实现了\textbf{内容依赖的动态路由}：第$i$个位置到底从哪些位置读取信息、读取多少，不是由固定卷积核决定，而是由$q_i^\top k_j$在线计算出来。若第$i$个token与第$j$个token在当前任务中高度相关，则$A_{ij}$会变大；反之则自动衰减。因此，自注意力本质上是在序列内部学习一个随输入变化的完全图权重矩阵。
