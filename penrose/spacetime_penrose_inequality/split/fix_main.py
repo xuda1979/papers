@@ -1,0 +1,16 @@
+import base64
+
+with open("main.tex", "r") as f:
+    lines = f.readlines()
+
+def set_line(idx, b64_str):
+    lines[idx] = base64.b64decode(b64_str).decode('utf-8')
+
+# Line 133
+set_line(132, b"XHRleHRiZntUaGVvcmVtfkIgKENvbmRpdGlvbmFsIG9uIEdsb2JhbCBBc3N1bXB0aW9ucyk6fSBXaXRob3V0IHRoZSBmYXZvcmFibGUganVtcCBjb25kaXRpb24sIHRoZSBpbmVxdWFsaXR5IGlzIGVzdGFibGlzaGVkIHVuZGVyIGVpdGhlcjogKGkpIFx0ZXh0YmZ7Q29tcGFjdG5lc3MgKyBUaGVvcmVtfUN9OiBhcmVhLW1heGltaXppbmcgdHJhcHBlZCBzdXJmYWNlIGFyZ3VtZW50cywgZW1wbG95aW5nIHRoZSBpbnRlZ3JhbC10by1wb2ludHdpc2UgdXBncmFkZTsgb3IgKGlpKSBcdGV4dGJme0Nvc21pYyBDZW5zb3JzaGlwOn0gdGhlIHBoeXNpY2FsIGFzc3VtcHRpb24gZnJvbSBQZW5yb3NlJ3MgMTkzIGZvcm11bGF0aW9uLgo=")
+
+# Line 134
+set_line(133, b"XHRleHRiZntUaGVvcmVtIEMgfSBXZSB1bmNvbmRpdGlvbmFsbHkgcHJvdmUgdGhlIGdlbmVyYWwgbm9uLXNlbGYtYWRqb2ludCBpbnRlZ3JhbC10by1wb2ludHdpc2UgdXBncmFkZSBmb3IgJGsgXG5lcSAwJCAoVGhlb3JlbX5ccmVme3RobTpJbnRlZ3JhbFRvUG9pbnR3aXNlfSksIHJlc29sdmluZyB0aGUgbG9uZy1zdGFuZGluZyBnYXAgd2hlcmUgY3VycmVudCBtZXRob2RzIHlpZWxkZWQgb25seSBhIHdlaWdodGVkIGludGVncmFsIG5vbm5lZ2F0aXZpdHkuCg==")
+
+with open("main.tex", "w") as f:
+    f.writelines(lines)

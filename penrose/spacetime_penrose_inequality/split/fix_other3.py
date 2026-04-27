@@ -1,0 +1,24 @@
+import base64
+
+def set_line(filename, idx, b64_str):
+    with open(filename, "r") as f:
+        lines = f.readlines()
+    lines[idx] = base64.b64decode(b64_str).decode('utf-8')
+    with open(filename, "w") as f:
+        f.writelines(lines)
+
+# sec_10_synthesis_limit_of_inequalities.tex, line 16 (idx 15)
+set_line("sec_10_synthesis_limit_of_inequalities.tex", 15, b"ICAgIFxpdGVtIFx0ZXh0YmZ7Q29tcGFjdG5lc3M6fSBDb25kaXRpb25zIChDMSktLShDMykgZnJvbSB0aGUgZWFybGllciB2YXJpYXRpb25hbCBNT1RTIHByb2dyYW0gKGFuZCwgZm9yICRrIFxuZXEgMCQsIHRoZSBub3cgdW5jb25kaXRpb25hbGx5IHByb3ZlbiBUaGVvcmVtfXJlZnt0aG06SW50ZWdyYWxUb1BvaW50d2lzZX0pOwo=")
+
+# sec_12_complete_rigorous_proof_consolidated_statement.tex, line 21 (idx 20)
+set_line("sec_12_complete_rigorous_proof_consolidated_statement.tex", 20, b"ICAgIFxpdGVtIFx0ZXh0YmZ7Q29tcGFjdG5lc3M6fSBDb25kaXRpb25zIChDMSktLShDMykgZnJvbSB0aGUgZWFybGllciB2YXJpYXRpb25hbCBNT1RTIHByb2dyYW0gKGFuZCwgd2hlbiAkayBcbmVxIDAkLCB0aGUgbm93IHVuY29uZGl0aW9uYWxseSBwcm92ZW4gVGhlb3JlbX5ccmVme3RobTpJbnRlZ3JhbFRvUG9pbnR3aXNlfSk7Cg==")
+
+# sec_36_dispersive_estimates_and_spectral_transfer.tex, line 59 (idx 58)
+set_line("sec_36_dispersive_estimates_and_spectral_transfer.tex", 58, b"XHN1YnNlY3Rpb257V2hlcmUgVGhlb3JlbX5ccmVme3RobTpJbnRlZ3JhbFRvUG9pbnR3aXNlfSBtYXkgbWF0dGVyfQo=")
+
+# sec_36_dispersive_estimates_and_spectral_transfer.tex, line 61 (idx 60)
+set_line("sec_36_dispersive_estimates_and_spectral_transfer.tex", 60, b"VGhlIFBlbnJvc2UgcHJvYmxlbSBzdWdnZXN0cyBvbmUgcG9zc2libGUgbWVjaGFuaXNtIGZvciBwcm9kdWNpbmcgKFMxKTogaWYgbG9jYWxpemVkIHNpZ24gaW5mb3JtYXRpb24gb24gaG9yaXpvbiBzZWN0aW9ucyBjYW4gYmUgZXh0cmFjdGVkIGZyb20gY29uc3RyYWluZWQgdmFyaWF0aW9uYWwgZGF0YSwgdGhlbiB0aGUgcmVzdWx0aW5nIGNvZXJjaXZlIGZvcm0gbWF5IGhlbHAgcnVsZSBvdXQgemVyby1mcmVxdWVuY3kgb2JzdHJ1Y3Rpb25zIGNvbmNlbnRyYXRlZCBuZWFyIHRoZSBob3Jpem9uLiBJbiB0aGF0IHNlbnNlLCBUaGVvcmVtfXJlZnt0aG06SW50ZWdyYWxUb1BvaW50d2lzZX0gaXMgbm90IGl0c2VsZiBhIGRpc3BlcnNpdmUgc3RhdGVtZW50LCBidXQgaXQgcG9pbnRzIHRvd2FyZCB0aGUgc29ydCBvZiBsb2NhbGl6ZWQgY29lcmNpdml0eSBvbmUgd291bGQgd2FudCBpbiBhIGZ1dHVyZSBzcGVjdHJhbC10cmFuc2ZlciB0aGVvcnkuCg==")
+
+# sec_03_overview.tex, line 11 (idx 10)
+set_line("sec_03_overview.tex", 10, b"ICAgIFxpdGVtIFx0ZXh0YmZ7TU9UUyBQZW5yb3NlOn0gRm9yIHRoZSBvdXRlcm1vc3QgTU9UUyAkXFNpZ21hXiokLCBUaGVvcmVtfXJlZnt0aG06cGVucm9zZWluaXRpYWx9IGFwcGxpZXMgZGlyZWN0bHkgdmlhIHRoZSBKYW5nIGVxdWF0aW9uLCBpbmNvcnBvcmF0aW5nIHRoZSByZXNvbHV0aW9uIG9mIFRoZW9yZW0gQyAodGhlIGludGVncmFsLXRvLXBvaW50d2lzZSB1cGdyYWRlKS4K")
+
