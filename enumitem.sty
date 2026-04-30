@@ -1,0 +1,121 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{enumitem}[2026/03/30 Minimal local fallback]
+
+\RequirePackage{xparse}
+\ExplSyntaxOn
+
+\cs_new_eq:NN \enumitem_orig_enumerate \enumerate
+\cs_new_eq:NN \enumitem_orig_endenumerate \endenumerate
+\cs_new_eq:NN \enumitem_orig_itemize \itemize
+\cs_new_eq:NN \enumitem_orig_enditemize \enditemize
+\cs_new_eq:NN \enumitem_orig_description \description
+\cs_new_eq:NN \enumitem_orig_enddescription \enddescription
+
+\tl_new:N \l__enumitem_label_tl
+\tl_new:N \l__enumitem_leftmargin_tl
+\tl_new:N \l__enumitem_itemsep_tl
+\bool_new:N \l__enumitem_nosep_bool
+
+\keys_define:nn { enumitem }
+  {
+    label .tl_set:N = \l__enumitem_label_tl,
+    leftmargin .tl_set:N = \l__enumitem_leftmargin_tl,
+    itemsep .tl_set:N = \l__enumitem_itemsep_tl,
+    nosep .code:n =
+      {
+        \bool_set_true:N \l__enumitem_nosep_bool
+      },
+    unknown .code:n = {}
+  }
+
+\cs_new_protected:Npn \enumitem_reset:
+  {
+    \tl_clear:N \l__enumitem_label_tl
+    \tl_clear:N \l__enumitem_leftmargin_tl
+    \tl_clear:N \l__enumitem_itemsep_tl
+    \bool_set_false:N \l__enumitem_nosep_bool
+  }
+
+\cs_new_protected:Npn \enumitem_parse:n #1
+  {
+    \enumitem_reset:
+    \IfNoValueF {#1}
+      {
+        \keys_set:nn { enumitem } { #1 }
+      }
+  }
+
+\cs_new:Npn \enumitem_label_from_counter:nn #1#2
+  {
+    \tl_set:Nn \l_tmpa_tl {#1}
+    \tl_replace_all:Nnn \l_tmpa_tl { \roman* } { \roman{#2} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \arabic* } { \arabic{#2} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \alph* } { \alph{#2} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \Roman* } { \Roman{#2} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \Alph* } { \Alph{#2} }
+    \tl_use:N \l_tmpa_tl
+  }
+
+\cs_new_protected:Npn \enumitem_apply_common_settings:
+  {
+    \tl_if_empty:NF \l__enumitem_leftmargin_tl
+      {
+        \tl_if_eq:NnF \l__enumitem_leftmargin_tl { * }
+          {
+            \setlength{\leftmargin}{\l__enumitem_leftmargin_tl}
+          }
+      }
+    \tl_if_empty:NF \l__enumitem_itemsep_tl
+      {
+        \setlength{\itemsep}{\l__enumitem_itemsep_tl}
+      }
+    \bool_if:NT \l__enumitem_nosep_bool
+      {
+        \setlength{\itemsep}{0pt}
+        \setlength{\parsep}{0pt}
+        \setlength{\topsep}{0pt}
+        \setlength{\partopsep}{0pt}
+      }
+  }
+
+\cs_new_protected:Npn \enumitem_apply_enumerate_label:
+  {
+    \tl_if_empty:NF \l__enumitem_label_tl
+      {
+        \cs_set:cpn { label\@enumctr }
+          { \enumitem_label_from_counter:nn { \l__enumitem_label_tl } { \@enumctr } }
+      }
+  }
+
+\RenewDocumentEnvironment{enumerate}{o}
+  {
+    \enumitem_parse:n {#1}
+    \enumitem_orig_enumerate
+    \enumitem_apply_common_settings:
+    \enumitem_apply_enumerate_label:
+  }
+  {
+    \enumitem_orig_endenumerate
+  }
+
+\RenewDocumentEnvironment{itemize}{o}
+  {
+    \enumitem_parse:n {#1}
+    \enumitem_orig_itemize
+    \enumitem_apply_common_settings:
+  }
+  {
+    \enumitem_orig_enditemize
+  }
+
+\RenewDocumentEnvironment{description}{o}
+  {
+    \enumitem_parse:n {#1}
+    \enumitem_orig_description
+    \enumitem_apply_common_settings:
+  }
+  {
+    \enumitem_orig_enddescription
+  }
+
+\ExplSyntaxOff

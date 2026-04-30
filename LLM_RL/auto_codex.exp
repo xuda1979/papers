@@ -1,0 +1,102 @@
+#!/usr/bin/expect -f
+
+if {$argc < 1} {
+    puts stderr "Usage: $argv0 \"your prompt here\""
+    exit 1
+}
+
+set user_prompt [lindex $argv 0]
+
+# how long expect waits before assuming codex is waiting for input
+set idle_timeout 8
+
+# max lifetime for one codex run before restart (seconds)
+set max_runtime 1800
+
+log_user 1
+exp_internal 0
+
+proc now {} {
+    return [clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]
+}
+
+proc shutdown {} {
+    puts "\n[now] --- Received stop signal. Exiting. ---"
+    exit 0
+}
+
+trap shutdown {SIGINT SIGTERM}
+
+proc run_codex {prompt idle_timeout max_runtime} {
+    puts "\n[now] --- Starting codex ---\n"
+
+    set start_time [clock seconds]
+    spawn codex -p yunwu -m gpt-5.4 -- $prompt
+    set pid $spawn_id
+
+    while {1} {
+        set elapsed [expr {[clock seconds] - $start_time}]
+        if {$elapsed > $max_runtime} {
+            puts "\n[now] --- Max runtime reached, restarting codex ---\n"
+            catch {close}
+            catch {wait}
+            return
+        }
+
+        expect {
+            -timeout $idle_timeout
+
+            -re {(?i)(yes/no|y/n|\[y/n\]|\[yes/no\]|continue\?|proceed\?|are you sure.*\?|confirm)} {
+                puts "\n[now] auto-reply: y"
+                send -- "y\r"
+                exp_continue
+            }
+
+            -re {(?i)(press enter|hit enter|return to continue|input required|waiting for input)} {
+                puts "\n[now] auto-reply: enter"
+                send -- "\r"
+                exp_continue
+            }
+
+            -re {(?i)(select an option|choose an option|choice:|selection:|enter your choice)} {
+                puts "\n[now] auto-reply: enter"
+                send -- "\r"
+                exp_continue
+            }
+
+            -re {(?i)(more|--more--|press any key)} {
+                puts "\n[now] auto-reply: enter"
+                send -- "\r"
+                exp_continue
+            }
+
+            -re {[:>] $} {
+                puts "\n[now] auto-reply: enter"
+                send -- "\r"
+                exp_continue
+            }
+
+            timeout {
+                puts "\n[now] idle for $idle_timeout seconds, sending Enter"
+                send -- "\r"
+                exp_continue
+            }
+
+            eof {
+                catch wait result
+                puts "\n[now] --- Codex exited: $result ---\n"
+                return
+            }
+        }
+    }
+}
+
+while {1} {
+    catch {run_codex $user_prompt $idle_timeout $max_runtime} err
+    if {$err ne ""} {
+        puts "\n[now] --- Error: $err ---\n"
+    }
+
+    puts "\n[now] --- Restarting in 5 seconds ---\n"
+    sleep 5
+}
