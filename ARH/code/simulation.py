@@ -13,13 +13,16 @@ random.seed(42)
 class HCDStream:
     """
     Generates a stream of data with Hierarchical Concept Drift.
+    Includes a 'Noise Phase' to test stability.
     """
-    def __init__(self, n_steps, drift_step, dim=20, n_classes=4):
+    def __init__(self, n_steps, drift_step, noise_interval=(2500, 3500), noise_prob=0.3, dim=20, n_classes=4):
         self.n_steps = n_steps
         self.drift_step = drift_step
         self.dim = dim
         self.n_classes = n_classes
         self.current_step = 0
+        self.noise_interval = noise_interval
+        self.noise_prob = noise_prob
 
         # Define prototypes for Phase 1 (active dims 0-4)
         # Using larger separation to make it learnable
@@ -33,23 +36,34 @@ class HCDStream:
             return None, None
 
         is_phase2 = self.current_step >= self.drift_step
+        is_noise_phase = (self.noise_interval[0] <= self.current_step < self.noise_interval[1])
 
         X = np.zeros((batch_size, self.dim))
-        y = np.random.randint(0, self.n_classes, size=batch_size)
+        y = np.zeros(batch_size, dtype=int)
 
         for i in range(batch_size):
-            label = y[i]
-            if not is_phase2:
-                # Phase 1: Signal in 0-5
-                signal = self.protos_p1[label] + np.random.randn(5) * 0.5
-                X[i, 0:5] = signal
-                X[i, 5:] = np.random.randn(self.dim - 5) * 0.1 # Noise
+            # Check for noise injection
+            if is_noise_phase and np.random.random() < self.noise_prob:
+                # Generate random noise vector
+                X[i, :] = np.random.randn(self.dim)
+                # Assign a dummy label -1 to indicate noise (evaluator should handle this)
+                # But to keep accuracy metric simple, we can assign a random label
+                # and expect the model to fail (accuracy drops), but structure should remain stable.
+                y[i] = np.random.randint(0, self.n_classes)
             else:
-                # Phase 2: Signal in 5-10
-                signal = self.protos_p2[label] + np.random.randn(5) * 0.5
-                X[i, 5:10] = signal
-                X[i, :5] = np.random.randn(5) * 0.1 # Noise
-                X[i, 10:] = np.random.randn(self.dim - 10) * 0.1 # Noise
+                label = np.random.randint(0, self.n_classes)
+                y[i] = label
+                if not is_phase2:
+                    # Phase 1: Signal in 0-5
+                    signal = self.protos_p1[label] + np.random.randn(5) * 0.5
+                    X[i, 0:5] = signal
+                    X[i, 5:] = np.random.randn(self.dim - 5) * 0.1 # Noise
+                else:
+                    # Phase 2: Signal in 5-10
+                    signal = self.protos_p2[label] + np.random.randn(5) * 0.5
+                    X[i, 5:10] = signal
+                    X[i, :5] = np.random.randn(5) * 0.1 # Noise
+                    X[i, 10:] = np.random.randn(self.dim - 10) * 0.1 # Noise
 
         self.current_step += batch_size
         return X, y
@@ -79,7 +93,6 @@ class GRUR_Node:
     def learn(self, x, label):
         # Hebbian-like update (move prototype towards input)
         # Standard instar learning rule
-        # Note: Input x should probably be normalized for consistency in prototype
         x_norm = np.linalg.norm(x)
         if x_norm > 0:
             x_n = x / x_norm
@@ -116,6 +129,7 @@ class ARH:
 
         # Metrics
         self.dissonance_history = []
+        self.nodes_history = []
 
     def predict(self, x):
         if not self.nodes:
@@ -124,11 +138,11 @@ class ARH:
         activations = [node.activation(x) for node in self.nodes]
         winner_idx = np.argmax(activations)
 
-        # If the winner is weak, maybe predict random?
-        # But standard competitive networks predict winner class.
         return self.nodes[winner_idx].predict_label()
 
     def train_step(self, x, y):
+        self.nodes_history.append(len(self.nodes))
+
         # 1. If empty, initialize
         if not self.nodes:
             self.nodes.append(GRUR_Node(self.input_dim, x, {y: 1}))
@@ -172,29 +186,29 @@ class ARH:
         X_buf = np.array(self.buffer_X)
         y_buf = np.array(self.buffer_y)
 
-        # If we have enough points, cluster them. Otherwise just take mean or points.
+        # If we have enough points, cluster them.
         k = min(len(X_buf), 4) # Attempt to find up to 4 new clusters
 
         if k > 0:
-            kmeans = KMeans(n_clusters=k, n_init=10)
-            kmeans.fit(X_buf)
+            try:
+                kmeans = KMeans(n_clusters=k, n_init=10)
+                kmeans.fit(X_buf)
 
-            for i in range(k):
-                centroid = kmeans.cluster_centers_[i]
+                for i in range(k):
+                    centroid = kmeans.cluster_centers_[i]
 
-                # Check if this centroid is too close to existing nodes
-                # If it is, maybe don't add it? Or add it anyway because it came from dissonance?
-                # Let's add it.
+                    # Determine label
+                    cluster_indices = np.where(kmeans.labels_ == i)[0]
+                    cluster_labels = y_buf[cluster_indices]
+                    if len(cluster_labels) > 0:
+                        counts = np.bincount(cluster_labels, minlength=10)
+                        maj_label = np.argmax(counts)
+                        label_dist = {maj_label: len(cluster_indices)}
 
-                # Determine label
-                cluster_indices = np.where(kmeans.labels_ == i)[0]
-                cluster_labels = y_buf[cluster_indices]
-                if len(cluster_labels) > 0:
-                    counts = np.bincount(cluster_labels, minlength=10)
-                    maj_label = np.argmax(counts)
-                    label_dist = {maj_label: len(cluster_indices)}
-
-                    self.nodes.append(GRUR_Node(self.input_dim, centroid, label_dist))
+                        self.nodes.append(GRUR_Node(self.input_dim, centroid, label_dist))
+            except Exception as e:
+                # Fallback if KMeans fails (e.g. singular matrix)
+                pass
 
         # Reset buffer and dissonance
         self.buffer_X = []
@@ -226,11 +240,14 @@ class StaticBaseline:
 def run_simulation():
     total_steps = 10000
     drift_step = 5000
+    noise_start = 2500
+    noise_end = 3500
 
-    stream = HCDStream(total_steps, drift_step)
+    stream = HCDStream(total_steps, drift_step, noise_interval=(noise_start, noise_end), noise_prob=0.3)
 
     # Tuned parameters: lower threshold, higher beta to ensure growth
-    arh = ARH(input_dim=20, vigilance=0.85, dissonance_threshold=3.0)
+    # Threshold increased to 5.0 to ensure stability against 30% noise
+    arh = ARH(input_dim=20, vigilance=0.85, dissonance_threshold=5.0)
     baseline = StaticBaseline(input_dim=20, n_nodes=4)
 
     arh_acc = []
@@ -256,6 +273,8 @@ def run_simulation():
         p_base = baseline.predict(x)
 
         # Record Accuracy
+        # If it was noise injection (which we don't know explicitly here without peeking),
+        # accuracy will drop. That's fine.
         arh_correct = 1 if p_arh == y else 0
         base_correct = 1 if p_base == y else 0
 
@@ -279,7 +298,8 @@ def run_simulation():
         'step': np.arange(total_steps),
         'ARH_Accuracy': arh_acc,
         'Baseline_Accuracy': base_acc,
-        'ARH_Dissonance': arh_dissonance
+        'ARH_Dissonance': arh_dissonance,
+        'ARH_Nodes': arh.nodes_history
     })
 
     out_dir = os.path.dirname(os.path.abspath(__file__))
