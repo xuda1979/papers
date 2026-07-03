@@ -18,16 +18,9 @@ try:
         new_conclusion = [
             "\\section{Conclusion}\n",
             "\n",
-            "In this work, we have provided a complete proof of the nonlinear stability of the Kerr black hole family for the full subextremal range $|a| < M$. By constructing a coercive energy functional $\mathcal{E}[h]$ that captures the delicate interplay between the geometry of the ergosphere and the trapping of null geodesics, we have overcome the obstacles that previously limited stability results to the slowly rotating regime.\n",
+            "In this work, we have provided a conditional roadmap for the nonlinear stability of the Kerr black hole family in the full subextremal range $|a| < M$. The manuscript does not prove the conjecture; it identifies the analytic estimates that would be needed for such a proof and shows how they would combine if supplied.\n",
             "\n",
-            "Our proof relies on three key innovations:\n",
-            "\\begin{enumerate}\n",
-            "    \\item A novel coercivity mechanism for the Teukolsky-Starobinsky energy that remains positive definite even in the presence of the ergosphere.\n",
-            "    \\item A uniform multiplier calculus that provides the necessary Morawetz estimates across the full range of spin parameters $0 \leq |a| < M$.\n",
-            "    \\item A precise characterization of the near-extremal behavior, resolving the Aretakis instability through appropriate weighted decay estimates.\n",
-            "\\end{enumerate}\n",
-            "\n",
-            "Our result confirms the physical intuition that black holes are robust astrophysical objects and provides the rigorous mathematical foundation required for the era of precision gravitational wave astronomy. The stability of the Kerr metric ensures that the final state of gravitational collapse is well-defined and predictable within the framework of General Relativity.\n",
+            "The remaining proof obligations are the construction of a coercive full-subextremal energy, a Morawetz estimate controlling trapping and superradiance, and a nonlinear gauge/modulation framework compatible with the weak-null hierarchy.\n",
             "\n",
             "\\newpage\n",
             "\n"

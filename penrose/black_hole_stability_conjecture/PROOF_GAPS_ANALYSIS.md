@@ -5,23 +5,23 @@
 **Document:** `black_hole_stability_conjecture_original.tex`  
 **Date:** December 2025  
 **Analysis Type:** Mathematical Rigor Assessment
-**Status:** MAJOR UPDATE - Nonlinear Stability Framework Added
+**Status:** Updated to match current manuscript: conditional roadmap, not a proof
 
 ---
 
 ## Executive Summary
 
-The paper presents 7 theorems on Kerr black hole stability. **UPDATE (Dec 2025):** A complete nonlinear stability framework has been added, providing rigorous proofs for the full subextremal range $|a| < M$. The key new theorems are:
+The original paper presented several theorem-like claims on Kerr black hole stability. **Current status:** the manuscript has been revised into a conditional roadmap. It does not provide a rigorous proof for the full subextremal range $|a| < M$; it isolates the analytic inputs that would be required for such a proof. The key items should be classified as follows:
 
-1. **Coercive Energy Functional (Thm \ref{thm:full-coercivity})**: $\star$ Rigorous
-2. **Nonlinear Energy Decay (Thm \ref{thm:nonlinear-energy-decay})**: $\star$ Rigorous  
-3. **Main Nonlinear Stability (Thm \ref{thm:main-nonlinear})**: $\star$ Rigorous
-4. **Null Condition Structure (Thm \ref{thm:null-condition})**: $\star$ Rigorous
-5. **Near-Extremal Uniform Estimates (Thm \ref{thm:near-extremal-uniform})**: $\star$ Rigorous
+1. **Coercive Energy Functional (Thm \ref{thm:full-coercivity})**: target assumption
+2. **Nonlinear Energy Decay (Thm \ref{thm:nonlinear-energy-decay})**: conditional bootstrap theorem
+3. **Main Nonlinear Stability (Thm \ref{thm:main-nonlinear})**: conditional implication
+4. **Null Condition Structure (Thm \ref{thm:null-condition})**: target assumption
+5. **Near-Extremal Uniform Estimates (Thm \ref{thm:near-extremal-uniform})**: conjectural/heuristic target
 
 ---
 
-## NEW: Nonlinear Stability Framework
+## Current Conditional Nonlinear Stability Framework
 
 ### Key Components Added:
 
@@ -343,8 +343,8 @@ instability, rather than a proven result.
 
 ## Recommended Paper Structure Changes
 
-1. **Add disclaimer in abstract** matching the full version:
-   > "Results A-E are proven rigorously; Results F-G are heuristic arguments indicating the structure of complete proofs."
+1. **Keep the abstract disclaimer** matching the current full version:
+   > "This manuscript is a conditional roadmap and does not prove full-subextremal nonlinear Kerr stability."
 
 2. **Add rigor markers** ($\dagger$ for heuristic, $\ddagger$ for speculative) in theorem statements
 

@@ -1,0 +1,201 @@
+{
+  "metadata": {
+    "name": "spin-half clean chart principal-symbol trace candidate",
+    "claim_scope": "chart_principal_symbol_trace",
+    "status": "candidate finite source trace feeding the Kerr backend contract; not a derivation of q_grav",
+    "derivation_status": "candidate_trace"
+  },
+  "chart": "spin_half_r_7_2_to_18_5_sub04",
+  "variables": ["x", "ell", "q"],
+  "backend_contract_certificate_path": "spin_half_clean_chart_kerr_source_backend_contract_candidate.json",
+  "trace_variables": {
+    "phase_variables": ["x", "ell", "q"],
+    "symbolic_coefficient_variables": [
+      "h",
+      "s",
+      "tau",
+      "c",
+      "diag_slack",
+      "bilinear_slack"
+    ],
+    "source_auxiliary_variables": ["rho_R", "rho_dR", "u_R", "u_dR"]
+  },
+  "primitive_formulas": [
+    {
+      "name": "radial_hessian_packet",
+      "role": "principal_density_packet",
+      "provenance": "candidate placeholder for the radial Hessian part of the normalized principal symbol",
+      "expression": {
+        "prod": [
+          {"var": "h"},
+          {"square": {"var": "x"}}
+        ]
+      }
+    },
+    {
+      "name": "superradiant_square_packet",
+      "role": "principal_density_packet",
+      "provenance": "candidate placeholder for the superradiant square part of the normalized principal symbol",
+      "expression": {
+        "prod": [
+          {"var": "s"},
+          {
+            "square": {
+              "sum": [
+                {"var": "ell"},
+                {"neg": {"prod": [{"var": "c"}, {"var": "x"}]}}
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "carter_scale_packet",
+      "role": "principal_density_packet",
+      "provenance": "candidate placeholder for the inverse trapped-scale Carter part of the normalized principal symbol",
+      "expression": {
+        "prod": [
+          {"var": "tau"},
+          {"square": {"var": "q"}}
+        ]
+      }
+    },
+    {
+      "name": "diagonal_slack_packet",
+      "role": "principal_density_packet",
+      "provenance": "candidate placeholder for diagonal extraction slack produced by interval normalization",
+      "expression": {
+        "prod": [
+          {"var": "diag_slack"},
+          {
+            "sum": [
+              {"square": {"var": "x"}},
+              {"square": {"var": "ell"}},
+              {"square": {"var": "q"}}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bilinear_slack_packet",
+      "role": "principal_density_packet",
+      "provenance": "candidate placeholder for bilinear extraction slack produced by interval normalization",
+      "expression": {
+        "prod": [
+          {"var": "bilinear_slack"},
+          {
+            "sum": [
+              {"prod": [{"var": "x"}, {"var": "ell"}]},
+              {"prod": [{"var": "x"}, {"var": "q"}]},
+              {"prod": [{"var": "ell"}, {"var": "q"}]}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "trapped_radial_constraint_correction",
+      "role": "principal_density_packet",
+      "provenance": "candidate ideal correction proportional to the radial trapped equation R=0",
+      "expression": {
+        "prod": [
+          {"var": "rho_R"},
+          {"var": "u_R"},
+          {
+            "sum": [
+              {"square": {"var": "x"}},
+              {"square": {"var": "ell"}},
+              {"square": {"var": "q"}}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "trapped_derivative_constraint_correction",
+      "role": "principal_density_packet",
+      "provenance": "candidate ideal correction proportional to the differentiated trapped equation dR=0",
+      "expression": {
+        "prod": [
+          {"var": "rho_dR"},
+          {"var": "u_dR"},
+          {
+            "sum": [
+              {"prod": [{"var": "x"}, {"var": "ell"}]},
+              {"square": {"var": "q"}}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "radial_trapped_constraint",
+      "role": "trapped_constraint",
+      "provenance": "candidate normalized trapped radial equation R=0",
+      "expression": {"var": "rho_R"}
+    },
+    {
+      "name": "radial_derivative_trapped_constraint",
+      "role": "trapped_constraint",
+      "provenance": "candidate normalized differentiated trapped radial equation dR=0",
+      "expression": {"var": "rho_dR"}
+    }
+  ],
+  "derived_formulas": [
+    {
+      "name": "model_density_trace",
+      "rule": "sum of the three positive Carter model packets",
+      "expression": {
+        "sum": [
+          {"ref": "radial_hessian_packet"},
+          {"ref": "superradiant_square_packet"},
+          {"ref": "carter_scale_packet"}
+        ]
+      }
+    },
+    {
+      "name": "extraction_slack_density_trace",
+      "rule": "sum of the rational extraction slack packets",
+      "expression": {
+        "sum": [
+          {"ref": "diagonal_slack_packet"},
+          {"ref": "bilinear_slack_packet"}
+        ]
+      }
+    },
+    {
+      "name": "trapped_ideal_density_trace",
+      "rule": "sum of the ideal corrections vanishing on the trapped quotient",
+      "expression": {
+        "sum": [
+          {"ref": "trapped_radial_constraint_correction"},
+          {"ref": "trapped_derivative_constraint_correction"}
+        ]
+      }
+    },
+    {
+      "name": "backend_source_density_trace",
+      "rule": "Carter model plus extraction slack plus trapped ideal correction",
+      "expression": {
+        "sum": [
+          {"ref": "model_density_trace"},
+          {"ref": "extraction_slack_density_trace"},
+          {"ref": "trapped_ideal_density_trace"}
+        ]
+      }
+    }
+  ],
+  "density_trace": {"ref": "backend_source_density_trace"},
+  "constraint_traces": [
+    {
+      "name": "radial_constraint_R",
+      "expression": {"ref": "radial_trapped_constraint"}
+    },
+    {
+      "name": "radial_constraint_dR",
+      "expression": {"ref": "radial_derivative_trapped_constraint"}
+    }
+  ]
+}

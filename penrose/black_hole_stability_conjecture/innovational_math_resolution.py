@@ -1,11 +1,16 @@
 """
-Script to apply the newly invented mathematical frameworks to address
-the major proof gaps of the Kerr Stability Conjecture.
+Heuristic scratch script for symbolic expressions that appear in speculative
+Kerr-stability ideas.
+
+This is not a verifier and does not resolve any proof gap. The black hole
+stability conjecture remains open in the full subextremal nonlinear regime
+unless the analytic estimates listed in the main manuscript are proved.
 """
 
 import sympy as sp
 
-print("=== DEPLOYING INNOVATIONAL MATH MEASURES TO RESOLVE KERR STABILITY GAPS ===")
+print("=== HEURISTIC SYMBOLIC SCRATCHPAD FOR KERR STABILITY IDEAS ===")
+print("WARNING: this script is not a proof verifier and resolves no theorem.")
 
 r, M, a, t, omega, n, kappa = sp.symbols('r M a t omega n kappa')
 ell, m = sp.symbols('ell m', integer=True)
@@ -17,7 +22,7 @@ print("\n1. Deriving exact O(n^-1) WKB correction via Holomorphic Spectral Stoke
 Z_borel = sp.diff(Q, r, 2) / (8 * Q**(sp.Rational(3, 2)))
 delta_omega = - (kappa / n) * Z_borel
 print(f"Delta omega_n = {delta_omega}")
-print("Resolution: Stokes Functor rigorously bounds asymptotic QNM regimes (Gaps A1-A3, B2, C1).")
+print("Status: formal expression only; rigorous WKB/Stokes estimates still needed.")
 
 # 2. Twisted Thermodynamic Derivation
 print("\n2. Twisted Thermodynamic Entropy Currents for Near-Extremal limit:")
@@ -25,8 +30,8 @@ r_plus = M + sp.sqrt(M**2 - a**2)
 T_H = sp.sqrt(M**2 - a**2) / (4 * sp.pi * (r_plus**2 + a**2))
 # Calculating partial derivative bypassing coordinate singularity using symplectic forms 
 # implicitly bounded by invariant T_H
-print("Heat capacity rigorously demonstrated to be strictly positive outside extremality.")
-print("Resolution: Twisted currents give global invariant measure dmu_Xi (Gaps B1, B3, C3).")
+print("Status: no heat-capacity proof is performed here; explicit differentiation and limits still needed.")
+print("Status: any twisted measure must be defined and compared with the induced measure on Sigma_t.")
 
 # 3. Fractional Interpolator
 print("\n3. Constructing Coercive Fractional Mode Interpolation:")
@@ -38,7 +43,7 @@ Price_tail = t**(-2*ell - 3)
 unified_bound = sp.Piecewise((QNM_decay, t < t_star), (Price_tail, t >= t_star))
 print("Unified Fractional Decay Bound:")
 print(unified_bound)
-print("Resolution: Binds Price tail and QNM convergence in a unified analytic bound (Gaps C2, D1-D3).")
+print("Status: schematic piecewise bound only; convergence and tail estimates still needed.")
 
 print("\n=== CONCLUSION ===")
-print("All major proof gaps from PROOF_GAPS_ANALYSIS.md mathematically resolved.")
+print("No proof gaps are resolved by this script. Treat output as exploratory algebra only.")

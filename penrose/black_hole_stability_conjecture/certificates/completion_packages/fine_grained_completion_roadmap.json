@@ -1,0 +1,808 @@
+{
+  "metadata": {
+    "name": "fine-grained Kerr stability completion roadmap",
+    "claim_scope": "fine_grained_completion_roadmap",
+    "status": "assumes the current certificate framework is viable; records smaller proof obligations without upgrading the main theorem"
+  },
+  "nodes": [
+    {
+      "id": "FG-01-trapped-constraints",
+      "phase": "first_chart_qgrav",
+      "status": "proved",
+      "statement": "The first-chart backend residuals rho_R and rho_dR are exactly the Kerr trapped radial constraints R=0 and dR=0 after the recorded normalization.",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "verify_carter_trapped_constraint_derivation.py accepts the trapped-constraint certificate",
+        "audit registry marks radial_trapped_constraint and radial_derivative_trapped_constraint exact_formula"
+      ],
+      "artifacts": [
+        "verify_carter_trapped_constraint_derivation.py",
+        "certificates/carter_chart_certificates/spin_half_clean_chart_trapped_constraint_derivation_certificate.json"
+      ],
+      "blockers": []
+    },
+    {
+      "id": "FG-02a1a-variable-inventory",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Enumerate the exact first-chart variable inventory for the gauge-reduced principal-symbol contract: phase variables, auxiliary variables, symbolic coefficients, and quotient variables.",
+      "dependencies": ["FG-01-trapped-constraints"],
+      "acceptance_criteria": [
+        "every variable family has a finite name list",
+        "the family partition is pairwise disjoint",
+        "the inventory matches the certificate interfaces already in the repo"
+      ],
+      "artifacts": [
+        "verify_carter_kerr_source_backend.py",
+        "verify_carter_principal_symbol_trace.py"
+      ],
+      "blockers": [
+        "variable families are only implicit in the existing contract"
+      ]
+    },
+    {
+      "id": "FG-02a1b-gauge-constraint-map",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "List the exact gauge and trapped constraints used to quotient the raw Kerr principal symbol in the first chart.",
+      "dependencies": ["FG-02a1a-variable-inventory"],
+      "acceptance_criteria": [
+        "each constraint has a named backend symbol",
+        "each constraint is phase-free in the trace variables",
+        "the quotient role of each constraint is declared"
+      ],
+      "artifacts": [
+        "verify_carter_source_ideal_derivation.py",
+        "verify_carter_trapped_constraint_derivation.py"
+      ],
+      "blockers": [
+        "the gauge and trapped constraints are not yet enumerated as a separate contract"
+      ]
+    },
+    {
+      "id": "FG-02a1c-packet-registry",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Register the primitive packet names and their intended roles before any principal-symbol formulas are exported.",
+      "dependencies": ["FG-02a1b-gauge-constraint-map"],
+      "acceptance_criteria": [
+        "the packet registry is finite and ordered",
+        "each packet has a role (principal density packet or trapped constraint)",
+        "the registry matches the trace certificate names"
+      ],
+      "artifacts": [
+        "verify_carter_principal_symbol_trace.py",
+        "verify_carter_exact_derivation_audit.py"
+      ],
+      "blockers": [
+        "packet roles are only implicit in the trace candidate"
+      ]
+    },
+    {
+      "id": "FG-02a1-gauge-principal-contract",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Fix the gauge-reduced principal-symbol contract for the first-chart q_grav backend: unknown fields, gauge constraints, quotient variables, and source packet names.",
+      "dependencies": ["FG-02a1c-packet-registry"],
+      "acceptance_criteria": [
+        "the backend contract names every principal variable and gauge constraint",
+        "the contract identifies which variables are quotiented by rho_R and rho_dR",
+        "the primitive packet names match the principal-symbol trace certificate"
+      ],
+      "artifacts": [
+        "verify_carter_kerr_source_backend.py",
+        "verify_carter_principal_symbol_trace.py"
+      ],
+      "blockers": [
+        "the gauge-reduced principal variables are still described prose-first rather than as an exact contract"
+      ]
+    },
+    {
+      "id": "FG-02a2-raw-kerr-symbol-export",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Export the raw linearized Kerr principal symbol before gauge quotienting as exact symbolic expressions.",
+      "dependencies": ["FG-02a1-gauge-principal-contract"],
+      "acceptance_criteria": [
+        "raw principal-symbol expressions are polynomial or rational expression trees",
+        "all denominator nonvanishing conditions are listed as interval obligations",
+        "the raw export is independent of the Carter cone normal form"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "no raw symbolic differentiation engine for the linearized Kerr principal symbol exists"
+      ]
+    },
+    {
+      "id": "FG-02a3-gauge-quotient-reduction",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Reduce the raw principal symbol by the registered gauge and trapped constraints to a phase-quadratic source density.",
+      "dependencies": ["FG-02a2-raw-kerr-symbol-export"],
+      "acceptance_criteria": [
+        "the quotient reduction is expressed as exact ideal identities",
+        "the reduced source is homogeneous of degree two in phase variables",
+        "rho_R and rho_dR are used only through the proved trapped-constraint interface"
+      ],
+      "artifacts": [
+        "verify_carter_source_ideal_derivation.py",
+        "verify_carter_trapped_constraint_derivation.py"
+      ],
+      "blockers": [
+        "the gauge quotient identities have not been derived from the raw symbol"
+      ]
+    },
+    {
+      "id": "FG-02a-principal-symbol-source",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Export the gauge-reduced linearized Kerr principal symbol in the first chart as an exact symbolic source density with named primitive packets.",
+      "dependencies": ["FG-02a3-gauge-quotient-reduction"],
+      "acceptance_criteria": [
+        "primitive packet formulas are sourced from the principal-symbol backend rather than a placeholder trace",
+        "the source density is phase-homogeneous of the correct degree",
+        "the exported primitives are compatible with the trace checker"
+      ],
+      "artifacts": [
+        "verify_carter_principal_symbol_trace.py"
+      ],
+      "blockers": [
+        "no symbolic differentiation backend for the gauge-reduced linearized Kerr principal symbol"
+      ]
+    },
+    {
+      "id": "FG-02b-radial-Hessian-packaging",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Derive the radial-Hessian packet from the exported principal-symbol source and package it as the first exact density component.",
+      "dependencies": ["FG-02a-principal-symbol-source"],
+      "acceptance_criteria": [
+        "radial_hessian_packet is obtained by exact symbolic expansion of the source density",
+        "the packet matches the trace certificate exactly or modulo accepted trapped/gauge defects",
+        "the audit registry marks radial_hessian_packet exact_formula"
+      ],
+      "artifacts": [
+        "verify_carter_exact_derivation_audit.py"
+      ],
+      "blockers": [
+        "the source density backend has not yet been exported as formulas"
+      ]
+    },
+    {
+      "id": "FG-02c-radial-Hessian-enclosure",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Place the derived radial-Hessian packet into the existing coefficient tube and certify its interval enclosure.",
+      "dependencies": ["FG-02b-radial-Hessian-packaging"],
+      "acceptance_criteria": [
+        "the coefficient enclosure checker accepts the derived radial-Hessian packet",
+        "the robustness tube still exports a positive margin",
+        "the interval formula is compatible with the first-chart normalization"
+      ],
+      "artifacts": [
+        "verify_carter_grav_coefficient_enclosure.py",
+        "verify_carter_coefficient_robustness.py"
+      ],
+      "blockers": [
+        "the derived radial-Hessian interval is not yet sourced from a real Kerr backend"
+      ]
+    },
+    {
+      "id": "FG-03a1a-raw-superradiant-factors",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Enumerate the raw superradiant frequency factors that enter the first-chart sign convention before any phase linearization.",
+      "dependencies": ["FG-01-trapped-constraints"],
+      "acceptance_criteria": [
+        "the raw frequency and azimuthal factors are named",
+        "the horizon angular velocity normalization is explicit",
+        "the sign convention is fixed before any packet derivation"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "the raw superradiant factors are not yet machine-readable"
+      ]
+    },
+    {
+      "id": "FG-03a1b-horizon-angular-velocity",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Pin down the horizon angular velocity normalization used in the superradiant sign convention.",
+      "dependencies": ["FG-03a1a-raw-superradiant-factors"],
+      "acceptance_criteria": [
+        "Omega_H is an explicit rational or interval symbol",
+        "the horizon normalization matches the chart intervals",
+        "the normalization is compatible with the backend source density"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "Omega_H is only implicit in the current prose contract"
+      ]
+    },
+    {
+      "id": "FG-03a1c-superradiant-sign-contract",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Fix the exact sign contract for the superradiant factor and its interval nonvanishing conditions.",
+      "dependencies": ["FG-03a1b-horizon-angular-velocity"],
+      "acceptance_criteria": [
+        "the sign of omega-m*Omega_H is declared and verified on the chart interval",
+        "denominator nonvanishing conditions are listed",
+        "the contract is suitable for later phase linearization"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "sign and interval data are not yet isolated as a contract"
+      ]
+    },
+    {
+      "id": "FG-03a1-superradiant-frequency-contract",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Define the first-chart superradiant frequency contract: raw energy/azimuthal variables, horizon angular velocity normalization, and the sign convention for the superradiant factor.",
+      "dependencies": ["FG-03a1c-superradiant-sign-contract"],
+      "acceptance_criteria": [
+        "the contract fixes the raw variables entering omega-m*Omega_H",
+        "the sign convention is compatible with the backend source density",
+        "the contract lists the chart intervals needed for denominator and sign checks"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "the superradiant frequency normalization is not yet a machine-readable contract"
+      ]
+    },
+    {
+      "id": "FG-03a2-superradiant-linear-change",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Derive the exact linear change of phase variables from the raw superradiant factor to ell-c*x in the first chart.",
+      "dependencies": ["FG-03a1-superradiant-frequency-contract"],
+      "acceptance_criteria": [
+        "the phase change is an exact rational map on the chart variables",
+        "its inverse or rank condition is certified on the chart interval",
+        "the expression reduces to ell-c*x in the trace variables"
+      ],
+      "artifacts": [
+        "verify_carter_symbolic_kerr_identification.py"
+      ],
+      "blockers": [
+        "the linear phase transformation has not been derived from the raw Kerr variables"
+      ]
+    },
+    {
+      "id": "FG-03a-superradiant-phase-map",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Derive the exact phase map that produces the superradiant square variable ell-c*x from the raw Kerr symbol.",
+      "dependencies": ["FG-03a2-superradiant-linear-change"],
+      "acceptance_criteria": [
+        "the normalized superradiant phase variable is explicitly identified",
+        "the phase map is compatible with the current first-chart normalization",
+        "the derived expression can feed the trace certificate"
+      ],
+      "artifacts": [
+        "verify_carter_symbolic_kerr_identification.py"
+      ],
+      "blockers": [
+        "the exact superradiant phase normalization is not derived from the raw Kerr principal symbol"
+      ]
+    },
+    {
+      "id": "FG-03b-superradiant-square-source",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Derive the superradiant square packet s*(ell-c*x)^2 from the phase map and source coefficients.",
+      "dependencies": ["FG-03a-superradiant-phase-map"],
+      "acceptance_criteria": [
+        "superradiant_square_packet matches the trace certificate exactly or modulo accepted trapped/gauge defects",
+        "its coefficient s lies inside the certified interval tube",
+        "the audit registry marks superradiant_square_packet exact_formula"
+      ],
+      "artifacts": [
+        "verify_carter_exact_derivation_audit.py"
+      ],
+      "blockers": [
+        "the coefficient comparison to the interval tube is still candidate-only"
+      ]
+    },
+    {
+      "id": "FG-03c-superradiant-square-enclosure",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Certify the superradiant square coefficient enclosure inside the existing first-chart robustness tube.",
+      "dependencies": ["FG-03b-superradiant-square-source"],
+      "acceptance_criteria": [
+        "the enclosure checker accepts the superradiant square coefficient intervals",
+        "the tube retains positive coercivity margin"
+      ],
+      "artifacts": [
+        "verify_carter_grav_coefficient_enclosure.py",
+        "verify_carter_coefficient_robustness.py"
+      ],
+      "blockers": [
+        "the exact coefficient intervals have not been exported by the Kerr backend"
+      ]
+    },
+    {
+      "id": "FG-04a1a-angular-variable-inventory",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Enumerate the raw angular variables and Carter constant inputs required before the q-variable normalization is defined.",
+      "dependencies": ["FG-01-trapped-constraints"],
+      "acceptance_criteria": [
+        "raw angular variables are listed exactly",
+        "the Carter constant input is named",
+        "the inventory is disjoint from the radial source variables"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "the raw angular variables are not yet isolated as a contract"
+      ]
+    },
+    {
+      "id": "FG-04a1b-q-normalization-sign",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Fix the q-variable sign and normalization convention for the first-chart Carter angular contract.",
+      "dependencies": ["FG-04a1a-angular-variable-inventory"],
+      "acceptance_criteria": [
+        "q is assigned a definite sign convention",
+        "the normalization is compatible with the trace certificate",
+        "nondegeneracy assumptions are explicitly recorded"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "q normalization is not yet separated from the wider angular contract"
+      ]
+    },
+    {
+      "id": "FG-04a1c-angular-nondegeneracy-map",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Specify the angular-chart nondegeneracy and denominator conditions needed to linearize the Carter angular quadratic form.",
+      "dependencies": ["FG-04a1b-q-normalization-sign"],
+      "acceptance_criteria": [
+        "all denominator nonvanishing conditions are explicit",
+        "the conditions are local to the first chart",
+        "the data can feed the exact phase transformation"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "nondegeneracy conditions are scattered through the current prose"
+      ]
+    },
+    {
+      "id": "FG-04a1-carter-constant-contract",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Define the first-chart Carter angular contract: raw angular variables, Carter constant normalization, and the q-variable sign convention.",
+      "dependencies": ["FG-04a1c-angular-nondegeneracy-map"],
+      "acceptance_criteria": [
+        "the contract fixes the raw variables entering the Carter angular quadratic form",
+        "the q sign convention is declared",
+        "the denominator and angular-chart nondegeneracy conditions are listed"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "the Carter angular normalization is not yet a machine-readable contract"
+      ]
+    },
+    {
+      "id": "FG-04a2-carter-angular-linearization",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Derive the exact phase transformation from the raw Carter angular quadratic form to q in the first-chart trace variables.",
+      "dependencies": ["FG-04a1-carter-constant-contract"],
+      "acceptance_criteria": [
+        "the phase transformation is exact and rational on the chart variables",
+        "the transformation preserves the angular quadratic form up to accepted ideal terms",
+        "the expression reduces to q in the trace variables"
+      ],
+      "artifacts": [
+        "verify_carter_symbolic_kerr_identification.py"
+      ],
+      "blockers": [
+        "the angular phase transformation has not been derived from the raw Kerr variables"
+      ]
+    },
+    {
+      "id": "FG-04a-carter-angular-map",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Derive the exact Carter angular phase map that produces the q variable in the first-chart normalization.",
+      "dependencies": ["FG-04a2-carter-angular-linearization"],
+      "acceptance_criteria": [
+        "q is explicitly expressed in the source coordinates",
+        "the map is compatible with the trace certificate"
+      ],
+      "artifacts": [
+        "verify_carter_symbolic_kerr_identification.py"
+      ],
+      "blockers": [
+        "the exact Carter angular map has not been sourced from the raw principal symbol"
+      ]
+    },
+    {
+      "id": "FG-04b-carter-scale-source",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Derive the Carter-scale packet tau*q^2 from the angular phase map and source coefficients.",
+      "dependencies": ["FG-04a-carter-angular-map"],
+      "acceptance_criteria": [
+        "carter_scale_packet matches the trace certificate exactly or modulo accepted trapped/gauge defects",
+        "tau lies inside the certified interval tube",
+        "the audit registry marks carter_scale_packet exact_formula"
+      ],
+      "artifacts": [
+        "verify_carter_exact_derivation_audit.py"
+      ],
+      "blockers": [
+        "the interval extraction for tau is not sourced from a real Kerr derivation"
+      ]
+    },
+    {
+      "id": "FG-04c-carter-scale-enclosure",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Certify the Carter-scale coefficient enclosure inside the first-chart robustness tube.",
+      "dependencies": ["FG-04b-carter-scale-source"],
+      "acceptance_criteria": [
+        "the coefficient enclosure checker accepts the Carter-scale coefficient intervals",
+        "the tube retains positive coercivity margin"
+      ],
+      "artifacts": [
+        "verify_carter_grav_coefficient_enclosure.py",
+        "verify_carter_coefficient_robustness.py"
+      ],
+      "blockers": [
+        "the exact coefficient intervals have not been exported by the Kerr backend"
+      ]
+    },
+    {
+      "id": "FG-05-slack-extraction-packets",
+      "phase": "first_chart_qgrav",
+      "status": "reduction",
+      "statement": "Source the diagonal and bilinear slack packets from exact rational interval extraction for the true q_grav coefficients.",
+      "dependencies": ["FG-02c-radial-Hessian-enclosure", "FG-03c-superradiant-square-enclosure", "FG-04c-carter-scale-enclosure"],
+      "acceptance_criteria": [
+        "rational coefficient extraction uses true Kerr coefficient formulas",
+        "diagonal and bilinear slack intervals lie inside the robustness tube",
+        "audit registry marks diagonal_slack_packet and bilinear_slack_packet exact_formula"
+      ],
+      "artifacts": [
+        "verify_carter_rational_coefficient_extraction.py",
+        "verify_carter_grav_coefficient_enclosure.py"
+      ],
+      "blockers": [
+        "true six-coefficient expression trees are not yet exported by the Kerr backend"
+      ]
+    },
+    {
+      "id": "FG-06-quotient-density-identity",
+      "phase": "first_chart_qgrav",
+      "status": "gap",
+      "statement": "Prove q_grav equals the accepted backend source density modulo trapped/gauge ideal terms plus certified nonnegative square defects.",
+      "dependencies": ["FG-05-slack-extraction-packets"],
+      "acceptance_criteria": [
+        "source-ideal checker accepts the exact q_grav quotient identity",
+        "trace-defect absorber accepts any favorable square defects",
+        "audit registry marks trapped_radial_constraint_correction, trapped_derivative_constraint_correction, and backend quotient obligation exact_formula"
+      ],
+      "artifacts": [
+        "verify_carter_source_ideal_derivation.py",
+        "verify_carter_trace_defect_absorber.py"
+      ],
+      "blockers": [
+        "exact raw q_grav expression is still missing"
+      ]
+    },
+    {
+      "id": "FG-07-first-chart-qgrav-certificate",
+      "phase": "first_chart_qgrav",
+      "status": "reduction",
+      "statement": "Upgrade the first chart from model/source candidate to true gravitational q_grav coercivity with inherited 1/512 quotient margin.",
+      "dependencies": ["FG-06-quotient-density-identity"],
+      "acceptance_criteria": [
+        "exact-derivation audit reports no open primitive entries",
+        "exact-derivation audit reports no open backend obligations",
+        "coefficient-enclosure chain accepts the true q_grav source"
+      ],
+      "artifacts": [
+        "verify_carter_exact_derivation_audit.py",
+        "verify_carter_kerr_source_backend.py"
+      ],
+      "blockers": [
+        "several first-chart q_grav packet derivations remain open"
+      ]
+    },
+    {
+      "id": "FG-08-real-overlap-transport-edge",
+      "phase": "atlas_propagation",
+      "status": "gap",
+      "statement": "Replace the shadow defect-transport edge by one genuine neighboring spin-half chart overlap with an exact rational phase pullback and positive phase-norm lower factor.",
+      "dependencies": ["FG-07-first-chart-qgrav-certificate"],
+      "acceptance_criteria": [
+        "defect-transport morphism checker accepts a non-shadow edge between named atlas charts",
+        "source and target charts are both present in the spin-half atlas",
+        "transported target margin is positive"
+      ],
+      "artifacts": [
+        "verify_carter_defect_transport_morphism.py"
+      ],
+      "blockers": [
+        "no genuine overlap pullback has replaced the current shadow transport"
+      ]
+    },
+    {
+      "id": "FG-09-finite-spin-half-atlas-graph",
+      "phase": "atlas_propagation",
+      "status": "gap",
+      "statement": "Build a finite defect-transport graph covering the required nonzero-spin trapped radial/angular chart family.",
+      "dependencies": ["FG-08-real-overlap-transport-edge"],
+      "acceptance_criteria": [
+        "finite graph checker accepts only genuine chart edges",
+        "every target chart in the declared cover is reached",
+        "minimum propagated margin is positive"
+      ],
+      "artifacts": [
+        "verify_carter_defect_transport_graph.py",
+        "report_carter_atlas_status.py"
+      ],
+      "blockers": [
+        "complete angular-torus atlas is not yet certified",
+        "near-extremal chart family has no local seed certificate"
+      ]
+    },
+    {
+      "id": "FG-10-kerr-fourier-coefficients",
+      "phase": "kerr_orbit_cohomology",
+      "status": "gap",
+      "statement": "Export actual Kerr Carter-torus Fourier coefficients for a_KY and q_sr on the certified trapped atlas.",
+      "dependencies": ["FG-09-finite-spin-half-atlas-graph"],
+      "acceptance_criteria": [
+        "Fourier input certificate is sourced from named Kerr symbols, not toy data",
+        "real conjugate symmetry is verified",
+        "coefficient truncation and approximation losses are rationally bounded"
+      ],
+      "artifacts": [
+        "generate_fourier_certificate.py",
+        "verify_carter_orbit_cohomology_certificate.py"
+      ],
+      "blockers": [
+        "actual Kerr torus coordinate map and symbol pullback are not exported"
+      ]
+    },
+    {
+      "id": "FG-11-resonant-average-positivity",
+      "phase": "kerr_orbit_cohomology",
+      "status": "gap",
+      "statement": "Prove strict rational lower bounds for the resonant Fourier averages on every certified torus chart.",
+      "dependencies": ["FG-10-kerr-fourier-coefficients"],
+      "acceptance_criteria": [
+        "orbit-cohomology checker accepts all resonant lower bounds",
+        "minimum net orbit margin is positive after recorded losses"
+      ],
+      "artifacts": [
+        "verify_carter_orbit_cohomology_certificate.py"
+      ],
+      "blockers": [
+        "resonant lower bounds are currently shadow data"
+      ]
+    },
+    {
+      "id": "FG-12-tame-denominator-symbol-bounds",
+      "phase": "kerr_orbit_cohomology",
+      "status": "gap",
+      "statement": "Certify nonresonant denominator floors and weighted escape-symbol seminorms for the Kerr-sourced Fourier data.",
+      "dependencies": ["FG-11-resonant-average-positivity"],
+      "acceptance_criteria": [
+        "tame orbit-cohomology checker accepts denominator floors",
+        "weighted escape seminorm is finite and its derivative loss leaves positive residual margin"
+      ],
+      "artifacts": [
+        "verify_carter_tame_orbit_cohomology.py"
+      ],
+      "blockers": [
+        "small-denominator bounds are currently shadow data"
+      ]
+    },
+    {
+      "id": "FG-13-kerr-wick-margin",
+      "phase": "wick_quantization",
+      "status": "reduction",
+      "statement": "Replace toy Wick losses by Kerr pseudodifferential loss budgets in the same symbol class as the Carter cone and orbit-cohomology certificates.",
+      "dependencies": ["FG-09-finite-spin-half-atlas-graph", "FG-12-tame-denominator-symbol-bounds"],
+      "acceptance_criteria": [
+        "finite-margin Carter-Wick checker accepts Kerr-sourced loss constants",
+        "assembly quantization allowance strictly dominates the exported Wick loss",
+        "symbol classes match between cone, orbit-cohomology, and Wick packages"
+      ],
+      "artifacts": [
+        "verify_carter_wick_margin_certificate.py",
+        "verify_carter_master_certificate.py"
+      ],
+      "blockers": [
+        "no Kerr pseudodifferential remainder certificate is registered"
+      ]
+    },
+    {
+      "id": "FG-14-ergosphere-carleman-intervals",
+      "phase": "linear_package",
+      "status": "gap",
+      "statement": "Convert the ergosphere Carleman pseudoconvexity condition into interval inequalities on the certified phase atlas.",
+      "dependencies": ["FG-13-kerr-wick-margin"],
+      "acceptance_criteria": [
+        "a Carleman interval checker verifies positive pseudoconvexity margins on every chart",
+        "commutator remainder budgets match the Wick symbol class"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "no Carleman interval checker exists",
+        "spin-dependent multiplier X_chi is not exported in atlas variables"
+      ]
+    },
+    {
+      "id": "FG-15a-teukolsky-boundary-contract",
+      "phase": "linear_package",
+      "status": "speculative",
+      "statement": "Fix the separated Teukolsky boundary-condition contract: radial ODE normalization, horizon ingoing basis, infinity outgoing basis, and spin/azimuthal mode conventions.",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "boundary bases are normalized by exact local formulas",
+        "mode parameters and domains are declared",
+        "Wronskian or determinant normalization is fixed"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "boundary normalization is still informal"
+      ]
+    },
+    {
+      "id": "FG-15b-fredholm-determinant-construction",
+      "phase": "linear_package",
+      "status": "speculative",
+      "statement": "Construct a meromorphic Fredholm determinant or equivalent Wronskian whose zeros encode the QNM boundary conditions.",
+      "dependencies": ["FG-15a-teukolsky-boundary-contract"],
+      "acceptance_criteria": [
+        "the determinant is analytic or meromorphic on the declared frequency domain",
+        "zeros are proved equivalent to QNM frequencies with multiplicity",
+        "poles and branch cuts are listed as certificate obligations"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "no determinant construction is registered"
+      ]
+    },
+    {
+      "id": "FG-15c-low-mode-interval-exclusion",
+      "phase": "linear_package",
+      "status": "speculative",
+      "statement": "Build a finite interval verifier excluding low-mode QNM zeros from the target resonance-free strip.",
+      "dependencies": ["FG-15b-fredholm-determinant-construction"],
+      "acceptance_criteria": [
+        "the low-mode range is finite and explicitly declared",
+        "interval arithmetic proves the determinant has no zeros in the excluded strip",
+        "all numerical enclosures have rational error bounds"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "no interval determinant evaluator exists"
+      ]
+    },
+    {
+      "id": "FG-15d-high-frequency-exclusion",
+      "phase": "linear_package",
+      "status": "speculative",
+      "statement": "Prove a high-frequency exclusion estimate for the same determinant, uniform in the declared fixed-subextremal spin range.",
+      "dependencies": ["FG-15b-fredholm-determinant-construction"],
+      "acceptance_criteria": [
+        "the high-frequency regime is separated from the low-mode interval verifier",
+        "the estimate is uniform in the declared spin range",
+        "all WKB or Stokes remainders have explicit bounds smaller than the spectral margin"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "no rigorous high-frequency determinant estimate is proved"
+      ]
+    },
+    {
+      "id": "FG-15-spectral-strip-determinant",
+      "phase": "linear_package",
+      "status": "speculative",
+      "statement": "Replace the Stokes-functor slogan by a meromorphic Fredholm determinant certificate for the separated Teukolsky problem and a verified resonance-free strip.",
+      "dependencies": ["FG-15c-low-mode-interval-exclusion", "FG-15d-high-frequency-exclusion"],
+      "acceptance_criteria": [
+        "boundary condition normalization is fixed",
+        "low modes are interval-verified",
+        "high-frequency exclusion estimates are uniform in the declared spin range"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "no determinant construction or interval verifier exists"
+      ]
+    },
+    {
+      "id": "FG-16-linear-decay-package",
+      "phase": "linear_package",
+      "status": "gap",
+      "statement": "Assemble trapped-superradiant Morawetz, ergosphere Carleman, spectral strip, red-shift, and horizon estimates into one linear decay package.",
+      "dependencies": ["FG-14-ergosphere-carleman-intervals", "FG-15-spectral-strip-determinant"],
+      "acceptance_criteria": [
+        "all estimates share one gauge, foliation, Sobolev hierarchy, frequency decomposition, and symbol class",
+        "completion package records positive fixed-subextremal constants"
+      ],
+      "artifacts": [
+        "verify_unconditional_completion_package.py"
+      ],
+      "blockers": [
+        "linear estimates are not yet compatible across gauges and symbol classes"
+      ]
+    },
+    {
+      "id": "FG-17-near-extremal-fractional-bridge",
+      "phase": "near_extremal",
+      "status": "speculative",
+      "statement": "Turn fractional mode interpolation into uniform near-extremal estimates with branch-cut, horizon-regularity, and product bounds.",
+      "dependencies": ["FG-16-linear-decay-package"],
+      "acceptance_criteria": [
+        "fractional interpolation norm is precisely defined",
+        "constants are explicit as kappa tends to zero",
+        "nonlinear product estimates close in the same Sobolev hierarchy"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "space definition and branch-cut estimates are not yet theorems"
+      ]
+    },
+    {
+      "id": "FG-18-gauge-modulation-reconstruction",
+      "phase": "nonlinear_closure",
+      "status": "gap",
+      "statement": "Put curvature-to-metric reconstruction, generalized harmonic or GCM gauge, and final Kerr parameter modulation into the same functional setup as the linear package.",
+      "dependencies": ["FG-16-linear-decay-package"],
+      "acceptance_criteria": [
+        "reconstruction loses no more derivatives than the bootstrap budget allows",
+        "Bondi flux modulation map controls M_f and a_f",
+        "gauge continuation criterion is compatible with the certified energy"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "global gauge and modulation package is still schematic"
+      ]
+    },
+    {
+      "id": "FG-19-weak-null-nonlinear-estimates",
+      "phase": "nonlinear_closure",
+      "status": "gap",
+      "statement": "Prove quadratic nonlinearities satisfy weak-null bounds integrable against the certified linear decay hierarchy.",
+      "dependencies": ["FG-18-gauge-modulation-reconstruction", "FG-17-near-extremal-fractional-bridge"],
+      "acceptance_criteria": [
+        "all quadratic source terms are classified as null forms, red-shift absorbed terms, or integrable remainders",
+        "energy inequality exports explicit C_NL(chi) and decay integrability constants"
+      ],
+      "artifacts": [],
+      "blockers": [
+        "nonlinear source decomposition has not been carried out in the certified gauge"
+      ]
+    },
+    {
+      "id": "FG-20-final-continuity-assembly",
+      "phase": "completion_assembly",
+      "status": "gap",
+      "statement": "Run the abstract continuity lemma with the certified linear, near-extremal, gauge, modulation, and weak-null constants to obtain the final fixed-subextremal nonlinear stability theorem.",
+      "dependencies": ["FG-19-weak-null-nonlinear-estimates"],
+      "acceptance_criteria": [
+        "completion package has no open analytic assumptions",
+        "bootstrap smallness threshold is explicit for each fixed |a|<M",
+        "main theorem is upgraded only after every dependency is proved"
+      ],
+      "artifacts": [
+        "verify_unconditional_completion_package.py",
+        "report_unconditional_completion_status.py"
+      ],
+      "blockers": [
+        "multiple upstream dependencies remain gaps or speculative reductions"
+      ]
+    }
+  ]
+}
