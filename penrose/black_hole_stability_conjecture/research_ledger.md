@@ -364,6 +364,45 @@ finite interval data or a standard cited theorem.
   on the bulk remain open proof obligations. See
   `REDSHIFT_RP_BUFFER_THEOREM.md` for the full statement and proof sketch.
 
+- 2026-07-03 (continued): Invented the Carter–Wick Composition Calculus
+  with Rational Remainder (CWCC) and added
+  `verify_carter_wick_composition.py`,
+  `verify_composed_cwcc_cwqp_rrbb.py`, and
+  `tests/test_verify_carter_wick_composition.py`. This is the missing
+  **symbol calculus** underlying CWQP-AB. The CWQP-AB proof sketch (Step 2)
+  used a "Wick-symbol composition rule" with an unbounded "lower order"
+  remainder; CWCC bounds that remainder by an explicit rational function
+  of the chart data:
+
+  $$ \rho_\alpha = \kappa_{\mathrm{CW}} \cdot N_\alpha^2 \cdot m_\alpha^2
+     \cdot M_\alpha \cdot (1 + C_{\mathrm{bump}}/w_\alpha), $$
+
+  using the diagonal Carter symplectic form (a genuine consequence of
+  Carter separability) and the polynomial structure of the symbols. The
+  v2 per-chart loss is
+
+  $$ \mathrm{Loss}_\alpha^{(2)} =
+     \frac{M_\alpha(1 + \kappa_{\mathrm{CW}} N_\alpha^2 m_\alpha^2)}{\mu_\alpha}
+     (1 + C_{\mathrm{bump}}/w_\alpha), $$
+
+  which is the v1 loss plus the calibrated composition loss. The composed
+  CWCC + CWQP-AB + RRBB verifier checks the cross-certificate inequality
+  $\mathrm{Loss}_{\mathrm{tot}}^{(2)} \le B_{\mathrm{lower\_bound}}$ by
+  exact rational arithmetic, with chart-name and bump-constant agreement
+  enforced across CWCC and CWQP. The toy composed triple
+  (`toy_cwcc_small_composition_certificate.json` +
+  `toy_cwqp_matching_small_certificate.json` +
+  `toy_rrbb_with_cwqp_compat.json`) closes with total_loss_v2 = 15/8
+  against B_lower_bound = 6. Two bad CWCC certificates
+  (`bad_cwcc_rho_mismatch.json`, `bad_cwcc_composition_fail.json`) are
+  correctly rejected. This reduces the linearized trapped-superradiant
+  sign obstruction to a single rational-arithmetic inequality with the
+  calculus remainder made explicit. It is a structural reduction, not a
+  proof: the diagonal symplectic form on $\mathfrak A_\chi$, the Moyal
+  expansion termination, and the Sobolev embedding remain open proof
+  obligations. See `CARTER_WICK_COMPOSITION_CALCULUS.md` for the full
+  statement and proof sketch.
+
 ## Failed Or Dangerous Moves
 - Claiming full Kerr stability from the Carter atlas certificates fails: the
   Renormalized Carter cone coefficient construction, Kerr pseudodifferential
