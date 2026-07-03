@@ -19,7 +19,7 @@ class VerifyFineGrainedRoadmapTests(unittest.TestCase):
         result = verifier.verify_file(ROOT / ROADMAP)
         self.assertTrue(result["accepted"])
         self.assertEqual(result["claim_scope"], "fine_grained_completion_roadmap")
-        self.assertEqual(result["node_count"], 46)
+        self.assertEqual(result["node_count"], 47)
         self.assertEqual(result["status_counts"]["proved"], 1)
         self.assertIn("FG-02a1a-variable-inventory", result["frontier"])
         self.assertIn("FG-03a1a-raw-superradiant-factors", result["frontier"])

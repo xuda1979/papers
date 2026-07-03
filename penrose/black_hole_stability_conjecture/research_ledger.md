@@ -311,6 +311,34 @@ finite interval data or a standard cited theorem.
   margin. The shadow tame certificate verifies denominator floor `1`, maximum
   escape seminorm `101/180`, and residual tame margin `3893/23040`.
 
+- 2026-07-03: Invented the Carter–Wick Quotient Positivity Theorem with
+  Assembly Budget (CWQP-AB) and added
+  `verify_quotient_positivity_assembly.py` plus
+  `tests/test_verify_quotient_positivity_assembly.py`. This is the missing
+  **assembly step** between the existing per-chart Gram/SOS certificates and
+  a global coercive positive-commutator estimate. The theorem states: given
+  (1) a finite contiguous atlas of the trapped-superradiant quotient ring
+  $\mathfrak A_\chi = \mathbb Q[r,\eta,\lambda,\omega]/\mathfrak I_\chi$,
+  (2) per-chart positivity certificates $\mathcal C_\alpha = (U_\alpha,
+  \mathfrak v_\alpha, G_\alpha, \mu_\alpha, M_\alpha)$, (3) a bump partition
+  of unity with widths $w_\alpha$ and constant $C_{\mathrm{bump}}$, and
+  (4) the budget inequality $\sum_\alpha (M_\alpha/\mu_\alpha)(1 +
+  C_{\mathrm{bump}}/w_\alpha) \le B$, the spin-$s$ linearized Teukolsky
+  equation admits a coercive positive-commutator estimate with $c_s =
+  \min_\alpha \mu_\alpha / \max_\alpha m_\alpha$ and total derivative loss
+  $\le B$. The verifier checks the combinatorial and budget content
+  (atlas contiguity, overlap-multiplicity consistency, per-chart loss
+  formula, total-loss sum, closure inequality); it does **not** check the
+  analytic content (Carter–Wick symbol calculus, redshift-plus-$r^p$
+  absorption, nonlinear bootstrap), which remain open proof obligations.
+  The included `toy_cwqp_assembly_certificate.json` closes with total_loss
+  `132` against buffer `140`; the two bad certificates
+  (`bad_cwqp_assembly_budget_overflow.json`,
+  `bad_cwqp_assembly_atlas_gap.json`) are correctly rejected. This is a
+  structural reduction, not a proof of Kerr stability. See
+  `CARTER_WICK_QUOTIENT_POSITIVITY_THEOREM.md` for the full statement and
+  proof sketch.
+
 ## Failed Or Dangerous Moves
 - Claiming full Kerr stability from the Carter atlas certificates fails: the
   Renormalized Carter cone coefficient construction, Kerr pseudodifferential
