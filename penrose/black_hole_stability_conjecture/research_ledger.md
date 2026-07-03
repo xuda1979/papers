@@ -339,6 +339,31 @@ finite interval data or a standard cited theorem.
   `CARTER_WICK_QUOTIENT_POSITIVITY_THEOREM.md` for the full statement and
   proof sketch.
 
+- 2026-07-03 (continued): Invented the Redshift–$r^p$ Buffer Theorem
+  (RRBB) and added `verify_redshift_rp_buffer.py`,
+  `verify_composed_cwqp_rrbb.py`, and
+  `tests/test_verify_redshift_rp_buffer.py`. This supplies the certified
+  right-hand side $B$ of the CWQP-AB inequality. The buffer is decomposed
+  as $B = B_{\mathrm{redshift}} + B_{\mathrm{rp}} + B_{\mathrm{comm}}$
+  where $B_{\mathrm{redshift}} = \kappa_{\mathrm{red}}\, \mu_{\mathrm{redshift}}$
+  is the Dafermos–Rodnianski redshift contribution on the horizon layer,
+  $B_{\mathrm{rp}} = C_p\, r_{\mathrm{far}}^{-\eta_p}$ is the
+  $r^p$-weighted far-field contribution, and $B_{\mathrm{comm}} \ge 0$ is
+  the nonnegative commutator slack on the bulk outside the
+  trapped-superradiant torus. The composed CWQP-AB + RRBB verifier checks
+  the cross-certificate inequality $\mathrm{Loss}_{\mathrm{tot}} \le
+  B_{\mathrm{lower\_bound}}$ by exact rational arithmetic. The toy composed
+  certificate (`toy_cwqp_small_loss_certificate.json` + `toy_rrbb_with_cwqp_compat.json`)
+  closes with total_loss `6` against B_lower_bound `6`. Three bad RRBB
+  certificates (`bad_rrbb_buffer_mismatch.json`,
+  `bad_rrbb_region_overlap.json`, `bad_rrbb_cwqp_composition_fail.json`)
+  are correctly rejected. This reduces the linearized trapped-superradiant
+  sign obstruction to a single rational-arithmetic inequality. It is a
+  structural reduction, not a proof: the Dafermos–Rodnianski redshift
+  calculation, the $r^p$ weighted estimate, and the nontrapping of $q_s$
+  on the bulk remain open proof obligations. See
+  `REDSHIFT_RP_BUFFER_THEOREM.md` for the full statement and proof sketch.
+
 ## Failed Or Dangerous Moves
 - Claiming full Kerr stability from the Carter atlas certificates fails: the
   Renormalized Carter cone coefficient construction, Kerr pseudodifferential
