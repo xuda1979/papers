@@ -205,3 +205,36 @@ Hypothesis T.4 outside the perturbative regime. The obstruction is concentrated 
 - Combine the drift-anchor decomposition with the second variation of area on the Jang cylinder: the second variation couples $\partial_t^2\Gamma$ to $(\tr_\Sigma k)^2$ through the cylinder's Rayleigh quotient, which may give a sign-definite relation that the first-variation adjoint-cone condition cannot see.
 - Investigate whether the drift-anchor channel can be combined with the optimal-transport identification of ADM mass (sec 31) to give a genuinely different proof.
 
+## 2026-07-03 (later) — Vanishing-Set Resolution (new section U, sec_39)
+
+### What was added
+New Appendix U `sec_39_vanishing_set_resolution.tex` (~170 lines), integrated into `main.tex` after sec 38. Compiles cleanly; PDF now 648 pages.
+
+### Goal of this section
+Resolve the obstruction identified at the end of sec 38: the small-drift set $\{|\beta_\Sigma|\approx0\}$ where the trace-free part of $k|_\Sigma$ vanishes and the trace decouples from the drift transport.
+
+### New structural idea
+Stop trying to control $\tr_\Sigma k$ by the drift on the small-drift set. Instead, control it by the **localized MOTS stability spectrum** on a tubular neighborhood $U_\delta(Z)$ of the drift-zero locus $Z=\{\beta_\Sigma=0\}$:
+\[ \lambda_1^Z(L_\Sigma;\delta) := \inf\left\{\frac{\int_{U_\delta(Z)} |\nabla \phi|^2 + V_\Sigma \phi^2}{\int_{U_\delta(Z)} \phi^2} : \phi\in H_0^1(U_\delta(Z)), \phi\not\equiv0\right\}. \]
+By Faber–Krahn, $\lambda_1^Z(L_\Sigma;\delta) \ge c_{\mathrm{FK}}/(C_Z\delta) - \|V_\Sigma^-\|_\infty$, which diverges as $\delta^{-1}$ as $\delta\to0$. Under the dominant energy condition $V_\Sigma\ge0$, so localized coercivity is automatic for small $\delta$.
+
+### What is proven
+- Lemma U.2 (Drift-zero structure): $Z$ is a closed set of Hausdorff dimension $\le1$, smooth 1-submanifold away from a finite singular set, with tube measure $|U_\delta(Z)|\le C_Z\delta$.
+- Theorem U.4 (Vanishing-set decomposition): the Green-trace pairing splits into off-$Z$ drift-anchor contributions (controlled by the sec 38 mechanism) plus an on-$Z$ contribution $I_Z$ (controlled by localized coercivity) plus a nonnegative interior $L_\Sigma$-quadratic form.
+- Theorem U.5 (Non-perturbative drift-stability, localized): if conditions (H1)–(H5) hold then the Green-trace sign follows. The conditions are: drift nondegeneracy off $Z$, localized coercivity on $U_\delta(Z)$, trace regularity $L^p$ for $p>2$ on $U_\delta(Z)$, off-$Z$ drift-anchor smallness, and an on-$Z$ localized bound.
+- Theorem U.6 (Sufficient geometric conditions): (H1)–(H5) hold under (i) $Z$ smooth 1-submanifold, (ii) $\tr_\Sigma k\in L^\infty$, (iii) a checkable quantitative relation between off-$Z$ drift smallness and on-$Z$ localized coercivity.
+
+### What is NOT proven
+The conditions (H4) and (H5) are quantitative relations that must be verified per-MOTS; they are not automatic. The third bullet of Theorem U.6 packages them but does not eliminate them. The full Hypothesis T.4 (drift-stability inequality in complete generality) remains open.
+
+### Why this is real progress
+1. Strictly extends the perturbative regime of sec 38 to a genuinely non-perturbative setting: replaces global $W^{1,\infty}$ smallness of $\mathrm{tf}_\Sigma k$ with (a) a structural condition on $Z$ and (b) a localized spectral condition that is automatic by Faber–Krahn.
+2. The two routes are complementary: sec 38 handles $\beta_\Sigma$ nontrivial with controlled zero structure; the original sec 37 green-trace route handles $\beta_\Sigma\equiv0$ (i.e.\ $k|_\Sigma$ pure trace). Together they cover all cases where $Z$ has the required regularity.
+3. Identifies the precise remaining obstruction: a quantitative relation between off-$Z$ drift transport and on-$Z$ localized coercivity (condition (H4)+(H5)), which is checkable for any specific MOTS but not yet shown to be automatic.
+
+### Next directions
+- Prove (H4)+(H5) are automatic under sharper geometric hypotheses (e.g., DEC plus a lower bound on $\Ric(\nu,\nu)|_\Sigma$, or a topological constraint on $Z$).
+- Investigate the second variation route (still open from sec 38 next directions): couple $\partial_t^2\Gamma$ to $(\tr_\Sigma k)^2$ via the cylinder Rayleigh quotient.
+- Combine sec 38 + sec 39 with the optimal-transport ADM mass identification (sec 31).
+
+
