@@ -282,5 +282,44 @@ Sec 37 already had a second-order KKT framework (Theorem 37.11) but it is logica
 - Investigate whether the quadratic trace term $\mathfrak Q_\Sigma^{(2)}$ can be used directly, without going through the drift transport, to give a purely second-variational proof.
 - Combine all three channels with the optimal-transport ADM mass identification (sec 31).
 
+## 2026-07-05 — Detail-Filling Pass: sec 38, 39, 40 fixes + new sec 41
+
+### What was fixed
+
+**sec 38 (Drift-Anchor Decomposition):**
+- Replaced the overclaimed Gauss-Codazzi identity (eq:GaussCodazzi) and the specific constant 1/2 in (eq:TraceTransport) with an honest momentum-constraint identity $c_0 \nabla_\Sigma(\tr_\Sigma k) = -\divv_\Sigma(\mathrm{tf}_\Sigma k) + \mathfrak G_\Sigma$, where $c_0$ is an explicit nonzero constant (not pinned to 1/2) and $\mathfrak G_\Sigma$ is explicitly enumerated (Ricci curvature, normal derivative of k, quadratic A terms, $k_{\nu\nu}$ and $\tr_g k$ terms).
+- Updated the main drift-anchor identity (eq:DriftAnchorIdentity) to use $c_0$ in the transport term $T_\Sigma$ instead of the hardcoded 2.
+- Updated (eq:TraceDriftContract) and (eq:TransportReorg) consistently with $c_0$.
+- The perturbative theorem's final bound $1 - C\varepsilon_{\mathbf b}/\sqrt{\underline\lambda}$ is independent of $c_0$ (absorbed into $C$), so the proof survives.
+
+**sec 39 (Vanishing-Set Resolution):**
+- Fixed mismatched \bigr| in (eq:OffZSmallness).
+
+**sec 40 (Cylinder Rayleigh — major rewrite):**
+- The original Step 2 of the proof of Theorem V.3 asserted the transmission condition $-\partial_t^2 G_\infty|_\Sigma = -\lambda_1 \Gamma_\Sigma + (\tr_\Sigma k)^2 \Gamma_\Sigma + \mathcal E_{\mathrm{trans}}$ without justification. This was the critical hand-wave: the $(\tr_\Sigma k)^2$ term does NOT appear naturally in the second $t$-derivative of $G_\infty$.
+- Replaced the derivation with an honest one from the standard second-variation formula for the null expansion $\delta_f \theta^+ = L_\Sigma f + \mathcal J_\Sigma[f,f]$ (Andersson-Metzger, Galloway-Schoen). The quadratic trace term $\int (\tr_\Sigma k)^2 \Gamma_\Sigma^2 dA$ now comes from the Jacobi form $\mathcal J_\Sigma$ with the MOTS condition $H = -\tr_\Sigma k$ converting $H \tr_\Sigma k$ into $-(\tr_\Sigma k)^2$.
+- Added Lemma V.2 (Quadratic trace term from the Jacobi form) explicitly deriving the expansion.
+- Honestly flag the additional terms $\partial_\nu H + V_\Sigma$ and $\mathcal J_\Sigma^{\mathrm{cross}}$ that accompany the quadratic trace term and are not sign-definite.
+- Theorem V.4 (Green-trace sign from second variation) now honestly acknowledges that its final step uses the small-drift regime of Theorem 38.5, so it does NOT give a new proof in a regime not already covered. Added Remark V.5 (Honest assessment) making this explicit.
+- Replaced fake citations (andMetzger2009, ashGalloway2008) with real ones (anderssonmetzger2009, gallowayschoen2006).
+
+### What was added
+
+**sec 41 (Consolidated Status — new):**
+- New Appendix W (~75 lines) consolidating the three-channel program into a single status theorem.
+- Theorem W.2 (Consolidated status): Penrose holds if any of (C1) pointwise favorable jump, (C2) drift-stability inequality, (C3) second-variation saturation holds. (C2) is automatic in sub-regimes (C2a) perturbative, (C2b) non-perturbative with controlled zero structure, (C2c) pure trace.
+- Remark W.3: lists 7 unconditional results (drift-anchor decomposition, cylinder Rayleigh nonnegativity, second-variation positivity identity, drift-zero structure, Faber-Krahn bound, perturbative drift-stability, no-go theorem).
+- Remark W.4: lists 4 conditional results (drift-stability outside perturbative/controlled-zero regimes, Cauchy-Schwarz saturation, Jacobi residual control, weighted Riccati positivity).
+- Remark W.6 (State of the program): honest summary of what is proven and what remains open.
+
+### Why this matters
+The detail-filling pass makes the three sections (38, 39, 40) honest about their limitations and fixes the most serious hand-wave (sec 40's transmission condition). The new sec 41 gives a reader a single place to assess the exact logical state of the Jang-equation route. PDF now 657 pages.
+
+### Next directions
+- Prove the Cauchy-Schwarz saturation (H6) and Jacobi residual control (H7) in the perturbative regime.
+- Investigate the singular drift-zero locus case (where Z has singular points) — this is the main remaining gap in (C2).
+- Combine all three channels with the optimal-transport ADM mass identification (sec 31).
+
+
 
 
