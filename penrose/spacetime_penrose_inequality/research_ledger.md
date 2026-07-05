@@ -237,4 +237,50 @@ The conditions (H4) and (H5) are quantitative relations that must be verified pe
 - Investigate the second variation route (still open from sec 38 next directions): couple $\partial_t^2\Gamma$ to $(\tr_\Sigma k)^2$ via the cylinder Rayleigh quotient.
 - Combine sec 38 + sec 39 with the optimal-transport ADM mass identification (sec 31).
 
+## 2026-07-03 (still later) — Cylinder Rayleigh / Second Variation (new section V, sec_40)
+
+### What was added
+New Appendix V `sec_40_cylinder_rayleigh.tex` (~195 lines), integrated into `main.tex` after sec 39. Compiles cleanly; PDF now 654 pages.
+
+### Goal of this section
+Open a second, logically independent channel: the **second variation**. The first-variation adjoint-cone condition (sec 34), drift-anchor decomposition (sec 38), and vanishing-set resolution (sec 39) all operate at first variation, which is linear in $\tr_\Sigma k$. The second variation is quadratic and sees positivity the first variation cannot.
+
+### New structural object
+The **cylinder Rayleigh quotient**
+\[ \mathcal R_\Sigma := \frac{\int_0^\infty\int_\Sigma |\partial_t(G_\infty-\Gamma_\Sigma^{(\mathrm{asymp})})|^2\,dA\,dt}{\int_\Sigma \Gamma_\Sigma^2\,dA} \ge 0, \]
+nonnegative by the cylinder Fredholm theory (Lemma V.2).
+
+### New algebraic identity (proven)
+Theorem V.3 (Second-variation positivity identity):
+\[ \lambda_1\|\Gamma_\Sigma\|^2 + \mathcal R_\Sigma\|\Gamma_\Sigma\|^2 = \mathfrak q_{L_\Sigma}[\Gamma_\Sigma] - \mathfrak T_\Sigma[\Gamma_\Sigma] + \mathfrak Q_\Sigma^{(2)}[\Gamma_\Sigma] \]
+where:
+- $\mathfrak q_{L_\Sigma}$ is the MOTS stability quadratic form ($\ge\lambda_1\|\Gamma\|^2$),
+- $\mathfrak T_\Sigma$ is the drift-transport Rayleigh contribution,
+- $\mathfrak Q_\Sigma^{(2)} = \int_\Sigma (\tr_\Sigma k)^2 \Gamma_\Sigma^2\, dA \ge 0$ is the **quadratic trace term**.
+
+The quadratic trace term $\mathfrak Q_\Sigma^{(2)} \ge 0$ is invisible to any first-variation argument because the first variation is linear in $\tr_\Sigma k$.
+
+### New theorem (Green-trace sign from second variation)
+Theorem V.4: under the Cauchy-Schwarz saturation condition
+\[ |\mathfrak T_\Sigma[\Gamma_\Sigma]| \le \tfrac12 \sqrt{\mathfrak Q_\Sigma^{(2)}[\Gamma_\Sigma]} \cdot \sqrt{\mathfrak q_{L_\Sigma}[\Gamma_\Sigma]}, \]
+the Green-trace sign $\int_\Sigma (\tr_\Sigma k)\Gamma_\Sigma\, dA \ge 0$ follows by combining the second-variation identity with the drift-anchor decomposition.
+
+### Three complementary channels
+The spacetime Penrose inequality along the Jang route can now be approached through three logically independent channels:
+1. **First-variation adjoint-cone (sec 34)**: controls linear pairing $\int(\tr_\Sigma k)\zeta_\Sigma\,dA$; no-go theorem shows insufficient by itself.
+2. **Drift-anchor + vanishing-set (sec 38+39)**: controls linear pairing via drift transport; proven perturbatively and non-perturbatively with controlled zero structure.
+3. **Cylinder Rayleigh / second variation (sec 40)**: controls quadratic pairing $\int(\tr_\Sigma k)^2\Gamma_\Sigma^2\,dA$ via cylinder Fredholm theory; combines with drift-anchor under Cauchy-Schwarz saturation.
+
+### What is NOT proven
+The Cauchy-Schwarz saturation condition~(eq:CauchySchwarzSaturation) is the new analytic input. It is strictly weaker than the pointwise favorable-jump and strictly weaker than weighted Riccati positivity (since both imply the Green-trace sign directly), but it is not yet shown to be automatic.
+
+### Distinction from sec 37's second-order KKT
+Sec 37 already had a second-order KKT framework (Theorem 37.11) but it is logically distinct: it assumes the second-order no-gap hypothesis (variational input), while sec 40 derives a sign from the Fredholm theory of the cylinder operator (elliptic input). Both produce second-variation information the first variation cannot see, but through different mechanisms.
+
+### Next directions
+- Prove the Cauchy-Schwarz saturation condition~\eqref{eq:CauchySchwarzSaturation} in the perturbative regime (collar close to product cylinder) — should follow from the same smallness as Theorem 38.5.
+- Investigate whether the quadratic trace term $\mathfrak Q_\Sigma^{(2)}$ can be used directly, without going through the drift transport, to give a purely second-variational proof.
+- Combine all three channels with the optimal-transport ADM mass identification (sec 31).
+
+
 
