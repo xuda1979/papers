@@ -403,6 +403,49 @@ finite interval data or a standard cited theorem.
   obligations. See `CARTER_WICK_COMPOSITION_CALCULUS.md` for the full
   statement and proof sketch.
 
+- 2026-07-03 (continued): Invented the Nonlinear Bootstrap
+  Classification Theorem (NBCT) and added
+  `verify_nonlinear_bootstrap_classification.py`,
+  `verify_composed_full_stack.py`, and
+  `tests/test_verify_nonlinear_bootstrap_classification.py`. This
+  extends the CWCC + CWQP-AB + RRBB stack from the **linearized** to
+  the **nonlinear** trapped-superradiant problem. Every nonlinear
+  source term in the Einstein vacuum equations linearized around Kerr,
+  in the certified gauge, is classified into one of three
+  integrability classes: NF (null form), RS (redshift-absorbed), or
+  IR (integrable remainder), each with a rational coefficient. The
+  nonlinear coefficient budget is
+
+  $$ B_{\mathrm{NL}} = \sum_{i \in \mathrm{NF}} C_i
+     + \sum_{i \in \mathrm{RS}} C_i\, \kappa_{\mathrm{red}}\, \mu_{\mathrm{redshift}}
+     + \sum_{i \in \mathrm{IR}} C_i\, \tau_0^{-\eta_i}, $$
+
+  reading $\kappa_{\mathrm{red}}, \mu_{\mathrm{redshift}}$ from the
+  referenced RRBB certificate. The bootstrap smallness parameter is
+  $\varepsilon_{\mathrm{boot}} = \sqrt{B_{\mathrm{lower\_bound}} /
+  B_{\mathrm{NL}}}$, and the nonlinear bootstrap closes when
+  $B_{\mathrm{NL}} \cdot \varepsilon_{\mathrm{boot}}^2 \le
+  B_{\mathrm{lower\_bound}}$. The verifier accepts either the tight
+  case (equality) or a rational slack lower bound. The composed
+  full-stack verifier `verify_composed_full_stack.py` accepts a 4-tuple
+  (CWCC, CWQP, RRBB, NBCT), checks each certificate independently,
+  verifies cross-certificate agreement (chart names, bump constants,
+  buffer references), and checks the nonlinear bootstrap closure by
+  exact rational arithmetic. The toy composed full-stack certificate
+  closes with $B_{\mathrm{NL}} = 13/16$, $\varepsilon_{\mathrm{boot}} =
+  2$, $B_{\mathrm{NL}} \cdot \varepsilon^2 = 13/4 \le
+  B_{\mathrm{lower\_bound}} = 6$. Three bad NBCT certificates
+  (`bad_nbct_budget_mismatch.json`, `bad_nbct_closure_fail.json`,
+  `bad_nbct_invalid_class.json`) are correctly rejected. This reduces
+  the nonlinear trapped-superradiant bootstrap to a single
+  rational-arithmetic inequality with the source-term classification
+  made explicit. It is a structural reduction, not a proof: the
+  complete source-term classification, the linear-stack constant
+  $C_{\mathrm{lin}} \le 1/B_{\mathrm{lower\_bound}}$, and the Bondi
+  flux formula for the final-state parameters remain open proof
+  obligations. See `NONLINEAR_BOOTSTRAP_CLASSIFICATION_THEOREM.md`
+  for the full statement and proof sketch.
+
 ## Failed Or Dangerous Moves
 - Claiming full Kerr stability from the Carter atlas certificates fails: the
   Renormalized Carter cone coefficient construction, Kerr pseudodifferential
