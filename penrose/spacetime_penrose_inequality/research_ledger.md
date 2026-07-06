@@ -320,6 +320,37 @@ The detail-filling pass makes the three sections (38, 39, 40) honest about their
 - Investigate the singular drift-zero locus case (where Z has singular points) — this is the main remaining gap in (C2).
 - Combine all three channels with the optimal-transport ADM mass identification (sec 31).
 
+## 2026-07-05 (later) — Perturbative Validation of (H6)+(H7) (new section X, sec_42)
+
+### What was added
+New Appendix X `sec_42_perturbative_validation.tex` (~180 lines), integrated into `main.tex` after sec 41. Compiles cleanly; PDF now 662 pages.
+
+### Goal
+Prove that the two hypotheses (H6) Cauchy-Schwarz saturation and (H7) Jacobi residual control, which underlie the second-variation route of sec 40, hold in the perturbative regime of Theorem 38.5. This closes the second-variation channel perturbatively, giving a result genuinely independent of the first-variation drift-anchor route.
+
+### What is proven
+- Lemma X.2 (Perturbative transport bound): $|\mathfrak T_\Sigma| \le C_T \underline\lambda^{-1/2} \varepsilon_{\mathbf b} \mathfrak q_{L_\Sigma}^{1/2} \|\nabla_\Sigma \partial_t G_\infty\|_{L^2}$.
+- Lemma X.3 (Perturbative quadratic trace lower bound): $\mathfrak Q_\Sigma^{(2)} \ge c_Q \underline\lambda \varepsilon_{\mathbf b}^2 \|\Gamma_\Sigma\|_{L^4}^2$, using the adjoint-cone Euler condition to extract a definite-sign L^2 mass of $\tr_\Sigma k$.
+- Theorem X.4 (Perturbative Cauchy-Schwarz saturation): (H6) holds in the perturbative regime under the constrained maximum-area nondegeneracy.
+- Lemmas X.5-X.6: bounds on $\partial_\nu H + V_\Sigma$ and $\mathcal J_\Sigma^{\mathrm{cross}}$.
+- Theorem X.7 (Perturbative Jacobi residual control): (H7) holds under the **strengthened perturbative condition** $\lambda_1(L_\Sigma) \ge 4 C V_0$, where $V_0$ is the cylinder potential. This is not automatic but is checkable.
+- Theorem X.8 (Perturbative second-variation Green-trace sign): under the strengthened perturbative condition and constrained maximum-area nondegeneracy, the Green-trace sign follows from the second-variation channel. The proof is **genuinely second-variational**: the sign comes from $\mathfrak Q_\Sigma^{(2)} \ge 0$, not from first-variation drift-anchor smallness alone.
+
+### What is NOT proven
+- The strengthened perturbative condition $\lambda_1 \ge 4 C V_0$ is the main restriction. In the product-cylinder model the condition is borderline ($C = 1/2$), so it holds for collars strictly thicker than the product model. Removing this requires a more refined cancellation between $\partial_\nu H + V_\Sigma$ and $\mathcal J_\Sigma^{\mathrm{cross}}$.
+- The constrained maximum-area nondegeneracy (assumed also in Theorem 34.3). In the degenerate case $\zeta_\Sigma \equiv 0$, the lower bound on $\mathfrak Q_\Sigma^{(2)}$ fails.
+- The non-perturbative regime.
+
+### Why this is real progress
+1. Closes the second-variation channel perturbatively with a genuinely second-variational proof (independent of the first-variation drift-anchor route).
+2. The three-channel program now has two independent perturbative proofs: first-variation (sec 38) and second-variation (sec 42). The union of regimes is robust.
+3. Identifies the precise remaining obstruction for the second-variation channel: the strengthened condition $\lambda_1 \ge 4 C V_0$ and the nondegeneracy of the constrained maximum-area principle.
+
+### Next directions
+- Remove the strengthened condition by finding a cancellation between $\partial_\nu H + V_\Sigma$ and $\mathcal J_\Sigma^{\mathrm{cross}}$.
+- Handle the degenerate constrained maximum-area case.
+- Investigate the singular drift-zero locus case (still the main gap in C2).
+
 
 
 
