@@ -429,3 +429,14 @@ Four new theorems in app211:
 
 PDF: 81 pages, zero LaTeX errors.
 Status: gap>0 all finite Lambda (Krein-Rutman). H-prime (Clay problem) OPEN.
+
+## 2026-07-07 Update (third pass): app211 four theorems
+
+Four new theorems in app211:
+1. Volume-monotonicity (isometric embedding).
+2. Real-analyticity (Kato + identity principle).
+3. Cheeger bound: gap >= (1/8) exp(-2 beta N |E_t|).
+4. Lipschitz: |dm/dbeta| <= 2N|E_t|/a; finite extension past beta_c.
+
+PDF: 81 pages, zero LaTeX errors.
+Status: gap>0 all finite Lambda (Krein-Rutman). H-prime (Clay problem) OPEN.
