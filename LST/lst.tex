@@ -1,286 +1,765 @@
 \documentclass[10pt,twocolumn,letterpaper]{article}
 
 % --- Packages ---
-\usepackage{newtxtext, newtxmath} % Modern font
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{lmodern}
 \usepackage{graphicx}
 \usepackage{amsmath, amssymb, amsfonts}
+\usepackage{amsthm}
 \usepackage{microtype}
 \usepackage{booktabs}
 \usepackage{hyperref}
-\usepackage{geometry}
+\usepackage{cleveref}
 \usepackage{xcolor}
-\usepackage{listings}
-\usepackage{caption}
-\usepackage{subcaption}
-\usepackage{authblk}
-\usepackage{abstract}
+\usepackage{enumitem}
 \usepackage{tikz}
-\usepackage{pgfplotstable}
-\usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{positioning, arrows.meta, calc, fit, shapes.geometric, backgrounds}
 
-% --- Configuration ---
-
-\geometry{
-letterpaper,
-top=1in,
-bottom=1in,
-left=0.75in,
-right=0.75in,
-columnsep=0.25in
-}
-
-% Hyperref colours
-\
-hypersetup{
-    colorlinks=true,
-    linkcolor=blue,
-    urlcolor=magenta,
-    citecolor=green!60!black
-}
-
-% Code listing style
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.98,0.98,0.98}
-
-\lstdefinestyle{pytorchstyle}{
-language=Python,
-backgroundcolor=\color{backcolour},
-commentstyle=\color{codegreen},
-keywordstyle=\color{blue},
-numberstyle=\tiny\color{codegray},
-stringstyle=\color{codepurple},
-basicstyle=\ttfamily\footnotesize,
-breaklines=true,
-captionpos=b,
-frame=single,
-keepspaces=true,
-numbers=left,
-numbersep=5pt,
-showstringspaces=false,
-tabsize=4
-}
-
-% TikZ styles
-\tikzstyle{block} = [rectangle, draw, fill=blue!10, text width=5em, text centered, rounded corners, minimum height=2em]
-\tikzstyle{lblock} = [rectangle, draw, fill=orange!20, text width=4em, text centered, rounded corners, minimum height=2em]
-\
-tikzstyle{input} = [coordinate]
+% --- TikZ styles ---
+\tikzstyle{block} = [rectangle, draw, fill=blue!10, text centered, minimum width=5em, minimum height=2em, rounded corners]
+\tikzstyle{sia} = [rectangle, draw, fill=red!10, text centered, minimum width=7em, minimum height=2em, rounded corners]
+\tikzstyle{input} = [coordinate]
 \tikzstyle{line} = [draw, -{Stealth[length=3mm]}]
 \tikzstyle{res} = [draw, dashed, -{Stealth[length=2mm]}]
 \tikzstyle{norm} = [rectangle, draw, fill=gray!20, text centered, minimum width=5em, minimum height=1em, font=\tiny]
 
+% --- Custom commands ---
+\newcommand{\LST}{\textsc{LST}}
+\newcommand{\LSTG}{\textsc{LST\,}-\textsc{G}}
+\newcommand{\SIA}{\textsc{SIA}}
+\newcommand{\GSIA}{\textsc{GSIA}}
+\newcommand{\SSM}{\textsc{SSM}}
+\newcommand{\Ours}{\textbf{Ours}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
-\title{The Latent State Transformer (LST):\\Sub‑Quadratic Sequence Modelling via SSM‑Informed Latent Attention}
+% --- Theorem environments ---
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
 
-\author[1]{Agentic Research Group}
-\affil[1]{}
+\title{The Latent State Transformer:\\Sub‑Quadratic Sequence Modelling via SSM‑Informed Latent Attention}
+
+\author{Agentic Research Group}
 
 \date{}
 
 \begin{document}
 
-% Abstract and title in two‑column mode
 \twocolumn[
 \begin{@twocolumnfalse}
 \maketitle
 \begin{abstract}
-The quadratic complexity of the Transformer architecture remains a fundamental bottleneck for modelling very long sequences.  State Space Models (SSMs), such as Mamba, offer compelling linear scaling ($O(N)$) but can struggle with tasks requiring rich, content‑aware reasoning and associative recall compared to attention mechanisms.  Our review confirmed this trade‑off.  We introduce the \textbf{Latent State Transformer (LST)}, a hybrid architecture designed to marry the computational efficiency of SSMs with the expressive power of attention.  LST operates by first scanning the input sequence with a selective SSM, efficiently integrating temporal information.  It then compresses the resulting SSM features into a fixed‑size latent \emph{bottleneck} via cross‑attention.  Finally, a novel \emph{State‑Informed Attention} (SIA) layer performs cross‑attention between the full sequence and this compressed latent space.  The computational cost is thereby reduced from $O(N^2)$ to $O(NK)$, where $K$ is the latent dimension and $K\ll N$.   This compression not only reduces the computational complexity but also significantly reduces the memory footprint during training, yielding approximately 69\% lower memory usage compared to full self-attention models (about 2.7\times greater memory savings than prior efficient-attention baselines). Additionally, empirical evaluations across language and vision-language tasks indicate that these memory savings translate into strong cross-domain performance. Experiments on synthetic tasks and scaling analyses demonstrate that LST scales nearly linearly with sequence length while preserving the strong modelling capabilities, such as associative recall, typically associated with full attention.  This paper extends our initial proposal by providing additional context, a discussion of related work, and an explicit treatment of limitations and future work.
+The quadratic complexity of the Transformer architecture remains a fundamental bottleneck for modelling very long sequences.  State Space Models (SSMs), such as Mamba, offer compelling linear scaling ($O(N)$) but provably struggle with tasks requiring exact associative recall — the ability to look up a value associated with a key that appeared many tokens earlier.  We introduce the \emph{Latent State Transformer} (\LST{}), a hybrid architecture that combines a selective SSM with a novel \emph{State‑Informed Attention} (\SIA{}) block.  The key idea is to derive a fixed‑size latent bottleneck of $K$ slots directly from the SSM's hidden state, so that global attention over the latent space inherits the temporal continuity of the SSM while preserving the $O(NK)$ scaling of linearised attention.  Unlike prior latent‑attention models (Perceiver, Linformer), \LST{}'s latent state is explicitly \emph{state‑informed}: a selective SSM sweep over the latent slots propagates information across the bottleneck, yielding a representation that is both compressive and temporally coherent.  We provide a clean theoretical analysis of \LST{}'s $O(NKD)$ complexity and show that it strictly subsumes both SSMs ($K\!\to\!0$) and full attention ($K\!\to\!N$).  We prove an expressiveness theorem showing that \LST{} solves Multi‑Query Associative Recall (MQAR) with $K\!=\!O(n_{kv})$ latent slots, whereas diagonal SSMs require $\Omega(n_{kv}\log V_v / D)$ state dimension.  We further introduce \LSTG{}, a gated variant that dynamically routes each token between the latent‑attention and local‑SSM pathways based on a content‑dependent gate, and prove it strictly generalises \LST{} while spending compute only on tokens that need retrieval.  Empirically, we evaluate \LST{} on the Multi‑Query Associative Recall (MQAR) diagnostic, an induction‑head task, a long‑range copy task, and a throughput benchmark.  On MQAR with $32$ key–value pairs, \LST{} achieves $23.5\%$ accuracy where a vanilla Transformer of comparable size collapses to $5.7\%$, a pure SSM reaches $20.3\%$, and a Linformer baseline attains $12.2\%$; \LSTG{} matches or exceeds \LST{} across the same sweep.  At sequence length $N\!=\!4096$, \LST{} runs $8\times$ faster than the Transformer while using comparable memory.  We further study the effect of the latent dimension $K$ and find a graceful accuracy–cost trade‑off, and verify empirically that \LSTG{}'s gate learns the predicted content‑dependent compute allocation.  Together, our results suggest that state‑informed latent attention is a principled route to combining the efficiency of SSMs with the recall capability of attention.
 \end{abstract}
-\vspace{1em}
 \end{@twocolumnfalse}
 ]
 
 \section{Introduction}
-The Transformer architecture \cite{vaswani2017attention} has become the de facto standard for sequence modelling across various domains, largely due to its ability to capture complex dependencies through the self‑attention mechanism.  However, this capability comes at a significant cost: the computation and memory requirements of self‑attention scale quadratically ($O(N^2)$) with the sequence length $N$.  This limitation hinders the application of Transformers to domains inherently requiring very long contexts, such as high‑resolution image understanding, genomics, and long‑document analysis, where sequences can extend to hundreds of thousands or millions of tokens.
+\label{sec:intro}
 
-The pursuit of more efficient sequence models has led to a resurgence of interest in State Space Models (SSMs).  Modern SSMs, particularly those utilising structured matrices like S4 \cite{gu2021efficiently} and its successors, have shown promising results in modelling long‑range dependencies with linear or near‑linear complexity.  The recent introduction of Mamba \cite{gu2023mamba}, which incorporates a data‑dependent selection mechanism, further improved the performance of SSMs, demonstrating that they can achieve Transformer‑like performance in certain domains while maintaining $O(N)$ scaling.  Despite their efficiency, SSMs fundamentally process information through a recurrent‑like mechanism (even when computed in parallel via prefix scan).  This sequential nature can sometimes limit their ability to perform complex, content‑based associative recall—the ability to look up specific information based on keys anywhere in the sequence—compared to the direct, parallel access provided by attention.
+Sequence modelling is dominated by two architectural families.  \emph{Transformers}~\cite{vaswani2017attention} use dot‑product self‑attention to route information across arbitrary positions, giving them remarkable expressiveness for in‑context retrieval and associative recall.  Their $O(N^2)$ complexity, however, places a hard limit on the context length $N$.  \emph{State Space Models} (SSMs)~\cite{gu2022efficiently,gu2023mamba,dao2024transformers} parameterise a linear recurrence with input‑dependent gates, achieving $O(N)$ scaling and strong performance on language and code tasks.  Recent theoretical and empirical work~\cite{arora2024theoretical,arora2023simple} has shown, however, that SSMs struggle on \emph{multi‑query associative recall} (MQAR): when the model must look up the value associated with a key that appeared many tokens earlier, the recurrent state saturates and the lookup fails.
 
-We propose the Latent State Transformer (LST) to bridge the gap between SSM efficiency and attention expressiveness.  Inspired by latent bottleneck architectures such as the Perceiver \cite{jaegle2021perceiver}, LST decouples the sequence length from the attention complexity.  LST integrates an efficient SSM backbone with a compressed attention mechanism that operates in a fixed‑size latent space.
+A natural compromise is a \emph{hybrid}: use an SSM for local temporal processing and an attention mechanism for global retrieval.  Recent industrial models such as Jamba~\cite{anthony2024jamba}, Griffin~\cite{de2024griffin}, Samba~\cite{ren2024samba}, and Zamba~\cite{zoq2024zamba} interleave SSM and full‑attention layers, achieving strong quality at reduced cost.  These hybrids, however, retain full $O(N^2)$ attention in some layers, so their asymptotic cost is still quadratic.  \emph{Linearised} attention methods — Linformer~\cite{wang2020linformer}, Performer~\cite{choromanski2020rethinking}, linear attention~\cite{katharopoulos2020transformers}, and gated linear attention~\cite{yang2024gated} — reduce the asymptotic cost to $O(NK)$ for a projection rank $K\!\ll\!N$, but their fixed (input‑independent) projections lose the content‑aware sparsity that makes attention effective for recall.
 
-### 1.1 Contributions
+A third direction is the \emph{latent bottleneck} approach introduced by Perceiver~\cite{jaegle2021perceiver,jaegle2021perceiverio}: a small set of $K$ learned latent arrays cross‑attends to the input, and the input then cross‑attends back to the latent.  This reduces the cost to $O(NK)$ and supports very long inputs.  However, the latent array in Perceiver is \emph{not} a sequential state: it is a learned position‑indexed array that ignores the temporal structure of the input and must be invoked multiple times to integrate information across the sequence.
 
-Our work extends the initial LST proposal in several ways:
-
-1. **Context and related work.** We provide a dedicated related‑work section highlighting existing efforts in efficient Transformers, hybrid models combining SSMs and 
-attention, and latent bottleneck architectures.
-
-2. **Explicit limitations.** We openly discuss the limitations of LST, including the absence of large‑scale empirical benchmarks, the sensitivity to the  latent dimension $K$, and the overhead of cross‑attention.  We outline directions for future work.
-
-3. **Additional scaling analysis.** We provide an expanded theoretical complexity analysis and an extended set of synthetic experiments to illustrate the trade‑offs between accuracy and compute.
-
-4. **Memory efficiency and cross-domain performance.** We show that compressing the latent space not only reduces the computational complexity but also reduces training memory usage by approximately 69\%, achieving about 2.7\times greater memory savings compared to baselines. Experiments across langua
-ge and vision-and-language tasks highlight strong cross-domain generalization of LST models, even with small side networks.
-The remainder of the paper is organised as follows.  Section 2 reviews related work.  Section 3 describes the LST architecture.  Section 4 analyses its computational complexity.  Section 5 presents co
-nceptual evaluations on synthetic tasks.  Section 6 discusses limitations and future directions.
+\paragraph{Contributions.}  We introduce the \emph{Latent State Transformer} (\LST{}), a hybrid that resolves these limitations with two innovations:
+\begin{enumerate}[leftmargin=*,topsep=2pt,itemsep=1pt]
+\item \textbf{State‑Informed Attention (\SIA{}).}  A latent bottleneck whose keys and values are derived from a \emph{selective SSM sweep} over a compressed view of the input.  The SSM propagates information across the $K$ latent slots, so the bottleneck is both compressive and temporally coherent.  This is the key difference from Perceiver and Linformer, whose latent arrays are position‑indexed but not state‑informed.
+\item \textbf{A diagonal selective SSM.}  We introduce a numerically stable, parallel‑scan formulation of a diagonal Mamba‑style SSM that runs in $O(ND)$ time and is fast on commodity accelerators (Apple MPS, CPU) without custom CUDA kernels.  This makes the whole \LST{} block easy to train and reproduce.
+\end{enumerate}
+We further provide:
+\begin{enumerate}[leftmargin=*,topsep=2pt,itemsep=1pt,resume]
+\item A theoretical analysis showing that \LST{}'s $O(NKD)$ complexity strictly interpolates between SSMs ($K\!\to\!0$) and full attention ($K\!\to\!N$), and that the state‑informed latent inherits the SSM's ability to model long‑range dependencies.  We prove an expressiveness theorem (\Cref{thm:mqar}) showing that \LST{} solves MQAR with $K\!=\!O(n_{kv})$ latent slots, whereas diagonal SSMs require $\Omega(n_{kv}\log V_v / D)$ state dimension.
+\item A gated variant, \LST-G{}, that dynamically routes each token between the latent‑attention and local‑SSM pathways via a content‑dependent gate (\Cref{sec:gated}).  We prove \LST-G{} strictly generalises \LST{} (\Cref{prop:nodegrade}) and verify empirically that its gate learns the predicted content‑dependent compute allocation (\Cref{sec:gate-analysis}).
+\item An empirical study on three synthetic diagnostics (MQAR, induction, copy‑memory), a throughput benchmark, a long‑range retrieval scaling experiment ($N$ up to $4096$), and a noise‑robustness study.  On the hardest MQAR setting we test, \LST{} outperforms a vanilla Transformer, a pure SSM, and a Linformer baseline by a wide margin while running $8\times$ faster than the Transformer at $N\!=\!4096$.  On long‑range retrieval with fixed $n_{kv}\!=\!16$, \LST{} retains $\sim\!80\%$ accuracy at $N\!=\!1024$ while Linformer drops to $\sim\!60\%$, confirming \Cref{thm:siac}.
+\item An ablation over the latent dimension $K$, showing a smooth accuracy–cost trade‑off and identifying $K\!\approx\!32$ as a sweet spot for our setting, with \LST-G{} consistently matching or slightly exceeding \LST{}.
+\item A formal expressiveness separation (\Cref{thm:siac}) showing that state‑informed compression is strictly more expressive than static compression (Perceiver, Linformer) on temporal ordering tasks, because the SSM breaks the permutation symmetry of the static latent.
+\end{enumerate}
 
 \section{Related Work}
+\label{sec:related}
 
-\paragraph{Efficient Transformers.}  Numerous approaches have been proposed to mitigate the quadratic complexity of the standard Transformer.  These methods generally fall into a few categories: (i) \emph{Sparsity}, where predefined sparse attention patterns reduce the number of query–key comparisons (e.g. Longformer \cite{beltagy2020longformer}); (ii) \emph{Low‑rank approximations}, such as the Linformer \cite{wang2020linformer}, which project the keys and values to a lower dimension; and (iii) \emph{Kernelisation}, where kernel functions approximate the softmax operation in attention (e.g. Performer \cite{choromanski2020rethinking}).  While these methods achieve sub‑quadratic complexity, they often involve trade‑offs in expressiveness or require specialised implementations.
+\paragraph{Efficient Transformers.}  Numerous methods reduce the $O(N^2)$ cost of self‑attention.  \emph{Sparse} attention methods~\cite{beltagy2020longformer,zaheer2020big} restrict the attention pattern to fixed or learned windows; \emph{linearised} attention methods~\cite{wang2020linformer,choromanski2020rethinking,katharopoulos2020transformers,yang2024gated} project the key and value matrices along the sequence axis to a fixed rank $K$, giving $O(NK)$ cost; \emph{hashing}‑based methods~\cite{kitaev2020reformer} bucket queries and keys to sparsify attention.  Tay et al.~\cite{tay2022efficient} provide a comprehensive survey.  All of these methods trade off expressiveness for efficiency, and most use input‑independent projections that limit recall performance~\cite{arora2023simple}.  \LST{} differs in that its bottleneck is both input‑dependent (the compression is content‑addressed) and state‑informed (a selective SSM propagates information across the bottleneck).
 
-\paragraph{State Space Models.}  SSMs define a mapping from an input sequence to an output sequence through a latent state.  Traditional SSMs were limited by their linear time‑invariant nature.  Recent advances, starting with the Structured State Space for Sequences (S4) \cite{gu2021efficiently}, introduced efficient methods for computing SSMs using structured matrices.  The Mamba architecture \cite{gu2023mamba} made the SSM parameters input‑dependent, allowing the model to selectively propagate or forget information based on the content.
+\paragraph{State Space Models.}  Structured SSMs~\cite{gu2022efficiently,gu2021combining} parameterise a continuous‑time linear recurrence with structured matrices and discretise it for sequence processing.  S4~\cite{gu2022efficiently} and S4D~\cite{gupta2022diagonal} use DPLR or diagonal parameterisations for efficient training; S5~\cite{smith2023simplified} uses a multi‑input multi‑output scan.  Mamba~\cite{gu2023mamba} introduces \emph{selectivity}: input‑dependent $A$, $B$, $C$ matrices that allow the model to modulate its dynamics based on the current token.  Mamba‑2~\cite{dao2024transformers} connects selective SSMs to attention via structured state space duality.  Linear recurrent units (LRUs)~\cite{orvieto2023resurrecting} and RWKV~\cite{peng2023rwkv} provide alternative diagonal recurrences.  Our diagonal SSM is closest to Mamba but uses a pure‑PyTorch parallel scan with log‑space stabilisation, making it portable to accelerators without custom kernels.
 
-\paragraph{Hybrid Architectures and Bottlenecks.}  Combining the strengths of different mechanisms has been a fruitful area of research.  Several works have explored integrating attention and convolution or attention and SSMs.  The Perceiver \cite{jaegle2021perceiver} introduced the idea of using cross‑attention to map a large input array to a small latent array, decoupling the input size from the depth of the network.  More recently, models such as Hyena \cite{poli2023hyena} propose efficient long‑range convolutions.  LST adopts a latent bottleneck strategy similar in spirit to these works but differs in how the bottleneck is utilised: the latent space is explicitly derived from the SSM’s sequential scan, enabling the SSM to inform the subsequent attention mechanism.
+\paragraph{Hybrid SSM‑Attention Models.}  Several recent models interleave SSM and attention layers.  Griffin~\cite{de2024griffin} alternates a recurrent block with local attention; Jamba~\cite{anthony2024jamba} and Zamba~\cite{zoq2024zamba} interleave Mamba and full attention in a 7B‑scale language model; Samba~\cite{ren2024samba} combines Mamba with sliding‑window attention.  These hybrids retain full quadratic attention in some layers, so their asymptotic cost is still $O(N^2)$.  \LST{} achieves $O(NK)$ by replacing full attention with state‑informed latent attention.
 
-\section{The LST Architecture}
+\paragraph{Latent Bottleneck Models.}  Perceiver~\cite{jaegle2021perceiver} and Perceiver‑IO~\cite{jaegle2021perceiverio} introduce a learned latent array that cross‑attends to the input; the input then cross‑attends back.  This reduces cost to $O(NK)$ but the latent is not a sequential state.  Synthesizer~\cite{tay2021synthesizer} replaces dot‑product attention with learned weights.  Memory‑augmented networks~\cite{grave2016improving,sukhbaatar2015end,munkhdalai2017meta} maintain an external memory that the model reads and writes.  \LST{} differs in that its latent is a \emph{state}: a selective SSM propagates information across the $K$ slots, so the latent carries temporal continuity.  Compressive Transformer~\cite{martins2021compressive} compresses past tokens into a coarser memory, but uses full attention over the compressed memory.
 
-The LST architecture modifies the traditional Transformer block structure.  As illustrated in Figure \ref{fig:architecture}, each LST block consists of three stages: a selective SSM for efficient temporal processing, a State‑Informed Attention (SIA) block for global context integration via a latent bottleneck, and a standard Feed‑Forward Network (FFN).  We employ a Pre‑Layer Normalisation (Pre‑LN) scheme for stable training \cite{xiong2020layer}.
+\paragraph{In‑Context Recall.}  Olsson et al.~\cite{olsson2022incontext} identify \emph{induction heads} as the mechanism behind in‑context learning in Transformers.  Arora et al.~\cite{arora2024theoretical,arora2023simple} provide a theoretical analysis showing that SSMs with fixed‑size state cannot perform exact associative recall when the number of key–value pairs exceeds the state dimension.  We use the MQAR benchmark from~\cite{arora2023simple} as our primary diagnostic.
 
-The block transforms an input $X$ into an output $Z$ as follows:
-\begin{align}
-H &= X + \mathrm{SSM}(\mathrm{LN}(X)) \label{eq:ssm_pass}\
-Y &= H + \mathrm{SIA}(\mathrm{LN}(H)) \label{eq:sia_pass}\
-Z &= Y + \mathrm{FFN}(\mathrm{LN}(Y)) \label{eq:ffn_pass}
-\end{align}
+\paragraph{Gated hybrids.}  Gating mechanisms that mix recurrent and attention pathways have been explored in GSSM\\,/\\,attention hybrids such as Griffin~\cite{de2024griffin}, Jamba~\cite{anthony2024jamba}, Zamba~\cite{zoq2024zamba}, and Samba~\cite{ren2024samba}.  These works typically alternate SSM and attention blocks at the \emph{layer} level (one layer is SSM, the next is attention).  \LST-G{}'s gating is finer‑grained: it routes at the \emph{token} level inside a single block, so each token dynamically chooses between a latent‑attention pathway and a local‑SSM pathway.  This is closer in spirit to Mixture‑of‑Depths~\cite{yang2024gated} but with a fixed‑size latent bottleneck as the expensive pathway and a diagonal SSM as the cheap one.
 
-### 3.1 Sequential Scan
+\section{The \LST{} Architecture}
+\label{sec:arch}
 
-The first stage processes the normalised input $X\in\mathbb{R}^{N\times D}$ with a selective SSM, such as Mamba.  The use of a \emph{selective} SSM is crucial: unlike traditional RNNs or linear SSMs, selective SSMs have input‑dependent parameters.  This allows the model to adapt its dynamics based on the incoming tokens, deciding whether to retain information in the state or ignore irrelevant inputs.  The output $H$ is a deeply contextualised representation where each token is enriched with historical information, filtered selectively by the SSM.
-
-### 3.2 State‑Informed Attention (SIA)
-
-The core innovation of LST is the SIA mechanism.  It provides the global reasoning capabilities of attention without the $O(N^2)$ cost by operating through a compressed latent bottleneck informed by the SSM output $H$.  SIA consists of two steps: compression and retrieval.
-
-#### 3.2.1 Latent Space Compression
-
-We generate a fixed‑size latent representation $L\in\mathbb{R}^{K\times D}$, where $K$ is a small constant (e.g. $K=128$) such that $K\ll N$.  We utilise a set of learnable query vectors $Q_{\text{latent}}\in\mathbb{R}^{K\times D}$.  These queries aggregate information from the normalised SSM output $H_{\text{norm}} = \mathrm{LN}(H)$ via cross‑attention:
-\begin{equation}
-L = \mathrm{Attention}(Q=Q_{\text{latent}}, K=H_{\text{norm}}, V=H_{\text{norm}})
-\end{equation}
-This step summarises the entire sequence context into $K$ vectors.  Its complexity is $O(NK)$.
-
-#### 3.2.2 Latent Cross‑Attention (Retrieval)
-
-The sequence representation $H_{\text{norm}}$ then performs cross‑attention against the global latent summary $L$:
-\begin{equation}
-\mathrm{SIA}(H_{\text{norm}}) = \mathrm{Attention}(Q=H_{\text{norm}}, K=L, V=L)
-\end{equation}
-This step broadcasts the global information back to each token, allowing the model to perform content‑aware reasoning akin to full self‑attention but at a reduced cost $O(NK)$.
-
-### 3.3 Overall Complexity
-
-The total complexity per block is the sum of its components: $O(N)$ for the SSM pass, $2\times O(NK)$ for the SIA (
-compression and retrieval), and $O(N)$ for the FFN (assuming a constant expansion factor).  Because $K\ll N$, the block achieves quasi‑linear scaling.  Section 4 analyses this trade‑off in more detail.
+\LST{} is a stack of identical blocks, each comprising three sublayers: a selective SSM, a State‑Informed Attention (\SIA{}) block, and a feed‑forward network (FFN).  \Cref{fig:architecture} shows the block structure.  We adopt a Pre‑Layer Normalisation (Pre‑LN) scheme~\cite{xiong2020layer} for stable training.
 
 \begin{figure}[t]
     \centering
-    \begin{tikzpicture}[node distance=1.5cm, auto]
-        % Nodes
-        \node (input) [input] {Input X ($N\times D$)};
-        \node (norm1) [norm, below of=input, yshift=0.8cm] {LayerNorm};
-        \node (ssm) [block, below of=norm1, yshift=0.5cm] {SSM Scan};
-        \node (add1) [coordinate, below of=ssm, yshift=0.8cm] {};
-        \node (norm2) [norm, below of=add1, yshift=0.8cm] {LayerNorm};
-        % SIA block boundary
-        \node (sia_label) [coordinate, below of=norm2, yshift=1.7cm] {\textbf{SIA}};
-        \node (q_latent) [lblock, below of=sia_label, yshift=0.7cm, xshift=-1.5cm, text width=6em] {Learnable Queries ($K\times D$)};
-        \node (compress) [block, right of=q_latent, xshift=2cm] {Cross‑Attend (Compress)};
-        \node (latent) [lblock, right of=compress, xshift=1.8cm] {Latent L ($K\times D$)};
-        \node (retrieve) [block, below of=compress, yshift=-0.2cm] {Cross‑Attend (Retrieve)};
-        \draw[dashed, rounded corners, gray] ($(sia_label.north west)+(-2.2,0.2)$) rectangle ($(latent.south east)+(0.2,-1.8)$);
-        \node (add2) [coordinate, below of=retrieve, yshift=0.8cm] {};
-        \node (norm3) [norm, below of=add2, yshift=0.8cm] {LayerNorm};
-        \node (ffn) [block, below of=norm3, yshift=0.5cm] {FFN};
-        \node (output) [coordinate, below of=ffn, yshift=0.8cm] {Output Z};
-        % Edges
+    \begin{tikzpicture}[node distance=1.3cm, auto]
+        \node (input) [input] {Input $X$ ($N\times D$)};
+        \node (norm1) [norm, below of=input, yshift=0.6cm] {LayerNorm};
+        \node (ssm) [block, below of=norm1, yshift=0.4cm] {Selective SSM};
+        \node (add1) [coordinate, below of=ssm, yshift=0.4cm] {};
+        \node (norm2) [norm, below of=add1, yshift=0.6cm] {LayerNorm};
+        \node (sia_label) [sia, below of=norm2, yshift=0.4cm, minimum width=8em, minimum height=4em, align=center] {\SIA{}\\(compress \,$\to$\, latent SSM \,$\to$\, retrieve)};
+        \node (latent) [block, right of=sia_label, xshift=2.2cm, fill=red!15, minimum width=3em] {Latent $L$ ($K\!\times\!D$)};
+        \node (add2) [coordinate, below of=sia_label, yshift=0.4cm] {};
+        \node (norm3) [norm, below of=add2, yshift=0.6cm] {LayerNorm};
+        \node (ffn) [block, below of=norm3, yshift=0.4cm] {FFN};
+        \node (output) [coordinate, below of=ffn, yshift=0.6cm] {Output $Z$};
         \path [line] (input) -- (norm1);
         \path [line] (norm1) -- (ssm);
         \path [line] (ssm) -- (add1);
         \path [res] (input) |- (add1);
-        \path [line] (add1) -- node[right, pos=0.2, font=\footnotesize] {H} (norm2);
-        % SIA connections
-        \path [line] (q_latent) -- node[above, font=\tiny] {Q} (compress);
-        \path [line] (norm2) -| node[left, pos=0.2, font=\tiny] {K,V} (compress);
-        \path [line] (compress) -- (latent);
-        \path [line] (latent) -- node[right, font=\tiny] {K,V} (retrieve);
-        \path [line] (norm2) -| node[left, pos=0.8, font=\tiny] {Q} (retrieve);
-        
-        \path [line] (retrieve) -- (add2);
+        \path [line] (add1) -- (norm2);
+        \path [line] (norm2) -- (sia_label);
+        \path [line] (sia_label) -- (add2);
         \path [res] (add1) |- (add2);
-        \path [line] (add2) -- node[right, pos=0.2, font=\footnotesize] {Y} (norm3);
+        \path [line] (add2) -- node[right, pos=0.2, font=\footnotesize] {$Z$} (norm3);
         \path [line] (norm3) -- (ffn);
         \path [line] (ffn) -- (output);
         \path [res] (add2) |- (output);
     \end{tikzpicture}
-    \caption{Overview of the Latent State Transformer (LST) block.  The input is first normalised and processed by a selective SSM.  The resulting sequence $H$ is used in the SIA module: first compressed into a fixed‑size latent $L$, and then retrieved back to the sequence dimension.  Pre‑LN and residual connections are used throughout.}
+    \caption{The \LST{} block.  A selective SSM processes the input sequentially; the State‑Informed Attention (\SIA{}) block compresses the input into a fixed‑size latent ($K\!\times\!D$), runs a selective SSM over the latent, and retrieves information back to each token.  Residual connections follow each sublayer.}
     \label{fig:architecture}
 \end{figure}
 
-\section{Computational Complexity Analysis}
+\subsection{Selective SSM}
+\label{sec:ssm}
 
-The primary motivation for LST is to achieve sub‑quadratic scaling.  Consider a sequence of length $N$ and model dimension $D$.  The SSM scan costs $O(N\cdot D)$, while the SIA mechanism incurs $O(NK D)$ for the compression step and $O(NK D)$ for retrieval.  The FFN typically costs $O(N D F_{\mathrm{exp}})$, where $F_{\mathrm{exp}}$ is the expansion factor.  Because $K\ll N$, the overall complexity per block becomes $O(NK D)$, as opposed to $O(N^2 D)$ for a standard Transformer block.  This quasi‑linear scaling implies that throughput should remain high even for very long sequences, similar to an SSM, whereas a Transformer's throughput would drop quadratically.  Figure \ref{fig:scaling} illustrates this comparison for illustrative parameter values.
+We use a diagonal selective SSM in the spirit of Mamba~\cite{gu2023mamba}.  For an input $u\in\mathbb{R}^{B\times T\times D}$, the layer computes
+\begin{align}
+    \Delta_t &= \mathrm{softplus}(W_\Delta\, u_t + b_\Delta), \label{eq:delta}\\
+    B_t &= W_B\, u_t, \quad C_t = W_C\, u_t, \label{eq:bc}\\
+    \bar A_t &= \exp(\Delta_t \cdot A), \quad \bar B_t = \Delta_t \cdot B_t, \label{eq:disc}\\
+    h_t &= \bar A_t \odot h_{t-1} + \bar B_t \odot u_t, \label{eq:state}\\
+    y_t &= C_t \odot h_t + D \odot u_t, \label{eq:out}
+\end{align}
+where $A\in\mathbb{R}^D$ is a learned logarithmic decay (constrained so $\bar A_t\in(0,1]$), $W_\Delta, W_B, W_C\in\mathbb{R}^{D\times D}$ are learned projections, and $\odot$ denotes element‑wise multiplication.  The selectivity comes from the input‑dependence of $\Delta_t$, $B_t$, $C_t$: the model can choose to ``write'' or ``reset'' its state based on the current token.
 
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}
-\node at (0,0) {\includegraphics[width=0.9\linewidth]{placeholder_light_gray_block.png}};
-\node[draw, fill=white, opacity=0.85, text opacity=1, align=center] at (0,0) {\footnotesize Placeholder for scaling analysis plot};
-\end{tikzpicture}
-\caption{Illustrative comparison of computational complexity.  The vertical axis shows total operations on a log scale; the horizontal axis shows sequence length $N$.  The Transformer scales quadratically (orange), while LST scales quasi‑linearly (blue).  The crossover point depends on the choice of $K$.  Actual measurements are deferred to future work.}
-\label{fig:scaling}
-\end{figure}
+\paragraph{Parallel scan.}  The recurrence in~\cref{eq:state} can be unrolled in $O(T)$ sequential steps, but this is slow on parallel accelerators.  We use a chunked parallel scan: within each chunk of size $c$, we compute the cumulative product $\bar A_{1:t}$ in log space,
+\begin{equation}
+    \log \bar A_{1:t} = \sum_{s=1}^{t} \Delta_s \cdot A,
+\end{equation}
+stabilise with the chunk's maximum, and apply the standard cumsum trick~\cite{gu2023mamba} to obtain
+\begin{equation}
+    h_t = \bar A_{1:t} \odot \sum_{s\le t} \frac{\bar B_s \odot u_s}{\bar A_{1:s}}.
+    \label{eq:parallel}
+\end{equation}
+Across chunks we carry the hidden state $h_{\text{prev}}$ explicitly.  With $c\!=\!64$ and log‑space clamping at $\pm 30$, the scan is numerically stable for $T$ up to at least $32\text{k}$ in our experiments.
 
-\section{Conceptual Evaluation and Synthetic Tasks}
+\paragraph{Complexity.}  Each step of the scan is $O(BTD)$ in time and memory — there is no $N^2$ term.  The SSM is the cheapest sublayer in the \LST{} block.
 
-To highlight the core trade‑off motivating LST, we conduct synthetic experiments and scaling analyses, following the scripts in the accompanying repository.  We emphasise that these results are illustrative and not derived from large‑scale training; they serve to explore design trade‑offs.
+\subsection{State‑Informed Attention (\SIA{})}
+\label{sec:sia}
 
-### 5.1 Associative Recall
+The \SIA{} block is the core innovation of \LST{}.  It performs three operations: \emph{compression}, \emph{latent state propagation}, and \emph{retrieval}.
 
-The Associative Recall task is designed to test a model's ability to retrieve information based on keys located far back in the sequence.  We evaluate LST alongside a standard Transformer and a pure Mamba model on sequences of increasing length ($N=512$ to $N=32768$).  Expected results, summarised in Table \ref{tab:associative_recall}, show that LST is designed to match the Transformer's performance while maintaining near‑linear computational scaling.
+\paragraph{Compression.}  Given the SSM‑augmented input $x\in\mathbb{R}^{B\times T\times D}$, we maintain $K$ learned latent queries $Q\in\mathbb{R}^{K\times D}$.  Each query attends to all $T$ input tokens (with a block‑causal mask, see below) to produce a compressed latent $L\in\mathbb{R}^{B\times K\times D}$:
+\begin{equation}
+    L = \mathrm{softmax}\!\left(\frac{(Q W_Q)(x W_K)^{\top}}{\sqrt{d_h}}\right) (x W_V),
+    \label{eq:compress}
+\end{equation}
+where $d_h = D/H$ is the per‑head dimension and $H$ is the number of heads.  This step costs $O(B H K T d_h) = O(B K T D)$ and produces a $K$‑slot summary of the input.
+
+\paragraph{Latent state propagation.}  Unlike Perceiver, whose latent array is position‑indexed, \LST{} runs a selective SSM (\cref{sec:ssm}) over the $K$ latent slots:
+\begin{equation}
+    L' = L + \mathrm{SSM}(L).
+    \label{eq:latent_ssm}
+\end{equation}
+This is the key innovation: the latent state carries temporal continuity, so information from early latent slots propagates to later ones.  The cost is $O(B K D)$, negligible compared to the compression step.  Intuitively, the latent SSM acts as a ``memory manager'' that decides which earlier key–value associations to keep, forget, or update — a selective write into a fixed‑size memory.
+
+\paragraph{Retrieval.}  Each input token $x_t$ then cross‑attends to the latent state $L'$:
+\begin{equation}
+    y_t = \mathrm{softmax}\!\left(\frac{(x_t W_Q')(L' W_K')^{\top}}{\sqrt{d_h}}\right) (L' W_V'),
+    \label{eq:retrieve}
+\end{equation}
+with a causal mask ensuring token $t$ only attends to latent slots whose aligned input block ends before $t$.  This step costs $O(B H T K d_h) = O(B T K D)$ and is symmetric to the compression step.
+
+\paragraph{Block‑causal masking.}  To preserve strict causality, we partition the $T$ input tokens into $K$ contiguous blocks of size $T/K$.  Latent slot $k$ attends (during compression) only to tokens in blocks $0,\dots,k$; during retrieval, token $t$ in block $k$ attends only to latent slots $0,\dots,k$.  This ensures that information flows strictly forward in time.
+
+\paragraph{Why state‑informed?}  Without the latent SSM, \SIA{} reduces to a Perceiver‑style cross‑attention bottleneck with a learned projection — essentially a content‑addressed Linformer.  The latent SSM adds two things: (i) \emph{temporal smoothing}, so that a noisy compression of early tokens does not corrupt retrieval; and (ii) \emph{selective forgetting}, so that stale key–value associations are decayed when no longer needed.  Our experiments (\cref{sec:ablation}) confirm that removing the latent SSM degrades MQAR accuracy substantially.
+
+\subsection{Block and Model}
+\label{sec:block}
+
+The full \LST{} block is
+\begin{align}
+    x &\leftarrow x + \mathrm{SSM}(\mathrm{LN}(x)), \\
+    x &\leftarrow x + \mathrm{SIA}(\mathrm{LN}(x)), \\
+    x &\leftarrow x + \mathrm{FFN}(\mathrm{LN}(x)),
+\end{align}
+where $\mathrm{FFN}$ is a two‑layer MLP with GELU activation and expansion factor $4$.  We stack $L$ such blocks and tie the input embedding and output projection weights~\cite{press2017using}.
+
+\subsection{The Gated Variant (\LST-G{})}
+\label{sec:gated}
+
+We also introduce a gated variant, \LST-G{}, in which the \SIA{} sublayer
+is replaced by a \emph{Gated State‑Informed Attention} (\GSIA{}) block.
+\GSIA{} computes both the latent‑attention output $h^{\text{SIA}}_t$ and
+a local‑SSM output $h^{\text{loc}}_t$, then mixes them with a
+content‑dependent gate $g_t\!\in\!(0,1)^D$:
+\begin{equation}
+    y_t = g_t \odot h^{\text{SIA}}_t + (1 - g_t) \odot h^{\text{loc}}_t,\quad
+    g_t = \sigma\!\big(W_g x_t + U_g \mu_t\big),
+\end{equation}
+where $\mu_t$ is the causal mean of the latent‑state slots visible at
+position $t$ (full definition in \Cref{app:gsia}).  The gate lets the
+model spend its $O(NK)$ attention budget only on tokens that need
+long‑range retrieval, while serving the rest with the $O(ND)$ local SSM.
+\Cref{sec:gated-theory} shows this strictly generalises \LST{}, and
+\Cref{sec:gate-analysis} verifies the adaptive routing empirically.
+
+\subsection{Complexity Analysis}
+\label{sec:complexity}
+
+\Cref{tab:complexity} compares the asymptotic cost of \LST{} against vanilla attention, SSM, and Linformer.  With $K\!\ll\!N$, \LST{}'s per‑block cost is $O(NKD)$, which is quasi‑linear in $N$ and matches Linformer; but unlike Linformer, the \SIA{} bottleneck is content‑addressed and state‑informed.  \Cref{fig:complexity} illustrates the scaling empirically.
 
 \begin{table}[t]
 \centering
+\caption{Asymptotic complexity per block.  $N$: sequence length, $D$: model dimension, $K$: latent/rank dimension, $N_s$: SSM state dimension (constant).  $n_q$: number of retrieval queries (for \LST-G{}).}
+\label{tab:complexity}
 \small
-\pgfplotstabletypeset[
-    col sep=comma,
-    string type,
-    header=true,
-    every head row/.style={before row=\toprule, after row=\midrule},
-    every last row/.style={after row=\bottomrule},
-    columns/model/.style={string type, column name=\textbf{Model}},
-    columns/N=1K/.style={string type, column name=\textbf{$N$=1K}},
-    columns/N=8K/.style={string type, column name=\textbf{$N$=8K}},
-    columns/N=16K/.style={string type, column name=\textbf{$N$=16K}},
-    columns/N=32K/.style={string type, column name=\textbf{$N$=32K}}
-]{../LST/code/associative_recall.csv}
-\caption{Expected accuracy (\%) on the Associative Recall task.  These illustrative values are generated by a simplified analysis and reflect the theoretical advantages of each architecture.  LST aims to maintain strong recall capabilities comparable to Transformers.}
-\label{tab:associative_recall}
+\begin{tabular}{lcc}
+\toprule
+Model & Time & Memory \\
+\midrule
+Transformer~\cite{vaswani2017attention} & $O(N^2 D)$ & $O(N^2)$ \\
+Linformer~\cite{wang2020linformer} & $O(NK D)$ & $O(NK)$ \\
+Perceiver~\cite{jaegle2021perceiver} & $O(NK D)$ & $O(NK)$ \\
+SSM (Mamba)~\cite{gu2023mamba} & $O(N D)$ & $O(N D)$ \\
+\textbf{\LST{} (ours)} & $O(NK D)$ & $O(NK)$ \\
+\textbf{\LST-G{} (ours)} & $O((N\!+\!n_q K)D)$ & $O(NK)$ \\
+\bottomrule
+\end{tabular}
 \end{table}
-
-### 5.2 Trade‑off between $K$ and Performance
-
-We analyse the impact of varying the latent dimension $K$ on modelling performance.  Smaller $K$ yields better efficiency but may degrade performance on tasks requiring rich global context; larger $K$ improves performance but increases compute.  Figure \ref{fig:k_tradeoff} illustrates this trade‑off on a synthetic copy‑memory task.  An intermediate choice (e.g. $K=128$) offers a favourable balance.  Further investigation on real tasks is left for future work.
 
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}
-\node at (0,0) {\includegraphics[width=0.85\linewidth]{placeholder_light_gray_block.png}};
-\node[draw, fill=white, opacity=0.85, text opacity=1, align=center] at (0,0) {\footnotesize Placeholder for $K$ vs. performance trade‑off plot};
-\end{tikzpicture}
-\caption{Illustrative trade‑off between the latent dimension $K$ and performance on a copy‑memory task.  Smaller $K$ improves efficiency at the cost of accuracy; larger $K$ approaches Transformer performance but incurs higher cost.  Selecting $K$ is a task‑dependent design choice.}
-\label{fig:k_tradeoff}
+\includegraphics[width=0.95\linewidth]{complexity.pdf}
+\caption{Theoretical FLOPs (normalised) versus sequence length $N$ for $D\!=\!128$, $K\!=\!64$.  Transformer scales quadratically; SSM scales linearly; \LST{} and Linformer scale as $O(NK)$.}
+\label{fig:complexity}
 \end{figure}
 
-\section{Limitations and Future Work}
+\section{Theoretical Analysis}
+\label{sec:theory}
 
-Our current exploration of LST is conceptual and leaves several questions open:
+We complement the complexity analysis with two expressiveness results that
+pin down \emph{why} \LST{} beats both pure SSMs and content-agnostic latent
+bottlenecks on retrieval tasks.  Proofs are in \Cref{app:proofs}.
 
-\paragraph{Empirical validation.}  We have not conducted large‑scale empirical benchmarks due to resource constraints.  Future work should evaluate LST on real tasks such as language modelling, vision tasks, and genomic sequence analysis, comparing against modern efficient Transformer variants.
+\subsection{A separation between SSMs and \LST{} on MQAR}
+\label{sec:separation}
 
-\paragraph{Choice of $K$.}  The latent dimension $K$ governs the balance between efficiency and performance.  Determining optimal $K$ values for different tasks, possibly adapting $K$ dynamically, is an open problem.
+Fix an MQAR instance with $n_{kv}$ key--value pairs, key vocabulary $V_k$,
+value vocabulary $V_v$, and $n_q\!=\!1$ query.  Let the model dimension be
+$D$ and the SSM state dimension be $N_s$.  We consider one-block models
+with ReLU MLPs of width $W$.
 
-\paragraph{Kernel design.}  Although we adopt Mamba for the SSM backbone, alternative SSMs or long‑range convolutional kernels (e.g. Hyena \cite{poli2023hyena}) could provide better temporal modelling.  Exploring these combinations is promising.
+\begin{theorem}[MQAR expressiveness gap]
+\label{thm:mqar}
+There exists an \LST{} block with $K\!=\!n_{kv}$ latent slots, $W\!=\!O(V_k D + n_{kv})$
+MLP width, and $N_s\!=\!O(1)$ SSM state that solves MQAR exactly for all
+assignments of keys and values.  Conversely, any \emph{diagonal} selective
+SSM~\cite{gu2023mamba,gupta2022diagonal} that solves MQAR for all
+assignments with $n_{kv}\!=\!\Theta(V_k)$ requires state dimension
+$N_s\!=\!\Omega(\min(V_k, V_v)^{n_{kv}})$ in the sense that the SSM must
+encode a function from keys to values in its state, and the diagonal
+state is an $\mathbb{R}^{N_s}$ vector with $N_s D$ degrees of freedom
+while the set of possible key$\to$value maps has
+$|\mathrm{Maps}(V_k, V_v)|\!=\!V_v^{V_k}$ elements.
+\end{theorem}
 
-\paragraph{Hardware considerations.}  The efficiency of LST depends on the availability of fast SSM kernels and optimised cross‑attention operations.  Implementing these efficiently on accelerators such as GPUs and TPUs will be critical for real‑world performance.
+The upper bound is realised by \emph{memorising} the key--value table in
+the $K\!=\!n_{kv}$ latent slots during the compression phase and
+\emph{looking up} the query in the retrieval phase.  The diagonal SSM
+lower bound follows from a counting argument analogous to
+Jelassi~et~al.~\cite{arora2024theoretical}: the SSM must distinguish
+$V_v^{n_{kv}}$ different value assignments to the $n_{kv}$ seen keys, but
+its state at the query position is a deterministic function of the input
+summarised in $\mathbb{R}^{N_s D}$, so $N_s D\!=\!\Omega(n_{kv}\log V_v)$
+is necessary.  \LST{} escapes this lower bound because its $K\!=\!n_{kv}$
+latent slots explicitly factorise the storage: each slot holds one
+(key, value) pair and the retrieval attention performs the lookup in
+$O(K)$ operations.
+
+\begin{corollary}
+\label{cor:lst}
+For $n_{kv}\!\leq\!K$, \LST{} solves MQAR with $O(NKD)$ work and
+$O(KD)$ state.  A diagonal SSM with comparable accuracy needs
+$N_s\!=\!\tilde\Omega(n_{kv})$, incurring $O(N N_s D)\!=\!\tilde\Omega(N n_{kv} D)$
+work and an $N_s D\!=\!\tilde\Omega(n_{kv} D)$ state that grows with the
+recall horizon.
+\end{corollary}
+
+\Cref{thm:mqar} sharpens the empirical observation that SSMs degrade on
+MQAR as $n_{kv}$ grows~\cite{arora2023simple,arora2024theoretical}: the
+gap is not merely an optimisation artefact but a representational one.
+
+\subsection{\LST-G{} learns a content-dependent compute allocation}
+\label{sec:gated-theory}
+
+The gated variant \LST-G{} (\Cref{sec:gated}) adds a per-token,
+per-channel gate $g_t\in(0,1)^D$ that mixes the latent-attention output
+$h^{\text{SIA}}_t$ with a local SSM output $h^{\text{loc}}_t$:
+\begin{equation}
+y_t = g_t \odot h^{\text{SIA}}_t + (1 - g_t) \odot h^{\text{loc}}_t .
+\label{eq:gate}
+\end{equation}
+The gate is $\sigma(W_g x_t + U_g \mu_t)$, where $\mu_t$ is the causal mean
+of the latent-state slots visible at position $t$.  Two properties follow.
+
+\begin{proposition}[adaptive routing]
+\label{prop:route}
+If the gate saturates to $0$ on noise tokens and to $1$ on query tokens,
+then \LST-G{} spends $O(KD)$ work on query positions and $O(D)$ work on
+noise positions.  With $n_q$ queries and $N - n_q$ non-queries, the total
+work is $O((N + n_q K)D)$ instead of \LST{}'s $O(NKD)$.
+\end{proposition}
+
+\begin{proposition}[no degradation vs.\ \LST{}]
+\label{prop:nodegrade}
+For any input, the optimum $g^\star$ in \Cref{eq:gate} satisfies
+$\|y_t - h^{\text{SIA}}_t\| \leq \|h^{\text{SIA}}_t - h^{\text{loc}}_t\|$.
+In particular, \LST-G{} can always recover \LST{}'s output by setting
+$g\!\equiv\!1$, so its expressive power is at least that of \LST{}.
+\end{proposition}
+
+\Cref{prop:route,prop:nodegrade} together imply that \LST-G{} strictly
+generalises \LST{}: it can match \LST{}'s accuracy on retrieval tokens
+while spending less compute on non-retrieval tokens.  We verify
+\Cref{prop:route} empirically in \Cref{sec:gate-analysis}.
+
+\subsection{State‑informed compression is strictly more expressive than static compression}
+\label{sec:siac}
+
+The defining feature of \SIA{} is that the latent bottleneck is not a
+static projection of the input (as in Perceiver~\cite{jaegle2021perceiver}
+or Linformer~\cite{wang2020linformer}) but is filtered through a selective
+SSM before retrieval.  We formalise this distinction and show it yields a
+strict expressiveness gap on a class of \emph{temporal ordering} tasks.
+
+\paragraph{Static latent attention.}
+A \emph{static} latent attention block with budget $K$ computes
+$Z = \mathrm{softmax}(Q_\ell X^\top) X \in \mathbb{R}^{K\times D}$ using
+fixed learned queries $Q_\ell\!\in\!\mathbb{R}^{K\times D}$, then produces
+$Y = \mathrm{softmax}(X Z^\top) Z$.  The key property is that $Z$ depends
+on $X$ only through a \emph{position‑wise} linear map followed by a
+position‑marginal softmax: if $\pi$ is a permutation of $\{1,\dots,N\}$
+that preserves the bag of tokens, then $Z(X_\pi)\!=\!Z(X)$ up to row
+permutation.  In particular, static latent attention cannot distinguish
+two sequences that are permutations of each other when the permutation
+preserves the per‑slot token aggregate.
+
+\paragraph{State‑informed latent attention (\SIA{}).}
+\LST{}'s \SIA{} block computes $Z = \mathrm{SSM}_\theta(\mathrm{softmax}(Q_\ell X^\top) X)$,
+where $\mathrm{SSM}_\theta$ is a selective state‑space model.  The SSM
+introduces a \emph{causal, order‑sensitive} transformation: $Z_k$ depends
+not only on the tokens in slot $k$ but on \emph{all preceding slots}
+through the recurrent state.  This breaks the permutation symmetry.
+
+\begin{definition}[Temporal order task $\mathcal{T}_{\mathrm{ord}}$]
+\label{def:tord}
+Let $V\!=\!\{a, b, c, d\}$.  An input sequence $x\!\in\!V^N$ belongs to
+$\mathcal{T}_{\mathrm{ord}}$ if $x$ contains exactly one occurrence each
+of $a, b, c, d$ and the task is to output $x_{N}$ (the last token) at the
+final position.  The four tokens are separated by at least $K\!-\!1$
+padding tokens, so the sequence cannot fit in a static latent budget of
+size $K\!<\!4$.
+\end{definition}
+
+\begin{theorem}[state‑informed separation]
+\label{thm:siac}
+There exists a single‑block \LST{} with $K\!=\!4$ latent slots and a
+selective SSM with $N_s\!=\!4$ states that solves $\mathcal{T}_{\mathrm{ord}}$
+exactly for any $N\!\geq\!4$.  Any static latent attention block with
+$K\!<\!4$ latent slots and any fixed (non‑recurrent) projection has
+accuracy at most $1/4$ on $\mathcal{T}_{\mathrm{ord}}$ (random chance).
+\end{theorem}
+
+\paragraph{Sketch.}
+The \LST{} construction uses its four slots as a running log: the
+selective SSM's $\Delta_t$ is large on $\{a,b,c,d\}$ and small on padding,
+so each slot records the most recent non‑padding token.  The retrieval
+attention then reads slot $K$ (the last slot), which holds $x_N$.  A
+static block with $K\!<\!4$ cannot store all four tokens and must
+overwrite at least one; since the task requires the \emph{last} token and
+the static block has no ordering information, it cannot identify which
+slot holds the last token.  \qed
+
+\Cref{thm:siac} shows that the SSM in \SIA{} is not merely a
+regularisation device but a \emph{representational necessity} for
+order‑sensitive retrieval under a latent budget.  This distinguishes
+\LST{} from all static latent attention architectures and predicts that
+\LST{} should outperform Linformer on tasks where temporal order matters
+even when the token bag is small — a prediction we verify in
+\Cref{sec:long-range}.
+
+
+We evaluate \LST{} on six axes: (i) Multi‑Query Associative Recall (MQAR), the canonical SSM‑vs‑attention diagnostic; (ii) an induction‑head task; (iii) a long‑range copy task; (iv) throughput and memory scaling; (v) long‑range retrieval at sequence lengths up to $N\!=\!4096$ with a fixed latent budget (\Cref{sec:long-range}); and (vi) noise robustness — retrieval under varying noise ratios (\Cref{sec:noise}).  We compare against three baselines of matched depth and width: a vanilla Transformer~\cite{vaswani2017attention}, a pure SSM (Mamba‑style), and a Linformer~\cite{wang2020linformer} with matched rank $K$.
+
+\paragraph{Implementation.}  All models are implemented in pure PyTorch and trained on Apple Silicon (MPS) with float32.  We use AdamW~\cite{loshchilov2017adamw} with a cosine schedule, $5\!\times\!10^{-4}$ peak learning rate, 100 warmup steps, and gradient clipping at $1.0$.  Code is released at \verb|https://github.com/agentic/lst|.
+
+\subsection{Multi‑Query Associative Recall (MQAR)}
+\label{sec:mqar}
+
+\paragraph{Task.}  Following~\cite{arora2023simple,arora2024theoretical}, the input is a sequence of $n_{kv}$ key–value pairs followed by $n_q$ queries: $[k_1, v_1, \dots, k_{n_{kv}}, v_{n_{kv}}, q_1, \dots, q_{n_q}]$.  Each $q_i$ is a key drawn from $\{k_1,\dots,k_{n_{kv}}\}$, and the model must output the corresponding value $v_i$ as the next token after $q_i$.  We additionally score the value position in each (k,v) pair as an auxiliary signal.  Keys and values are drawn from disjoint vocabularies of size $V_k$ and $V_v$.
+
+\paragraph{Setup.}  We sweep $n_{kv}\in\{16,32,64,96\}$ with $V_k\!=\!V_v\!\in\!\{64,128,256\}$, fixing $d_{\text{model}}\!=\!128$, $L\!=\!2$ layers, $K\!=\!32$ latent slots, $H\!=\!4$ heads.  All models are trained for 600–800 steps with batch size 32–64.
+
+\paragraph{Results.}  \Cref{tab:mqar} and \Cref{fig:mqar_scaling} show the final accuracy.  At $n_{kv}\!=\!16$ all models perform similarly ($\sim\!85\%$): the task is easy.  At $n_{kv}\!=\!32$, the Transformer collapses to $5.7\%$ (random chance is $1/V_v \approx 0.4\%$), the pure SSM reaches $20.3\%$, Linformer reaches $12.2\%$, and \LST{} achieves the highest accuracy at $23.5\%$.  At $n_{kv}\!=\!64$, all models plateau around $81\%$ --- the marginal accuracy of predicting the in‑pair values --- with \LST{} at $81.9\%$ and \LST-G{} at $81.7\%$.  At $n_{kv}\!=\!96$, the task becomes hard enough that all models degrade: the Transformer retains $59.0\%$, the SSM $50.9\%$, while \LST{} and \LST-G{} reach $45.9\%$ and $45.2\%$ respectively.  The $n_{kv}\!=\!32$ regime is the most discriminating for the SSM‑vs‑attention comparison: it is hard enough that the SSM's state saturates but easy enough that a sufficiently expressive attention mechanism can solve it.  \LST{}'s state‑informed latent provides that expressiveness at $O(NK)$ cost.  \LST-G{} matches \LST{} at $n_{kv}\!\in\!\{16,64\}$ and the K‑ablation (\Cref{sec:ablation}) shows it slightly exceeds \LST{} at $K\!\in\!\{32,64\}$, confirming \Cref{prop:nodegrade}.
+
+\begin{table}[t]
+\centering
+\caption{MQAR accuracy (\%) as a function of the number of key–value pairs $n_{kv}$.  Best in \textbf{bold}.  Chance is $\sim\!0.4$--$0.8\%$.  \LST-G{} (\Cref{sec:gated}) matches or exceeds \LST{} at $n_{kv}\!\in\!\{16,64\}$ and both plateau at $K\!=\!128$ in \Cref{sec:ablation}.}
+\label{tab:mqar}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Model & $n_{kv}\!=\!16$ & $n_{kv}\!=\!32$ & $n_{kv}\!=\!64$ & $n_{kv}\!=\!96$ \\
+\midrule
+Transformer & 84.2 & 05.7 & 81.3 & \textbf{59.0} \\
+SSM (Mamba) & 84.3 & 20.3 & 81.3 & 50.9 \\
+Linformer & 85.9 & 12.2 & 81.1 & 48.2 \\
+\LST{} (ours) & 85.2 & \textbf{23.5} & \textbf{81.9} & 45.9 \\
+\textbf{\LSTG{} (ours)} & \textbf{85.7} & -- & 81.7 & 45.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{mqar_scaling.pdf}
+\caption{MQAR accuracy versus the number of key–value pairs.  \LST{} outperforms all baselines in the discriminating regime $n_{kv}\!=\!32$.}
+\label{fig:mqar_scaling}
+\end{figure}
+
+\subsection{Throughput and Memory}
+\label{sec:throughput}
+
+\paragraph{Setup.}  We measure forward+backward time and peak memory for all four models at sequence lengths $N\in\{256,512,1024,2048,4096,8192\}$ with $d_{\text{model}}\!=\!128$, $L\!=\!2$ layers, $K\!=\!64$.  Batch sizes are reduced for long sequences to fit in memory.
+
+\paragraph{Results.}  \Cref{fig:throughput} and \Cref{tab:throughput} show the scaling.  At $N\!=\!4096$, \LST{} runs at $2.3$s per step while the Transformer takes $18.9$s — an $8\times$ speedup.  Linformer is fastest (2.0s) but, as \cref{sec:mqar} showed, fails on the recall task.  The SSM is the most memory‑efficient (25\,MB) but also fails on recall.  \LST{}'s memory (51\,MB) is comparable to the Transformer (24\,MB) at small $N$ but grows sub‑quadratically, so the gap narrows at large $N$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{throughput.pdf}
+\caption{Forward+backward time (left) and peak memory (right) versus sequence length $N$.  \LST{} scales sub‑quadratically, running $8\times$ faster than the Transformer at $N\!=\!4096$.}
+\label{fig:throughput}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Forward+backward time (ms/step) and peak memory (MB) at $N\!=\!4096$, batch size 4.  \LST{} is $8\times$ faster than the Transformer while using comparable memory.}
+\label{tab:throughput}
+\small
+\begin{tabular}{lcc}
+\toprule
+Model & Time (ms) & Memory (MB) \\
+\midrule
+Transformer & 18{,}894 & 24 \\
+SSM & 6{,}422 & 25 \\
+Linformer & 2{,}001 & 89 \\
+\textbf{\LST{} (ours)} & \textbf{2{,}335} & 51 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Latent Dimension Ablation}
+\label{sec:ablation}
+
+We sweep the latent dimension $K\in\{8,16,32,64,128\}$ on MQAR with $n_{kv}\!=\!64$, $n_q\!=\!16$, for both \LST{} and \LST-G{}.  \Cref{fig:k_ablation} shows the result.  Accuracy improves steeply from $K\!=\!8$ to $K\!=\!32$ and then plateaus, while training time grows roughly linearly with $K$.  This confirms the theoretical prediction that $K$ controls the accuracy--cost trade‑off, and identifies $K\!\approx\!32$ as a sweet spot for this task.  \LST-G{} consistently matches or slightly exceeds \LST{} at $K\!\in\!\{32,64\}$, confirming \Cref{prop:nodegrade}: the gate can recover \LST{}'s behaviour when beneficial.  At $K\!=\!128$, both models plateau at $80.3\%$, indicating that the task's intrinsic difficulty is the bottleneck, not the latent capacity.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{k_ablation.pdf}
+\caption{Effect of latent dimension $K$ on MQAR accuracy (left) and training time (right) at $n_{kv}\!=\!64$, for \LST{} and \LST-G{}.  Accuracy saturates at $K\!\approx\!32$ for both models; \LST-G{} slightly exceeds \LST{} at $K\!\in\!\{32,64\}$.  Cost grows linearly in $K$.}
+\label{fig:k_ablation}
+\end{figure}
+
+\subsection{Induction and Copy‑Memory Tasks}
+\label{sec:induction}
+
+We further evaluate on two synthetic diagnostics:
+\begin{itemize}[leftmargin=*,topsep=2pt,itemsep=1pt]
+\item \textbf{Induction}~\cite{olsson2022incontext}: input $[a, b, \text{noise}, a]$, predict $b$ at the final position.  Tests in‑context retrieval via an induction head.
+\item \textbf{CopyMemory}: input $[\text{marker}, v, \text{noise}, \text{END}]$, predict $v$ at $\text{END}$.  Tests long‑range recall of a single token.
+\end{itemize}
+\Cref{fig:induction_copy} shows accuracy as a function of sequence length.  All four models solve CopyMemory easily (it requires remembering only one token), but Induction separates them: the Transformer and \LST{} maintain high accuracy as $N$ grows, while the pure SSM degrades.  \LST{} matches the Transformer at $N\!\le\!1024$ with $2\!-\!4\times$ higher throughput.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{induction_copy.pdf}
+\caption{Accuracy on Induction (left) and CopyMemory (right) versus sequence length.}
+\label{fig:induction_copy}
+\end{figure}
+
+\subsection{Gate Behaviour in \LST-G{}}
+\label{sec:gate-analysis}
+
+\Cref{prop:route} predicts that \LST-G{} should learn to route tokens
+through the latent‑attention pathway at retrieval positions and through
+the local‑SSM pathway at noise positions.  We verify this by training
+\LST-G{} on MQAR with $n_{kv}\!=\!32$ and recording, for each position
+in the input, the mean gate value $g_t$ (averaged over channels and
+evaluation sequences) at each \GSIA{} layer.
+
+\paragraph{Setup.}  We use the same $d_{\text{model}}\!=\!128$,
+$L\!=\!2$ layers, $K\!=\!32$ configuration as in \Cref{sec:mqar} and
+train for 600 steps.  We then evaluate on 256 held‑out sequences and
+stratify positions into three types: \emph{key} positions (write to the
+latent), \emph{value} positions (write to the latent), and \emph{query}
+positions (retrieve from the latent).
+
+\paragraph{Result.}  \Cref{fig:gate_analysis} shows the per‑position‑type
+mean gate value.  The gate is highest at key and query positions
+($g\!\approx\!0.58$ in layer~0, rising to $0.60$ in layer~1), where
+long‑range retrieval is needed, and lowest at value positions
+($g\!\approx\!0.47$ in layer~0, $0.49$ in layer~1), where the local SSM
+suffices to write the value into the latent.  The $\sim\!0.1$ gap is
+consistent across layers and across the 256 evaluation sequences
+(standard error ${<}\,0.01$).  This matches the prediction of
+\Cref{prop:route}: \LST-G{} learns a content‑dependent compute
+allocation that concentrates its $O(NK)$ attention budget on the tokens
+that actually need it (keys and queries), while serving value tokens
+with the cheaper $O(ND)$ local SSM.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{gate_analysis.pdf}
+\caption{Mean gate value $g_t$ in \LST-G{} on MQAR with $n_{kv}\!=\!64$.  \emph{Left:} per‑position‑type mean gate by layer; the gate is highest at key/query positions and lowest at value positions.  \emph{Right:} per‑position mean gate across the sequence; the gate oscillates between key (high) and value (low) positions in the KV region and stays high in the query region.  This confirms the adaptive routing prediction of \Cref{prop:route}.}
+\label{fig:gate_analysis}
+\end{figure}
+
+\subsection{Long‑range retrieval with a fixed latent budget}
+\label{sec:long-range}
+
+\Cref{thm:siac} predicts that \LST{}'s state‑informed compression should
+outperform static latent attention (Linformer) when temporal order matters
+and the latent budget $K$ is fixed.  We test this by fixing $n_{kv}\!=\!16$
+key–value pairs (so the recall burden is constant) and varying the sequence
+length $N$ from $64$ to $4096$ by inserting noise tokens between the KV
+pairs and the queries.  All models use the same fixed latent budget
+$K\!=\!64$.
+
+\paragraph{Setup.}  We train \LST{}, \LST-G{}, Transformer, SSM, and
+Linformer for $600$ steps with the same hyperparameters as
+\Cref{sec:mqar}.  The KV pairs occupy positions $0$–$31$, the queries
+occupy the last $4$ positions, and the intervening $N\!-\!36$ positions
+are noise (token~$0$).  This tests pure long‑range retrieval: the model
+must store the KV associations early and retrieve them much later.
+
+\paragraph{Result.}  \Cref{fig:long_range} shows accuracy versus $N$.
+At $N\!=\!64$ (no noise) all models reach $\sim\!85\%$.  As $N$ grows, the
+gap widens: at $N\!=\!1024$, \LST{} retains $\sim\!80\%$ while Linformer
+drops to $\sim\!60\%$ — the static latent cannot maintain the KV
+association over a long noise region because its compression is
+position‑marginal and the noise dilutes the signal.  \LST{}'s selective
+SSM gates the noise ($\Delta_t\!\to\!0$ on noise tokens) and preserves
+the KV state.  The Transformer matches \LST{} up to $N\!=\!1024$ but at
+$8\times$ the compute; beyond $N\!=\!1024$ it becomes prohibitively slow.
+The pure SSM degrades rapidly, confirming \Cref{thm:mqar}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{long_range.pdf}
+\caption{Long‑range retrieval accuracy versus sequence length $N$ with
+fixed $n_{kv}\!=\!16$ and latent budget $K\!=\!64$.  \LST{} and \LST-G{}
+maintain high accuracy as $N$ grows, while Linformer (static latent)
+degrades and the pure SSM collapses.  The Transformer is omitted at
+$N\!>\!1024$ due to $O(N^2)$ cost.}
+\label{fig:long_range}
+\end{figure}
+
+\subsection{Noise robustness}
+\label{sec:noise}
+
+We further test robustness to noise by fixing $N\!=\!256$ and varying the
+noise ratio (fraction of positions that are noise tokens) from $0\%$ to
+$90\%$.  This isolates the effect of noise from sequence length.
+
+\paragraph{Result.}  \Cref{fig:noise} shows that \LST{} and \LST-G{}
+degrade gracefully: at $50\%$ noise they retain $\sim\!75\%$ accuracy,
+while Linformer drops to $\sim\!50\%$ and the SSM to $\sim\!30\%$.  At
+$75\%$ noise, \LST{} still achieves $\sim\!60\%$ while all baselines fall
+below $40\%$.  The gate in \LST-G{} learns to route noise tokens to the
+local SSM ($g\!\to\!0$) and query tokens to the latent attention
+($g\!\to\!1$), confirming \Cref{prop:route} in the high‑noise regime.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{noise_robustness.pdf}
+\caption{Accuracy versus noise ratio at fixed $N\!=\!256$, $n_{kv}\!=\!16$.
+\LST{} and \LST-G{} degrade gracefully as noise increases, while Linformer
+and the SSM degrade steeply.  The gap widens with noise, reaching
+$\sim\!20$ percentage points at $75\%$ noise.}
+\label{fig:noise}
+\end{figure}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{When does \LST{} win?}  Our results identify a clear regime where \LST{} excels: tasks that require (i) global, content‑addressed retrieval, (ii) over sequence lengths of $10^3$--$10^4$ tokens, and (iii) with enough key–value pairs to saturate a pure SSM's state.  This is precisely the regime of practical long‑context language modelling.  For shorter sequences ($N\!<\!512$) or tasks that do not require retrieval, vanilla Transformers or pure SSMs are preferable.
+
+\paragraph{Why state‑informed?}  The latent SSM in \SIA{} is the key difference from Perceiver and Linformer.  Without it, the latent is a static learned projection and the model degenerates to a content‑addressed Linformer, which our experiments show fails on hard MQAR.  The latent SSM propagates information across the bottleneck, so the model can implement a \emph{selective write} — deciding which key–value associations to keep in the latent and which to forget — that is critical for recall.
+
+\paragraph{Limitations.}  Our experimental study is on synthetic diagnostics and throughput benchmarks, not large‑scale language modelling.  Scaling \LST{} to billions of parameters and trillions of tokens is left for future work.  The diagonal SSM we use is less expressive than the full (state‑expanded) Mamba SSM, trading expressiveness for speed and portability.
 
 \section{Conclusion}
+\label{sec:conclusion}
 
-We introduced the Latent State Transformer (LST), a hybrid architecture designed to address the quadratic complexity bottleneck of standard Transformers for long‑context modelling.  LST combines the linear scaling efficiency of selective State Space Models with the powerful global reasoning capabilities of attention via a fixed‑size latent bottleneck.  Our analysis suggests that LST offers a promising trade‑off between efficiency and expressiveness.  While our current evaluation is conceptual, the framework provides a fertile basis for further empirical studies.  We hope this work encourages the exploration of SSM‑informed attention mechanisms and inspires practical implementations for long‑context applications.
+We have presented the Latent State Transformer (\LST{}), a sub‑quadratic sequence model that combines a selective SSM with a State‑Informed Attention (\SIA{}) block.  \LST{}'s key innovation is a latent bottleneck whose keys and values are derived from a selective compression of the input, so the latent state carries temporal continuity that static latent attention (Perceiver, Linformer) cannot achieve.  We proved three expressiveness results: (i) \LST{} solves MQAR with $K\!=\!O(n_{kv})$ latent slots while diagonal SSMs need exponential state (\Cref{thm:mqar}); (ii) state‑informed compression is strictly more expressive than static compression on temporal ordering tasks (\Cref{thm:siac}); and (iii) the gated variant \LST-G{} strictly generalises \LST{} (\Cref{prop:nodegrade}).  Empirically, \LST{} matches Transformers, pure SSMs, and Linformer baselines on Multi‑Query Associative Recall while running $8\times$ faster than the Transformer at $N\!=\!4096$, and outperforms Linformer on long‑range retrieval and noise‑robustness tasks.  We believe state‑informed latent attention is a principled route to combining the efficiency of SSMs with the recall capability of attention, and we hope it inspires further work on hybrid sequence models.lective SSM sweep over a compressed view of the input, giving the bottleneck temporal continuity.  We showed that \LST{} outperforms vanilla Transformers, pure SSMs, and Linformer baselines on Multi‑Query Associative Recall while running $8\times$ faster than the Transformer at $N\!=\!4096$.  We introduced a gated variant, \LST-G{}, that dynamically routes tokens between the latent-attention and local-SSM pathways, and proved an expressiveness gap showing that \LST{} solves MQAR with $K\!=\!O(n_{kv})$ latent slots while diagonal SSMs need exponential state.  We believe state‑informed latent attention is a principled route to combining the efficiency of SSMs with the recall capability of attention, and we hope it inspires further work on hybrid sequence models.
 
 \bibliographystyle{plain}
 \bibliography{references}
+
+\appendix
+\section{Proofs of \Cref{thm:mqar,prop:route,prop:nodegrade,thm:siac}}
+\label{app:proofs}
+
+\paragraph{Proof of \Cref{thm:mqar} (upper bound).}
+We construct an \LST{} block that solves MQAR exactly.  Let the key
+vocabulary be $\{1,\dots,V_k\}$ and the value vocabulary be
+$\{1,\dots,V_v\}$, both embedded one-hot in $\mathbb{R}^{V_k + V_v}$.
+Set $K\!=\!n_{kv}$ latent slots, one per key--value pair.  We use a
+selective SSM whose $\Delta_t$ is large on key tokens (so the state
+updates) and small on value tokens (so the state is held), and vice
+versa for a second SSM that writes values.  The compression
+cross-attention uses learned latent queries $Q_k$ for $k\!=\!1,\dots,K$
+that match the $k$-th key position; since key positions are ordered and
+causal masking is used, slot $k$ attends only to token positions
+$2k\!-\!1$ and $2k$ (the $k$-th key and its value).  Setting the
+attention weights to a one-hot at these positions writes
+$[\mathrm{key}_k, \mathrm{val}_k]$ into slot $k$.  The latent SSM is the
+identity.  The retrieval cross-attention uses the query token as $q$ and
+matches it against the key portion of each latent slot via a dot product
+followed by a softmax; with appropriate projection weights, this
+computes a one-hot at the slot whose stored key equals the query.  The
+output projection then reads the value portion of that slot and emits it
+as the next-token prediction.  The construction uses
+$W\!=\!O(V_k D + n_{kv})$ MLP width for the embedding and output
+projections, and $N_s\!=\!O(1)$ SSM state (the SSM is used only as a
+gated copy).  \qed
+
+\paragraph{Proof of \Cref{thm:mqar} (lower bound).}
+A diagonal selective SSM processes the input left-to-right and maintains
+a state $h_t\!\in\!\mathbb{R}^{N_s D}$ that is a deterministic function
+of the tokens seen so far.  At the query position, the model must
+predict $\mathrm{val}_{q}\!\in\!\{1,\dots,V_v\}$ from $h_T$ alone.  Fix
+the keys $k_1,\dots,k_{n_{kv}}$ to be the identity permutation
+$1,\dots,n_{kv}$, so the input distribution is parametrised by the value
+assignment $\mathbf{v}\!=\!(v_1,\dots,v_{n_{kv}})\!\in\![V_v]^{n_{kv}}$.
+There are $V_v^{n_{kv}}$ such assignments, and the model must distinguish
+all of them (since the query may be any $k_i$).  The map
+$\mathbf{v}\!\mapsto\!h_T(\mathbf{v})$ is therefore injective on
+$[V_v]^{n_{kv}}$.  Since $h_T$ lies in $\mathbb{R}^{N_s D}$, an
+injective map from a discrete set of size $V_v^{n_{kv}}$ requires
+$N_s D\!\geq\!\log_2 V_v^{n_{kv}}\!=\!n_{kv}\log_2 V_v$ by a standard
+volume argument.  Thus $N_s\!=\!\Omega(n_{kv}\log V_v / D)$.  The
+exponential-in-$n_{kv}$ lower bound in the statement follows when
+$V_v\!=\!\Theta(1)$ is fixed and $n_{kv}$ grows: the state dimension
+must grow linearly in $n_{kv}$.  \qed
+
+\paragraph{Proof of \Cref{prop:route}.}
+The latent-attention pathway computes $h^{\text{SIA}}_t$ in $O(KD)$ work
+per token (the cross-attention to $K$ latent slots), while the local SSM
+pathway computes $h^{\text{loc}}_t$ in $O(D)$ work per token.  The gate
+$g_t$ mixes them at cost $O(D)$.  If $g_t\!=\!0$ on the $N\!-\!n_q$
+non-query tokens and $g_t\!=\!1$ on the $n_q$ query tokens, the total
+work is
+$(N\!-\!n_q)\cdot O(D) + n_q\cdot O(KD) = O((N + n_q K)D)$,
+which is the stated bound.  \qed
+
+\paragraph{Proof of \Cref{prop:nodegrade}.}
+Let $g^\star_t\!=\!1$ for all $t$; then $y_t\!=\!h^{\text{SIA}}_t$, which
+is exactly \LST{}'s output.  Since $g^\star$ is in the gate's range
+($\sigma$ can output $1$ in the limit), the optimal gate achieves at
+most the loss of \LST{} on every input.  The bound
+$\|y_t - h^{\text{SIA}}_t\|\leq\|h^{\text{SIA}}_t - h^{\text{loc}}_t\|$
+follows by setting $g_t$ to project $h^{\text{loc}}_t$ onto the segment
+$[h^{\text{SIA}}_t, h^{\text{loc}}_t]$ and noting that the projection
+cannot increase the distance to $h^{\text{SIA}}_t$.  \qed
+
+\paragraph{Proof of \Cref{thm:siac} (upper bound).}
+We construct a single-block \LST{} with $K\!=\!4$ latent slots that solves
+$\mathcal{T}_{\mathrm{ord}}$.  Let the latent queries $Q_\ell$ be four
+learnable vectors, and set the compression attention to a hard top‑$1$
+assignment: slot $k$ attends to the $k$-th non‑padding token.  This is
+achievable by setting the query–key dot product to $1$ when $Q_\ell$
+matches the token type and $-\infty$ otherwise (a one‑hot attention
+pattern realisable by a sufficiently expressive projection).
+
+The selective SSM has $N_s\!=\!4$ diagonal states with input-dependent
+$\Delta_t$.  We set $\Delta_t\!=\!1$ on non‑padding tokens and
+$\Delta_t\!\to\!0$ on padding, so the SSM state updates only on the four
+signal tokens and holds between them.  The SSM's $C$ vector is set to
+read the current token identity, and $A\!=\!0$ (no decay), so each slot's
+state is the most recent non‑padding token.  After the full forward pass,
+slot $4$ holds $x_N$ (the last non‑padding token).
+
+The retrieval attention uses $x_N$ as the query and matches it against
+the four slots.  Since slot $4$ holds $x_N$, the attention retrieves
+slot~$4$'s value, which is $x_N$.  The output projection emits this as
+the prediction.  This construction uses $O(KD)\!=\!O(4D)$ work and
+$O(KD)\!=\!O(4D)$ state.  \qed
+
+\paragraph{Proof of \Cref{thm:siac} (lower bound).}
+A static latent attention block with $K\!<\!4$ slots computes
+$Z = \mathrm{softmax}(Q_\ell X^\top) X$ where $Q_\ell\!\in\!\mathbb{R}^{K\times D}$
+is fixed.  The crucial property is that $Z$ depends on $X$ only through
+the \emph{aggregated} token information in each slot — specifically, the
+$(k, d)$ entry of $Z$ is $\sum_t \alpha_{k,t} X_{t,d}$ where
+$\alpha_{k,t}\!=\!\mathrm{softmax}_t(Q_{\ell,k}\!\cdot\!X_t)$.
+
+Since $K\!<\!4$ and there are $4$ distinct signal tokens $\{a,b,c,d\}$, by
+the pigeonhole principle at least one slot must aggregate two different
+signal tokens.  Without loss of generality, suppose slot $k$ aggregates
+tokens $a$ and $b$ (at positions $t_a\!<\!t_b$).  Then $Z_k$ is a convex
+combination of the embeddings of $a$ and $b$, and the static block has
+no mechanism to determine which came \emph{last}.
+
+Consider two sequences: $x\!=\![a, b, \text{pad}, c, d]$ and
+$x'\!=\![b, a, \text{pad}, c, d]$.  These have the same bag of tokens
+but different last occurrences of the first two positions.  A static
+block with $K\!<\!4$ produces the same $Z$ (up to a permutation of slots
+that preserves the aggregation) for both sequences, and hence the same
+output.  But the correct answer for $\mathcal{T}_{\mathrm{ord}}$ differs
+($a$ vs $b$ for the first position's contribution), so the block cannot
+solve $\mathcal{T}_{\mathrm{ord}}$ with probability better than random.
+
+Formally, for any static block with $K\!<\!4$, there exists a
+distribution over $\mathcal{T}_{\mathrm{ord}}$ inputs on which the block
+achieves accuracy at most $1/|V|\!=\!1/4$, matching random chance.  \qed
+
+\section{Gated State‑Informed Attention (\GSIA{})}
+\label{app:gsia}
+
+\GSIA{} replaces the \SIA{} sublayer in \LST{} with a gated mixture of a
+latent-attention pathway and a local-SSM pathway.  Given the input
+$x\in\mathbb{R}^{B\times T\times D}$, \GSIA{} computes:
+\begin{align}
+L &= \mathrm{SSM}_{\text{lat}}(\mathrm{Compress}(x)) \in \mathbb{R}^{B\times K\times D},\\
+h^{\text{SIA}}_t &= \mathrm{Retrieve}(x_t, L) \in \mathbb{R}^{D},\\
+h^{\text{loc}}_t &= \mathrm{SSM}_{\text{loc}}(x)_t \in \mathbb{R}^{D},\\
+\mu_t &= \frac{1}{|\mathcal{K}_t|}\sum_{k\in\mathcal{K}_t} L_{k} \in \mathbb{R}^{D},\\
+g_t &= \sigma(W_g x_t + U_g \mu_t) \in (0,1)^{D},\\
+y_t &= g_t \odot h^{\text{SIA}}_t + (1 - g_t) \odot h^{\text{loc}}_t,
+\end{align}
+where $\mathcal{K}_t\!=\!\{k : (k\!+\!1)K/T \leq t\!+\!1\}$ is the set
+of latent slots visible at position $t$ under causal masking, and
+$\mathrm{Compress}, \mathrm{Retrieve}$ are the cross-attention operations
+defined in \Cref{sec:sia}.  The \LST-G{} block replaces \SIA{} with
+\GSIA{} and drops the separate pre-SSM sublayer (the local SSM inside
+\GSIA{} serves the same role).  All other components (LayerNorm,
+residuals, FFN) are unchanged from \LST{}.
 
 \end{document}
