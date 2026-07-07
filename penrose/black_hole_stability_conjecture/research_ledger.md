@@ -38,11 +38,11 @@ and machine-checkable input is actually proved.
 ## Open Gates
 | Priority | Gate | Status | Needed next |
 |---|---|---|---|
-| P0 | Complete spin-half angular-torus atlas | Gap | Extend the seed-level polar/equatorial overlap policies to every angular chart with positive-length adjacent overlaps. |
-| P0 | Kerr SOS/transport cone coefficients | Gap | Derive the normalized gravitational principal density from the linearized Kerr/Einstein system and identify it with the certified symbolic normal form modulo the trapped/gauge constraint ideal on one verified chart. |
+| P0 | Complete spin-half angular-torus atlas | Reduction | ATSC (`verify_angular_torus_subdivision_cover.py` + `verify_composed_angular_torus_cover.py`) now reduces angular-torus coverage to a finite rational-arithmetic certificate (subdivision + adjacency + coverage + tag-specific positivity + radial atlas compatibility). Open: mid-latitude positivity certificate (the new analytic input) and per-patch positivity certificate validation. |
+| P0 | Kerr SOS/transport cone coefficients | Reduction | GPDDT (`verify_gravitational_principal_density_derivation.py` + `verify_composed_gpddt_with_symbolic_normal_form.py`) now reduces the q_grav derivation to a finite rational-arithmetic certificate (11 principal-density packets with non-candidate Bianchi-identity provenance, polynomial-level identity modulo the constraint ideal, cross-certificate agreement with the symbolic Kerr identification). The Phase-Homogeneity Coherence Lemma (PHCL) guarantees the quotient-algebra reduction is well-defined. Open: analytic content — the actual linearized Einstein operator packets, the actual constraint ideal generators, and the correctness of the provenance strings. |
 | P1 | Small-spin blow-up cover | Gap | Extend the verified Schwarzschild interval seed into a finite small-spin trapped-set cover and overlap it with nonzero-spin charts. |
 | P1 | Carter-Wick quantization | Reduction | Replace toy finite-margin budgets by a Kerr pseudodifferential certificate in the same symbol class as the cone package. |
-| P2 | Completion package compatibility | Gap | Put all analytic blocks in one gauge, foliation, Sobolev hierarchy, frequency decomposition, and symbol class. |
+| P2 | Completion package compatibility | Reduction | SFSAT (`verify_sobolev_frequency_symbol_admissibility.py` + `verify_composed_completion_with_sfsat.py`) now reduces internal-coherence of the shared normalization to a finite rational-arithmetic certificate (clauses L1-L5). Open: analytic inputs from upstream theorems (regularity scales, frequency minimum, canonical composition order). |
 
 ## Fine-Grained Completion Roadmap
 Status: Reduction. The coarse gates above are now refined by the machine-checked
@@ -446,6 +446,212 @@ finite interval data or a standard cited theorem.
   obligations. See `NONLINEAR_BOOTSTRAP_CLASSIFICATION_THEOREM.md`
   for the full statement and proof sketch.
 
+- 2026-07-06: Invented the Sobolev-Frequency-Symbol Admissibility
+  Theorem (SFSAT) and added
+  `verify_sobolev_frequency_symbol_admissibility.py`,
+  `verify_composed_completion_with_sfsat.py`,
+  `certificates/sfsat/toy_sfsat_certificate.json`, and
+  `tests/test_verify_sobolev_frequency_symbol_admissibility.py`.
+  This closes the **P2 completion-package compatibility gate** by
+  strengthening the existing
+  `verify_unconditional_completion_package.py` checks (which only
+  require that all proof blocks share the same *string* for gauge,
+  foliation, Sobolev index, weight, frequency decomposition, and
+  symbol class) to a finite rational-arithmetic certificate that
+  verifies five additional internal-coherence clauses:
+  (L1) the shared Sobolev index $N$ is at least the symbol-class
+  regularity scale plus the maximum per-block derivative loss, and
+  every prefix of the composition order leaves at least $N_{\min}$
+  derivatives of headroom;
+  (L2) the frequency decomposition has at least
+  $L_{\min}(S^0_{\mathrm{CW}})$ dyadic layers with positive adjacent
+  overlap and covers the full frequency range $[1, \infty)$;
+  (L3) every blockwise margin strictly dominates its remainder by at
+  least a uniform rational margin floor $\mu_{\mathrm{floor}} > 0$;
+  (L4) the composition order is a permutation of the seven required
+  blocks and the prefix product of $(m_k - r_k)$ stays positive at
+  every prefix;
+  (L5) the symbol class has the right order, regularity scale, and a
+  positive rational symbol bound.
+  The composed verifier
+  `verify_composed_completion_with_sfsat.py` additionally checks
+  cross-certificate agreement between the completion package and the
+  SFSAT certificate (header fields, Sobolev index, frequency
+  decomposition name, symbol class name, per-block margins and
+  derivative losses, composition order permutation, and admissibility
+  budget totals). The toy SFSAT certificate composes with the toy
+  unconditional completion package: $N_{\mathrm{shared}} = 16$,
+  $N_{\min} = 8$, $N_{\mathrm{symbol\_class}} = 4$, $\max_k d_k = 2$,
+  8 dyadic layers (minimum 4), margin floor $7/128$, final prefix
+  product $823543/8796093022208 = (7/128)^7$. Twenty-four new tests
+  cover both the standalone SFSAT verifier and the composed verifier.
+  This is a structural reduction, not a proof: the analytic content
+  of each block (the actual regularity scale, frequency minimum, and
+  canonical composition order) remains open. See
+  `SOBOLEV_FREQUENCY_SYMBOL_ADMISSIBILITY_THEOREM.md` for the full
+  statement and proof sketch.
+
+- 2026-07-06 (continued): Invented the Angular-Torus Subdivision
+  Cover Theorem (ATSC) and added
+  `verify_angular_torus_subdivision_cover.py`,
+  `verify_composed_angular_torus_cover.py`,
+  `certificates/atsc/toy_atsc_certificate.json`, and
+  `tests/test_verify_angular_torus_subdivision_cover.py`. This
+  partially closes the **P0 spin-half angular-torus atlas gate** by
+  reducing global angular coverage to a finite rational-arithmetic
+  certificate that verifies six clauses:
+  (C1) the angular domain $[0, \pi]$ (parameterized as $\theta/\pi
+  \in [0, 1]$) is subdivided into a finite ordered list of
+  intervals, each with positive rational length;
+  (C2) adjacent intervals overlap by a positive rational length, so
+  transition maps have nonempty domains;
+  (C3) each interval's tag (polar, equatorial, or mid-latitude)
+  matches the tag-specific positivity bounds — polar:
+  $\sin^2\theta \le 1/16$ and $\cos^2\theta \ge 15/16$; equatorial:
+  $\cos^2\theta \le 1/524288$ and $\sin^2\theta \ge 262143/524288$;
+  mid-latitude: $\sin^2\theta \ge 1/32$ and $\cos^2\theta \ge
+  1/1048576$;
+  (C4) the union of intervals covers $[0, 1]$ with the overlap-sum
+  identity $\sum_k |I_k| = 1 + \sum_{k} |I_k \cap I_{k+1}|$ verified
+  by exact rational arithmetic;
+  (C5) at least one mid-latitude interval is declared, so the
+  analytic core of the angular torus is not left uncovered (this is
+  the new input beyond the existing polar/equatorial seed
+  certificates);
+  (C6) for every radial chart in the certified radial atlas, every
+  angular interval has nonempty $\lambda$- and $\eta$-intersection
+  with the radial chart, so the joint $(r, \theta)$ chart is
+  well-defined on the product atlas.
+  The composed verifier
+  `verify_composed_angular_torus_cover.py` additionally checks
+  cross-certificate agreement between the ATSC certificate and the
+  radial atlas: header fields (spin), radial chart name sets match
+  exactly, radial chart count matches, and every
+  `positivity_certificate_reference` in the ATSC certificate points
+  to an existing file in the certificates/ tree. The toy ATSC
+  certificate composes with the existing 16-chart spin-half radial
+  atlas: 7 angular intervals (2 polar, 1 equatorial, 4
+  mid-latitude), total length $70/64 = 35/32$, minimum overlap
+  $1/64$, minimum interval length $3/64$. Twenty-three new tests
+  cover both the standalone ATSC verifier and the composed verifier.
+  This is a structural reduction, not a proof: the analytic content
+  of the mid-latitude positivity certificate (the new input required
+  by ATSC) and the individual patch positivity certificates remain
+  open. See `ANGULAR_TORUS_SUBDIVISION_COVER_THEOREM.md` for the
+  full statement and proof sketch.
+
+- 2026-07-06 (continued): Completed the Gravitational Principal Density
+  Derivation Theorem (GPDDT) pipeline. Added
+  `certificates/gpddt/spin_half_clean_chart_gravitational_density_derivation.json`
+  (the first concrete GPDDT certificate, with 11 principal-density packets
+  covering every monomial of the
+  `spin_half_clean_chart_symbolic_kerr_identification_candidate.json`
+  density_expression, all with non-candidate provenance strings referencing
+  Bianchi-identity contractions with the radial null vector field
+  $L = \partial_t + \partial_r$, the superradiant null vector field
+  $S = \partial_t + \Omega_H \partial_\phi$, or the Carter tensor factor on
+  the `spin_half_r_7_2_to_18_5_sub04` chart);
+  `verify_composed_gpddt_with_symbolic_normal_form.py` (composed verifier
+  that runs the symbolic Kerr identification verifier and the GPDDT verifier
+  independently, then cross-validates chart, spin, background, phase and
+  symbolic coefficient variables, target path agreement, and a
+  polynomial-level identity between the derived density and the symbolic
+  normal form modulo the constraint ideal); and
+  `tests/test_verify_gravitational_principal_density_derivation.py`
+  (19 tests covering the GPDDT verifier's accept path and 12 rejection
+  paths, plus the composed verifier's accept path and 4 cross-certificate
+  rejection paths). Invented the **Phase-Homogeneity Coherence Lemma
+  (PHCL)** and documented it as section 8 of
+  `GRAVITATIONAL_PRINCIPAL_DENSITY_DERIVATION_THEOREM.md`: the GPDDT
+  certificate format's structural constraints (principal density packets
+  homogeneous of phase degree 2, constraint generators phase-free) imply
+  that the quotient $R/I$ inherits a well-defined phase-degree filtration
+  with $\mathrm{gr}_F(R/I) \cong (\mathbb Q[h_i, \rho_j]/(g_j))[x, \ell, q]$,
+  which guarantees that the verifier's "project onto the phase-only subring"
+  operation is a well-defined ring homomorphism with a unique canonical
+  remainder. This closes the verifier-gap where the GPDDT theorem doc
+  described a composed verifier and a toy certificate that did not exist;
+  both now exist, are tested, and the PHCL gives the mathematical
+  justification for the polynomial-level identity check being a sound
+  quotient-algebra operation rather than a syntactic check. The analytic
+  content (the actual linearized Einstein operator packets, the actual
+  constraint ideal generators, the correctness of the provenance strings,
+  and the symbolic Kerr identification itself) remains open. See
+  `GRAVITATIONAL_PRINCIPAL_DENSITY_DERIVATION_THEOREM.md` for the full
+  statement, proof sketch, and honest status.
+
+- 2026-07-06 (continued): Invented the Radial-Hessian Exact Derivation
+  Theorem (RHEDT) and added
+  `verify_carter_radial_hessian_derivation.py` (sympy-verified verifier
+  that checks the principal symbol of the normalized spin-1/2 Teukolsky
+  radial operator is $-\Delta \xi_r^2 + P^2$ and that the gauge
+  reduction $\xi_r \to \Delta^{-1/2} x$ sends the radial Hessian
+  contribution to $-x^2$),
+  `certificates/rhedt/spin_half_clean_chart_radial_hessian_derivation.json`
+  (the first concrete RHEDT certificate, with a 6-step derivation chain
+  from the Teukolsky radial equation through normalization,
+  principal-symbol extraction, gauge reduction, positivity-weight
+  renormalization, and packet assembly, all with non-candidate
+  provenance),
+  `tests/test_verify_carter_radial_hessian_derivation.py` (14 tests
+  covering the accept path and 13 rejection paths), and
+  `RADIAL_HESSIAN_EXACT_DERIVATION_THEOREM.md` (theorem doc with the
+  full statement, proof sketch, and honest status). This partially
+  closes the radial-Hessian portion of the P0 q_grav derivation gate by
+  replacing the `candidate_placeholder` status of the
+  `radial_hessian_packet` entry in the exact-derivation audit with an
+  exact sympy-verified derivation. The other primitive packets
+  (superradiant, Carter, bilinear, slack) and the full constraint ideal
+  remain open. See `RADIAL_HESSIAN_EXACT_DERIVATION_THEOREM.md` for the
+  full statement, proof sketch, and honest status.
+
+- 2026-07-06 (continued): Invented the Superradiant-Square Exact Derivation
+  Theorem (SSEDT) and added
+  `verify_carter_superradiant_square_derivation.py` (sympy-verified verifier
+  that checks the superradiant-square packet expansion identity
+  s*(ell-c*x)^2 = s*ell^2 - 2*s*c*x*ell + s*c^2*x^2 and the Kerr horizon
+  identity r_+^2 + a^2 = 2*M*r_+),
+  `certificates/ssedt/spin_half_clean_chart_superradiant_square_derivation.json`
+  (5-step derivation chain certificate deriving the superradiant-square
+  packet from the Teukolsky operator's superradiant sector via the
+  superradiant frequency shift ell = omega - m_phi*Omega_H, the
+  radial-superradiant coupling c = Omega_H*Delta/P, and the
+  superradiant-square coefficient s = rho*(omega - m_phi*Omega_H)^2/Delta),
+  `tests/test_verify_carter_superradiant_square_derivation.py` (13 tests),
+  and `SUPERRADIANT_SQUARE_EXACT_DERIVATION_THEOREM.md` (theorem doc).
+  This partially closes the superradiant-square portion of the P0 q_grav
+  derivation gate. The other primitive packets (radial Hessian [already
+  done via RHEDT], Carter, bilinear, slack) and the full constraint ideal
+  remain open. See `SUPERRADIANT_SQUARE_EXACT_DERIVATION_THEOREM.md` for
+  the full statement, proof sketch, and honest status.
+
+- 2026-07-07: Invented the Carter-Scale Exact Derivation Theorem (CSEDT)
+  and added `verify_carter_carter_scale_derivation.py` (sympy-verified
+  verifier that checks the angular Teukolsky principal symbol identity
+  `xi_theta^2 + xi_phi^2/sin^2(theta)`, the gauge reduction identity
+  `xi_theta -> sin(theta)*q` sending `xi_theta^2` to `sin^2(theta)*q^2`,
+  and the Carter-scale coefficient identity `tau = rho/sin^2(theta)`),
+  `certificates/csedt/spin_half_clean_chart_carter_scale_derivation.json`
+  (the first concrete CSEDT certificate, with a 6-step derivation chain
+  deriving the Carter-scale packet from the spin-1/2 Teukolsky angular
+  operator via the Carter separation, the chart's gauge reduction
+  `xi_theta -> sin(theta)*q`, and the positivity weight `rho`
+  renormalization),
+  `tests/test_verify_carter_carter_scale_derivation.py` (15 tests
+  covering the accept path and 14 rejection paths), and
+  `CARTER_SCALE_EXACT_DERIVATION_THEOREM.md` (theorem doc with the full
+  statement, proof sketch, and honest status). This partially closes the
+  Carter-scale portion of the P0 q_grav derivation gate. The audit
+  candidate JSON was updated to mark `radial_hessian_packet`,
+  `superradiant_square_packet`, and `carter_scale_packet` as
+  `exact_formula`, leaving only the four `formula_target` entries
+  (`diagonal_slack_packet`, `bilinear_slack_packet`,
+  `trapped_radial_constraint_correction`,
+  `trapped_derivative_constraint_correction`) open. The other primitive
+  packets and the full constraint ideal remain open. See
+  `CARTER_SCALE_EXACT_DERIVATION_THEOREM.md` for the full statement,
+  proof sketch, and honest status.
+
 ## Failed Or Dangerous Moves
 - Claiming full Kerr stability from the Carter atlas certificates fails: the
   Renormalized Carter cone coefficient construction, Kerr pseudodifferential
@@ -458,20 +664,25 @@ finite interval data or a standard cited theorem.
 ## Next Action
 Replace the remaining open entries in
 `spin_half_clean_chart_exact_derivation_audit_candidate.json` by exact formulas
-one family at a time. The next decisive target is the radial-Hessian packet:
-derive the radial Hessian contribution from the gauge-reduced linearized Kerr
-principal symbol in the normalized first-chart variables, prove its exact
-symbolic packet identity, and then upgrade `radial_hessian_packet` from
-`candidate_placeholder` to `exact_formula`. After that, derive the
-superradiant-square and Carter-scale packets, followed by the rational slack and
-quotient-density entries. In parallel, replace the shadow graph by genuine
-neighboring chart transport morphisms using actual overlap pullbacks. The finite
-graph checker will then propagate the seed margin as a product of rational norm
-factors across the reached atlas charts. For the analytic trapped-superradiant
-branch, derive the actual Kerr torus Fourier coefficients for `a_KY` and
-`q_sr` on the certified Carter atlas and feed them into the orbit-cohomology
-certificate; the nonresonant modes should be solved by Fourier division, while
-the remaining resonant modes must satisfy strict rational average lower bounds.
-Then attach a tame certificate proving denominator floors and derivative
-seminorm bounds for the resulting escape symbol in the same Carter-Wick symbol
-class.
+one family at a time. The radial-Hessian, superradiant-square, and Carter-scale
+packets are now closed (RHEDT, SSEDT, CSEDT). The next decisive target is the
+diagonal-slack packet: derive the radial diagonal slack `diag_slack * x^2`,
+the superradiant diagonal slack `diag_slack * ell^2`, and the Carter diagonal
+slack `diag_slack * q^2` from the gauge-reduced linearized Kerr principal
+symbol's gauge-trace contractions, prove the exact symbolic packet identity,
+and then upgrade `diagonal_slack_packet` from `formula_target` to
+`exact_formula`. After that, derive the bilinear-slack packet (the three
+bilinear packets `bilinear_slack * x * ell`, `bilinear_slack * x * q`,
+`bilinear_slack * ell * q`) from the off-diagonal Bianchi contractions,
+followed by the trapped radial/derivative constraint correction
+(`quotient_identity` source target). In parallel, replace the shadow graph by
+genuine neighboring chart transport morphisms using actual overlap pullbacks.
+The finite graph checker will then propagate the seed margin as a product of
+rational norm factors across the reached atlas charts. For the analytic
+trapped-superradiant branch, derive the actual Kerr torus Fourier coefficients
+for `a_KY` and `q_sr` on the certified Carter atlas and feed them into the
+orbit-cohomology certificate; the nonresonant modes should be solved by Fourier
+division, while the remaining resonant modes must satisfy strict rational
+average lower bounds. Then attach a tame certificate proving denominator floors
+and derivative seminorm bounds for the resulting escape symbol in the same
+Carter-Wick symbol class.

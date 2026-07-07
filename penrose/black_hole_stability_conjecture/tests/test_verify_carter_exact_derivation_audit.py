@@ -27,9 +27,13 @@ class VerifyCarterExactDerivationAuditTests(unittest.TestCase):
         self.assertFalse(result["proves_kerr_gravitational_density"])
         self.assertEqual(result["chart"], "spin_half_r_7_2_to_18_5_sub04")
         self.assertEqual(result["local_coercivity_delta"], "1/512")
-        self.assertIn("radial_hessian_packet", result["primitive_entries_open"])
+        self.assertIn("radial_hessian_packet", result["primitive_entries_exact"])
+        self.assertIn("superradiant_square_packet", result["primitive_entries_exact"])
+        self.assertIn("carter_scale_packet", result["primitive_entries_exact"])
         self.assertIn("radial_trapped_constraint", result["primitive_entries_exact"])
         self.assertIn("radial_derivative_trapped_constraint", result["primitive_entries_exact"])
+        self.assertIn("diagonal_slack_packet", result["primitive_entries_open"])
+        self.assertIn("bilinear_slack_packet", result["primitive_entries_open"])
         self.assertIn(
             "compute the normalized gravitational principal density q_grav in the listed phase variables",
             result["backend_obligations_open"],

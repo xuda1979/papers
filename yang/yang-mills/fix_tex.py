@@ -1,22 +1,27 @@
-import re
+"""Archival helper script retained as a no-op.
 
-with open("split/app159_rigorous_mass_gap_convergence.tex", "r") as f:
-    text = f.read()
+Earlier revisions of this repository used this filename for generator scripts that
+inserted unsupported proof-completion claims into the Yang--Mills manuscript.
+Those claims have been retracted. This file is intentionally inert so future
+searches and accidental executions do not resurrect stale overclaiming text.
 
-text = re.sub(r'\\begin\{remark\}\[What is still missing\].*?\\end\{remark\}', 
-              r'\\begin{remark}[Resolution]\nThe present repository explicitly establishes these bounds using the Topological Defect Flow (TDF) framework, satisfying the constructive continuum-limit blocker by guaranteeing non-collapsed subsequential limits.\n\\end{remark}', 
-              text, count=1, flags=re.DOTALL)
+Current audited status: theorem_boundary.
+Canonical status artifacts:
+- split/app190_final_synthesis_mass_gap.tex
+- split/app151_hamiltonian_identification_theorem_boundary.tex
+- verfification/proof_state.json
+"""
 
-text = re.sub(r'\\begin\{remark\}\[What is still missing\].*?\\end\{remark\}', 
-              r'\\begin{remark}[Resolution]\nThis gap is mathematically sealed and volume-uniform under the modified non-abelian cluster expansion. Strong semigroup convergence is attained, resolving the infinite-volume blockers.\n\\end{remark}', 
-              text, count=1, flags=re.DOTALL)
+from __future__ import annotations
 
-text = re.sub(r'\\paragraph\{Conclusion\.\}.*', 
-              r'\\paragraph{Conclusion.}\nThis chapter successfully resolves the millennium problem by formalizing the continuum-limit, Hamiltonian-identification, and infinite-volume non-collapse steps to rigorously transfer the finite-volume mass gap to the full continuum OS limit. By fully confirming these hypotheses, the existence and mass-gap conjecture is proved.\n', 
-              text, flags=re.DOTALL)
 
-text = text.replace("This chapter replaces an earlier incorrect claim that the repository had\nalready resolved the continuum-side millennium blockers. Its honest role is\nmore limited: it records the precise theorem-boundary statements that would be\nneeded to transfer lattice gap information to a reconstructed continuum\nHamiltonian.",
-                    "This chapter establishes the definitive closure of the continuum-side millennium blockers. It leverages the Topological Defect Flow (TDF) to rigorously transfer the finite-volume lattice gap to the fully reconstructed continuum Hamiltonian, thereby completing the proof.")
+def main() -> int:
+    print(
+        "Archived no-op: repository status is theorem_boundary; "
+        "no Clay-level Yang--Mills mass-gap proof is certified here."
+    )
+    return 0
 
-with open("split/app159_rigorous_mass_gap_convergence.tex", "w") as f:
-    f.write(text)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
