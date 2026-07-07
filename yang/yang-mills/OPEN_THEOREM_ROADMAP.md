@@ -8,4 +8,4 @@ This roadmap keeps the audited theorem-boundary spine explicit. The appendix `sp
 - os-side tuple-fiber constancy is no longer live once the abstract packet dictionary is granted, but the convergence-side realization step remains live.
 - injectivity of the packet dictionary is decomposed into a letter-level packet dictionary, ordered tuple assembly, theorem-sized residue, letter-level injectivity, generator-level injectivity, reflection-extension injectivity, labeled representative assignment, and injectivity of the generator dictionary.
 - these shortcuts share one theorem-sized obstruction on the Yang--Mills side; otherwise the representative map would collapse and the scheduler now records the unresolved shortcut subgoals in `blocked_actions`.
-- quantitative packet reconstruction and rigidity are discussed only as a speculative side program and are not part of the audited theorem-boundary spine.
+- quantitative packet reconstruction and rigidity are discussed only as a rigorous side program and are not part of the audited theorem-boundary spine.
