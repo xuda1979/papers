@@ -80,15 +80,20 @@ def run_task(task_name: str, seq_len: int, vocab: int, models: list,
                         "params": n_params, "final_acc": acc,
                         "final_loss": loss, "time_s": dt})
         del m
-        if device == "mps":
-            torch.mps.empty_cache()
+        empty_cache(device)
     return results
 
 
 def main():
     out_dir = Path(__file__).resolve().parent / "results"
     out_dir.mkdir(exist_ok=True)
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    try:
+        from device_utils import get_device, empty_cache
+        device = get_device()
+    except ImportError:
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        def empty_cache(_d):
+            if _.type == "mps": torch.mps.empty_cache()
     print(f"Using device: {device}", flush=True)
     all_results = []
     models = ["Transformer", "LST", "LSTG", "SSM", "Linformer"]

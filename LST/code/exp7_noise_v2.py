@@ -101,8 +101,7 @@ def run_one(name, model_cls, noise_ratio, V, device, steps=600):
     acc = hist["eval_acc"][-1][1]
     loss = hist["eval_loss"][-1][1]
     del m
-    if device.type == 'mps':
-        torch.mps.empty_cache()
+    empty_cache(device)
     return {"model": name, "noise_ratio": noise_ratio, "vocab": V,
             "params": n_params, "final_acc": acc, "final_loss": loss, "time_s": dt}
 
@@ -110,7 +109,13 @@ def run_one(name, model_cls, noise_ratio, V, device, steps=600):
 def main():
     out_dir = Path(__file__).resolve().parent / "results"
     out_dir.mkdir(exist_ok=True)
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    try:
+        from device_utils import get_device, empty_cache
+        device = get_device()
+    except ImportError:
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        def empty_cache(_d):
+            if _.type == "mps": torch.mps.empty_cache()
 
     V = 1 + 128 + 128
 

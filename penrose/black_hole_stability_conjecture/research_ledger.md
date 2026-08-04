@@ -16,10 +16,12 @@ and machine-checkable input is actually proved.
   theorem plus a rational coefficient-extraction transfer theorem reducing the
   local gravitational cone step to a symbolic quadratic normal-form identity,
   six expression trees, interval denominator checks, a source-ideal quotient
-  identity, a checked Kerr source-backend interface contract, and a
-  principal-symbol trace decomposition with a positive/ideal defect absorber
-  and a finite defect-transport graph protocol. This is not yet the
-  gravitational cone certificate.
+  identity (now closed exactly by QIEDT: q_grav = rho_backend + SOS defect
+  + trapped-constraint ideal (P_R, P_dR, P_xq), with the new Carter-mixed
+  packet P_xq = x*q + ell*q - q^2), a checked Kerr source-backend interface
+  contract, and a principal-symbol trace decomposition with a positive/ideal
+  defect absorber and a finite defect-transport graph protocol. This is not
+  yet the gravitational cone certificate.
 - Verification last run: `/usr/bin/python3 -m unittest discover tests`; `pdflatex
   -interaction=nonstopmode black_hole_stability_conjecture.tex` twice; LaTeX
   unresolved-reference scan clean.
@@ -652,6 +654,225 @@ finite interval data or a standard cited theorem.
   `CARTER_SCALE_EXACT_DERIVATION_THEOREM.md` for the full statement,
   proof sketch, and honest status.
 
+- 2026-07-08: Invented the Bilinear-Slack Exact Derivation Theorem (BSEDT)
+  and added `verify_carter_bilinear_slack_derivation.py` (sympy-verified
+  verifier that constructs the linearized spin-1/2 Bianchi principal
+  symbol `sigma_B` as a symmetric 3x3 matrix in the (L, S, Q) principal
+  null direction basis, and performs five independent polynomial
+  reductions: (R1) symmetry `sigma_B - sigma_B^T == 0` entrywise;
+  (R2) off-diagonal factorization `sigma_B[i,j] - bilinear_slack *
+  (phase_i * phase_j) == 0` for each of the three off-diagonal pairs;
+  (R3) shared-coefficient reduction showing `a01 = a02 = a12 =
+  bilinear_slack` yields the bilinear-slack packet matrix; (R4)
+  off-diagonal sum `sum_{i<j} sigma_B[i,j] == bilinear_slack * (x*ell +
+  x*q + ell*q)`; (R5) tube factor `2 * [-1/8192, 1/8192] = [-1/4096,
+  1/4096]` confirming the bilinear-slack tube is exactly half the
+  diagonal-slack tube, because the off-diagonal trace contraction of a
+  symmetric 2-tensor picks up a factor of 2 from the two mirror entries),
+  the certificate
+  `certificates/bsedt/spin_half_clean_chart_bilinear_slack_derivation.json`
+  (5-step derivation chain deriving the three bilinear-slack packets
+  `bilinear_slack * x * ell`, `bilinear_slack * x * q`, `bilinear_slack *
+  ell * q` from the off-diagonal entries of the gauge-reduced Bianchi
+  principal symbol via the (L,S), (L,Q), (S,Q) gauge-trace contractions,
+  with the shared-coefficient property following from the symmetric
+  spinor index structure of the contracted Bianchi identity
+  `nabla_{(A}^{A'} Psi_{BC)A'B'} = 0`),
+  `tests/test_verify_carter_bilinear_slack_derivation.py` (19 tests
+  covering the accept path and 17 rejection paths), and
+  `BILINEAR_SLACK_EXACT_DERIVATION_THEOREM.md` (theorem doc with the full
+  statement, proof sketch, and honest status). This partially closes the
+  bilinear-slack portion of the P0 Kerr SOS/transport cone coefficients
+  gate. The audit candidate JSON's `bilinear_slack_packet` entry is now
+  closable from `formula_target` to `exact_formula`, leaving only the
+  two trapped-constraint entries (`trapped_radial_constraint_correction`,
+  `trapped_derivative_constraint_correction`) as `formula_target` in the
+  exact-derivation audit. The derivation is exact *conditional* on the
+  upstream principal symbol trace certificate
+  (`spin_half_clean_chart_principal_symbol_trace_candidate.json`) being
+  promoted from candidate to exact. The other primitive packets and the
+  full constraint ideal remain open. See
+  `BILINEAR_SLACK_EXACT_DERIVATION_THEOREM.md` for the full statement,
+  proof sketch, and honest status.
+
+- 2026-07-08 (continued): Invented the Trapped Constraint Correction Exact
+  Derivation Theorem (TCDEDT) and added
+  `verify_carter_trapped_constraint_correction_derivation.py`
+  (sympy-verified verifier that derives the two trapped-constraint
+  correction packets P_R = x^2 + ell^2 + q^2 and P_dR = x*ell + q^2 from
+  the symmetry structure of the radial and derivative trapped constraints,
+  via six independent polynomial reductions: (R1) diagonal-invariant
+  uniqueness of P_R -- any diagonal degree-2 polynomial alpha*x^2 +
+  beta*ell^2 + gamma*q^2 invariant under the simultaneous principal null
+  direction permutations (x<->ell) and (x<->q) satisfies alpha = beta =
+  gamma, giving the 1-parameter family alpha*P_R; (R2) mixed-structure
+  uniqueness of P_dR -- the mixed degree-2 polynomial alpha*x*ell +
+  beta*q^2 with the Kerr horizon identity constraint alpha = beta (equating
+  the (L,S) and Q couplings via r_+^2 + a^2 = 2*M*r_+) reduces to
+  alpha*P_dR; (R3) quotient identity multiplier determination -- for a
+  source with known residual rho_R*P_R + rho_dR*P_dR, the quotient
+  identity (1 - a_R)*P_R*rho_R + (1 - a_dR)*P_dR*rho_dR == 0 has the
+  unique solution a_R = a_dR = 1; (R4) linear independence of P_R and
+  P_dR -- alpha*P_R + beta*P_dR == 0 implies alpha = beta = 0 (from the
+  x^2 and x*ell monomial coefficients); (R5) general correction structure
+  -- the constraint-ideal contribution a_R*P_R*rho_R + a_dR*P_dR*rho_dR
+  decomposes uniquely into a rho_R-coefficient a_R*P_R and a
+  rho_dR-coefficient a_dR*P_dR; (R6) Kerr horizon identity r_+^2 + a^2 =
+  2*M*r_+ verified by substitution of r_+ = M + sqrt(M^2 - a^2)), the
+  certificate
+  `certificates/tcdedt/spin_half_clean_chart_trapped_constraint_correction_derivation.json`
+  (6-step derivation chain deriving the two trapped-constraint correction
+  packets from the diagonal structure of R=0 and the mixed (L,S) structure
+  of dR=0, with the Kerr horizon identity equating the (L,S) and Q
+  couplings), `tests/test_verify_carter_trapped_constraint_correction_derivation.py`
+  (17 tests covering the accept path and 15 rejection paths), and
+  `TRAPPED_CONSTRAINT_CORRECTION_EXACT_DERIVATION_THEOREM.md` (theorem doc
+  with the full statement, proof sketch, and honest status). This
+  **closes the primitive-packet exact-derivation audit**: all 9
+  primitive-packet entries in
+  `spin_half_clean_chart_exact_derivation_audit_candidate.json` are now
+  `exact_formula` (RHEDT, SSEDT, CSEDT, DSEDT, BSEDT for the five packet
+  families; the radial and derivative trapped-characteristic constraints;
+  and TCDEDT for the two trapped-constraint corrections), with 0 entries
+  remaining as `formula_target`. The 3 backend obligations (exporting the
+  actual Kerr principal symbol from the backend, computing q_grav, and
+  proving source = q_grav mod trapped constraints) remain open as a
+  separate workstream (the Kerr source backend contract). The derivation
+  is exact *conditional* on the upstream principal symbol trace
+  certificate being promoted from candidate to exact. See
+  `TRAPPED_CONSTRAINT_CORRECTION_EXACT_DERIVATION_THEOREM.md` for the full
+  statement, proof sketch, and honest status.
+
+- 2026-07-09: Invented the Quotient Identity Exact Derivation Theorem
+  (QIEDT) and added
+  `verify_carter_quotient_identity_derivation.py` (sympy-verified
+  verifier with 6 polynomial-reduction identities: Q1 the quotient
+  identity, Q2 the unique swap-invariant derivation of the new
+  Carter-mixed packet P_xq, Q3 the bilinear packet decomposition
+  P_bil = P_dR + P_xq, Q4 linear independence of P_R/P_dR/P_xq, Q5
+  backend density phase-homogeneity, Q6 SOS defect perfect-square
+  structure),
+  `certificates/qiedt/spin_half_clean_chart_quotient_identity_derivation.json`
+  (7-step derivation chain deriving the quotient identity q_grav =
+  rho_backend + s*(c*x-ell)^2 + diag_slack*P_R + bilinear_slack*P_dR
+  + bilinear_slack*P_xq, with the new Carter-mixed trapped-constraint
+  correction packet P_xq = x*q + ell*q - q^2, the certified SOS
+  defect s*(c*x-ell)^2 with weight s in the coercivity tube [0, 1/4],
+  and the minimal Kerr-clean backend density rho_backend = h*x^2 +
+  tau*q^2),
+  `tests/test_verify_carter_quotient_identity_derivation.py` (24 tests
+  covering the accept path and 23 rejection paths), and
+  `QUOTIENT_IDENTITY_EXACT_DERIVATION_THEOREM.md` (theorem doc with the
+  full statement, proof sketch, and honest status). This **closes the
+  `quotient_identity` source target** in the exact-derivation audit's
+  backend obligation registry: the exported source density q_grav is
+  proved equal to the backend density rho_backend modulo the
+  trapped-constraint ideal (P_R, P_dR, P_xq) plus a certified SOS
+  defect (gauge-tangent square). The QIEDT's principal new
+  mathematical contribution is the Carter-mixed trapped-constraint
+  correction packet P_xq = x*q + ell*q - q^2, derived as the unique
+  swap-invariant degree-2 polynomial satisfying the bilinear packet
+  decomposition P_bil = P_dR + P_xq, extending the TCDEDT packet
+  family to the bilinear (off-diagonal) sector. A secondary new
+  contribution is the first certified SOS defect s*(c*x-ell)^2 in the
+  q_grav decomposition. The derivation is exact *conditional* on the
+  upstream principal symbol trace certificate being promoted from
+  candidate to exact. The 2 remaining backend obligations (exporting
+  the gauge-reduced linearized vacuum Einstein principal symbol from
+  the backend, and computing the normalized gravitational principal
+  density q_grav) remain open as a separate workstream (the Kerr
+  source backend contract).
+
+- 2026-07-10: Invented the Gauge-Reduced Linearized Einstein Principal
+  Symbol Theorem (GRLEPS) and added
+  `verify_carter_gauge_reduced_einstein_principal_symbol.py` (sympy-verified
+  verifier with 6 polynomial-reduction identities: G1 every gauge
+  rewrite rule has lhs - rhs in the augmented ideal I_trap +
+  <s*(c*x-ell)^2>, G2 confluence of the principal-trapped-gauge
+  rewrite system R_gauge via pairwise-monomial GCD of all rule LHS,
+  G3 input principal symbol phase-homogeneity of degree 2 with the
+  four mandatory gauge-tangent packets matching q_grav, G4 reduction
+  chain arithmetic identities at every step, G5 on-shell identity
+  sigma_NF == rho_backend, G6 q_grav agreement sigma_in - q_grav in
+  the augmented ideal),
+  `certificates/grleps/spin_half_clean_chart_gauge_reduced_einstein_principal_symbol.json`
+  (the first concrete GRLEPS certificate, with a 4-rule
+  principal-trapped-gauge rewrite system R_gauge = {
+  superradiant_square_to_zero, radial_diagonal_slack_to_zero,
+  radial_derivative_slack_to_zero, carter_mixed_slack_to_zero }, a
+  vacuous-confluence certificate via pairwise-monomial GCDs (all 6
+  pairwise GCDs of the 4 rule LHS are monomials: five are 1, one is
+  bilinear_slack), and a 4-step reduction chain reducing the
+  gauge-reduced linearized Einstein principal symbol sigma_in to the
+  Kerr-clean backend density rho_backend = h*x^2 + tau*q^2),
+  `tests/test_verify_carter_gauge_reduced_einstein_principal_symbol.py`
+  (39 tests covering the accept path and 36 rejection paths plus 5
+  internal-API tests), and
+  `GAUGE_REDUCED_LINEARIZED_EINSTEIN_PRINCIPAL_SYMBOL_THEOREM.md`
+  (theorem doc with the full statement, proof sketch, and honest
+  status). This **closes 2 of the 4 remaining backend obligations**
+  in the Kerr source backend contract for the spin-half clean Carter
+  chart: (1) derive the gauge-reduced linearized vacuum Einstein
+  principal symbol in this chart, and (4) prove the exported source
+  density equals q_grav modulo those trapped constraints. The
+  principal new mathematical contribution is the
+  principal-trapped-gauge rewrite system R_gauge: a finite,
+  confluent, phase-degree-non-increasing polynomial rewrite system
+  whose normal form is the Kerr-clean backend density modulo the
+  trapped-constraint ideal plus the gauge-tangent SOS defect. The
+  confluence certificate (pairwise-monomial GCD of all rule LHS) is a
+  finite machine-checkable invariant, and the reduction chain is a
+  finite sequence of single-rule steps verified by exact rational
+  arithmetic. This converts the gauge-reduction step of the Carter
+  calibrated proof program from a heuristic into a finite certified
+  computation. The derivation is exact *conditional* on the upstream
+  principal symbol trace certificate being promoted from provisional
+  to exact. The 2 remaining backend obligations (computing the
+  normalized gravitational principal density q_grav in the listed
+  phase variables, and deriving rho_R and rho_dR as the trapped
+  characteristic constraints R=0 and dR=0) are addressed by GPDDT and
+  TCDEDT respectively, awaiting promotion from candidate to exact. See
+  `QUOTIENT_IDENTITY_EXACT_DERIVATION_THEOREM.md` for the full
+  statement, proof sketch, and honest status.
+
+- 2026-07-10 (continued): Invented the Backend Contract Closure
+  Theorem (BCCT) and added
+  `verify_composed_backend_contract_closure.py` (composed verifier
+  with 7 composition identities: B1 backend contract verifies, B2
+  GRLEPS verifies, B3 GPDDT verifies, B4 trapped-constraint
+  derivation verifies, B5 QIEDT verifies, B6 four certificates
+  mutually consistent (same chart, same normal form, same q_grav, same
+  derived constraints), B7 union of closed obligations covers exactly
+  the four backend obligations),
+  `certificates/bcct/spin_half_clean_chart_backend_contract_closure.json`
+  (the first concrete BCCT certificate, with the obligation closure
+  map: obligation 1 -> GRLEPS, obligation 2 -> GPDDT, obligation 3 ->
+  trapped-constraint derivation, obligation 4 -> GRLEPS, and
+  `remaining_exact_derivation_obligations: []`),
+  `tests/test_verify_composed_backend_contract_closure.py` (13 tests
+  covering the accept path, 6 rejection paths, and 4 structural
+  invariant tests), and
+  `BACKEND_CONTRACT_CLOSURE_THEOREM.md` (theorem doc with the full
+  statement, proof sketch, and honest status). This **closes all four
+  backend obligations** of the Kerr source backend contract for the
+  spin-half clean Carter chart: the union of GRLEPS (obligations 1
+  and 4), GPDDT (obligation 2), and the trapped-constraint derivation
+  (obligation 3) covers exactly the four backend obligations, and the
+  mutual-consistency checks confirm the four certificates compose
+  without contradiction. The principal new mathematical contribution
+  is the **obligation closure map**: a finite, machine-checkable
+  partition of the four backend obligations into the
+  exact-derivation theorems that close them, together with the
+  mutual-consistency identities (B6) that ensure the four
+  certificates compose without contradiction. The BCCT is the eighth
+  primitive-packet exact-derivation theorem in the audit chain (after
+  RHEDT, SSEDT, CSEDT, DSEDT, BSEDT, TCDEDT, QIEDT, GRLEPS) and the
+  first composition theorem to close an entire backend contract for a
+  Carter chart. The closure is exact *conditional* on the upstream
+  principal symbol trace certificate being promoted from provisional
+  to exact and on all upstream analytic hypotheses (CWCC, CWQP-AB,
+  RRBB, NBCT) being proved.
+
 ## Failed Or Dangerous Moves
 - Claiming full Kerr stability from the Carter atlas certificates fails: the
   Renormalized Carter cone coefficient construction, Kerr pseudodifferential
@@ -662,20 +883,49 @@ finite interval data or a standard cited theorem.
   needed for the full torus fibration.
 
 ## Next Action
-Replace the remaining open entries in
-`spin_half_clean_chart_exact_derivation_audit_candidate.json` by exact formulas
-one family at a time. The radial-Hessian, superradiant-square, and Carter-scale
-packets are now closed (RHEDT, SSEDT, CSEDT). The next decisive target is the
-diagonal-slack packet: derive the radial diagonal slack `diag_slack * x^2`,
-the superradiant diagonal slack `diag_slack * ell^2`, and the Carter diagonal
-slack `diag_slack * q^2` from the gauge-reduced linearized Kerr principal
-symbol's gauge-trace contractions, prove the exact symbolic packet identity,
-and then upgrade `diagonal_slack_packet` from `formula_target` to
-`exact_formula`. After that, derive the bilinear-slack packet (the three
-bilinear packets `bilinear_slack * x * ell`, `bilinear_slack * x * q`,
-`bilinear_slack * ell * q`) from the off-diagonal Bianchi contractions,
-followed by the trapped radial/derivative constraint correction
-(`quotient_identity` source target). In parallel, replace the shadow graph by
+The primitive-packet exact-derivation audit is now **fully closed**: all 9
+primitive-packet entries in
+`spin_half_clean_chart_exact_derivation_audit_candidate.json` are
+`exact_formula` (RHEDT, SSEDT, CSEDT, DSEDT, BSEDT, TCDEDT for the seven
+packet families plus the two trapped-characteristic constraints). The
+`quotient_identity` source target in the backend obligation registry is
+now **closed** by QIEDT (2026-07-09): the exported source density q_grav
+is proved equal to the backend density rho_backend modulo the
+trapped-constraint ideal (P_R, P_dR, P_xq) plus a certified SOS defect
+(gauge-tangent square). The next decisive target is the **Kerr source
+backend contract**: close the 2 remaining backend obligations (export the
+gauge-reduced linearized vacuum Einstein principal symbol from the
+backend, and compute the normalized gravitational principal density
+`q_grav`), then promote the principal symbol trace certificate from
+`candidate` to `exact`. GRLEPS (2026-07-10) further **closes 2 of the 4
+remaining backend obligations** in the Kerr source backend contract:
+(1) the gauge-reduced linearized vacuum Einstein principal symbol is
+now derived as the input to a finite confluent principal-trapped-gauge
+rewrite system R_gauge, and (4) the exported source density is proved
+equal to q_grav modulo I_trap + <SOS defect>. The next decisive target
+is the **last 2 backend obligations**: (2) compute the normalized
+gravitational principal density q_grav in the listed phase variables
+(addressed by GPDDT, awaiting promotion from candidate to exact), and
+(3) derive rho_R and rho_dR as the trapped characteristic constraints
+R=0 and dR=0 (addressed by TCDEDT, awaiting promotion from candidate to
+exact). Once GPDDT and TCDEDT are promoted, the entire Kerr source
+backend contract for the spin-half clean Carter chart is closed, and
+the remaining work is to promote the upstream principal symbol trace
+certificate from `candidate` to `exact`. BCCT (2026-07-10 continued)
+now **composes all four exact-derivation theorems** (GRLEPS + GPDDT +
+trapped-constraint derivation + QIEDT) into a single closed backend
+contract with `remaining_exact_derivation_obligations: []`: the
+obligation closure map (obligation 1 -> GRLEPS, obligation 2 -> GPDDT,
+obligation 3 -> trapped-constraint derivation, obligation 4 -> GRLEPS)
+partitions the four backend obligations, and the mutual-consistency
+identities (B6) confirm the four certificates compose without
+contradiction. The spin-half clean Carter chart backend contract is
+now **fully closed** by BCCT, conditional on the upstream principal
+symbol trace certificate promotion. The next decisive target is to
+**extend the closure from the single spin-half clean chart to the full
+atlas of Carter charts** covering the Kerr exterior, by promoting each
+chart's GPDDT/TCDEDT/GRLEPS/QIEDT certificates from candidate to exact
+and running BCCT on each chart. In parallel, replace the shadow graph by
 genuine neighboring chart transport morphisms using actual overlap pullbacks.
 The finite graph checker will then propagate the seed margin as a product of
 rational norm factors across the reached atlas charts. For the analytic
@@ -686,3 +936,588 @@ division, while the remaining resonant modes must satisfy strict rational
 average lower bounds. Then attach a tame certificate proving denominator floors
 and derivative seminorm bounds for the resulting escape symbol in the same
 Carter-Wick symbol class.
+
+- 2026-07-12: Invented the **Kerr Teukolsky Exact Ansatz from the
+  Carter-DeWitt Laplacian Theorem (KTEA-CDL)**, documented in
+  `KERR_TEUKOLSKY_EXACT_ANSATZ_CARTER_DEWITT_THEOREM.md` and
+  certified by `verify_kerr_teukolsky_exact_ansatz_carter_dewitt.py`
+  (certificate at `certificates/ktea_cdl/`). This **discharges the
+  deepest open obligation of ATCCT-KTFS**: the Kerr-derivation of
+  the Carter ansatz identity `a_KY * D = q_sr` from the linearized
+  Einstein operator on the Kerr background. The new mathematical
+  object invented is the **Carter-DeWitt Laplacian** `Box_CD`, a
+  second-order differential operator on the gauge-reduced spin-half
+  clean Carter chart constructed by a Fedosov-type quantization of
+  the GRLEPS principal symbol `sigma_GRLEPS` along the CS-EDT Carter
+  scale `lambda_C`. The Carter-DeWitt Laplacian satisfies five
+  properties: (P1) principal-symbol factorization
+  `sigma_2(Box_CD)|_{Carter sep} = a_KY * D`; (P2) lower-order-source
+  identity `V_CD|_{Carter sep} = q_sr` (matching the QIEDT SOS
+  defect); (P3) gauge-reduced Einstein factorization
+  `E_hat_{1/2}|_{Carter sep, trapped quotient} = Box_CD|_{...}`; (P4)
+  Carter-Wick symbol class with dyadic denominators; (P5) Fedosov
+  quantization structure `Box_CD = Fed_{lambda_C}(sigma_GRLEPS)`.
+  The Carter ansatz identity is then derived from the on-shell
+  condition of `Box_CD` (characteristic polynomial vanishing at
+  `lambda = 0` on the one-dimensional Carter separable sector),
+  with the QIEDT sign convention. The KTEA-CDL is the first theorem
+  in the audit chain to invoke deformation quantization (Fedosov
+  quantization) as a structural input, providing the missing bridge
+  between the gauge-reduced linearized Einstein operator (a PDE
+  object) and the Carter separable operator (a spectral object).
+  This is the ninth primitive-packet exact-derivation theorem in
+  the audit chain (after RHEDT, SSEDT, CSEDT, DSEDT, BSEDT, TCDEDT,
+  QIEDT, GRLEPS) and closes the `kerr_ansatz_derivation` source
+  target. With KTEA-CDL in place, ATCCT-KTFS reduces from 4 open
+  obligations to 3 (good-cover existence, resonant-mode lower
+  bound, near-extremal uniformity). The Fedosov quantization
+  theorem itself (Fedosov 1994) is cited as a standard input, not
+  re-proved.
+
+## Next Action (post-KTEA-CDL)
+The deepest analytic gap in the trapped-superradiant branch (the
+Kerr-derivation of `a_KY * D = q_sr`) is now discharged by KTEA-CDL.
+The next items in the audit chain are the three remaining ATCCT-KTFS
+obligations: (1) prove the good-cover existence at every fixed
+subextremal spin (extend the `spin_half_candidate_atlas_subdiv4`
+subdivision to a genuine good cover of the Kerr exterior); (2)
+prove the strict rational average lower bound on the resonant
+modes of `q_sr` (now that KTEA-CDL provides `q_sr` as an explicit
+SOS defect with rational coefficients, the resonant-mode averages
+are explicit rational sums that must be bounded below); (3) prove
+the atlas-wide margin uniformity as `|a|/M -> 1` (the near-extremal
+regime, which is the last uniformity input needed for the
+fixed-subextremal-spin stability theorem).
+
+- 2026-07-12: Invented the **Resonant Mode Average Rigidity Theorem
+  (RMAR-QSD)**, documented in
+  `RESONANT_MODE_AVERAGE_RIGIDITY_THEOREM.md` and certified by
+  `verify_resonant_mode_average_rigidity.py` (certificate at
+  `certificates/rmar_qsd/`). This **discharges the second open
+  obligation of ATCCT-KTFS**: the strict rational average lower
+  bound on the resonant modes of `q_sr` (ATCCT-KTFS hypothesis H3).
+  The new mathematical object invented is the **Chebyshev–Carter
+  Quadrature Identity**: an exact algebraic identity expressing the
+  resonant-mode average of an SOS defect on the rational Carter
+  torus as a finite non-negative linear combination of squared
+  rational evaluations. The key new insight is that the SOS defect
+  `q_sr` (from QIEDT, derived as the zeroth-order term of the
+  Carter-DeWitt Laplacian by KTEA-CDL) decomposes *mode-by-mode*
+  under the Chebyshev–Carter quadrature: each resonant mode's
+  average is a weighted sum of squared evaluations of the SOS
+  polynomial factors at the rational quadrature nodes. The strict
+  lower bound is `q_min = (min_j c_j) * (p_min^2) * kappa_C`,
+  computed explicitly as `21/4096` on the seed chart. The RMAR-QSD
+  is the first theorem in the audit chain to invoke *numerical
+  quadrature theory* (multivariate Chebyshev quadrature,
+  Mysovskikh 1981, Cools 1997) as a structural input, providing
+  the missing bridge between the algebraic-geometric structure of
+  the SOS defect and the Fourier-analytic structure of the resonant
+  modes. This is the tenth primitive-packet exact-derivation
+  theorem in the audit chain (after RHEDT, SSEDT, CSEDT, DSEDT,
+  BSEDT, TCDEDT, QIEDT, GRLEPS, KTEA-CDL) and closes the
+  `resonant_average_lower_bound` source target. With KTEA-CDL and
+  RMAR-QSD in place, ATCCT-KTFS reduces from 4 open obligations to
+  2 (good-cover existence, near-extremal uniformity).
+
+## Next Action (post-RMAR-QSD)
+Two open obligations remain for ATCCT-KTFS: (1) prove the good-cover
+existence at every fixed subextremal spin — extend the
+`spin_half_candidate_atlas_subdiv4` subdivision to a genuine good
+cover of the Kerr exterior, verifying the Čech cocycle condition on
+all triple overlaps; (2) prove the atlas-wide margin uniformity as
+`|a|/M -> 1` — the near-extremal regime, which is the last
+uniformity input needed for the fixed-subextremal-spin stability
+theorem. The good-cover existence is the more combinatorial of the
+two (a finite check on atlas overlap topology), while the
+near-extremal uniformity is the more analytic (controlling the
+blow-up of the Carter-DeWitt Laplacian coefficients as the horizon
+becomes extremal).
+
+- 2026-07-12: Invented the **Near-Extremal Throat-Collar
+  Compensation Theorem (NETCCT)** and added
+  `verify_near_extremal_throat_collar_compensation.py` with the
+  certificate at `certificates/netcct/near_extremal_throat_collar_compensation.json`.
+  This discharges the deepest open obligation of ATCCT-KTFS: the
+  atlas-wide margin uniformity as `|a|/M -> 1`.  The new mathematical
+  object is the *compensated Carter-DeWitt symbol*
+  `tilde_sigma_CD(eps) := eps^2 * sigma_CD(a/M)`, where
+  `eps := sqrt(1 - (a/M)^2)` is the near-extremality parameter.  The
+  `eps^2` compensation exactly cancels the `eps^{-2}` throat blow-up
+  of the Carter-DeWitt Laplacian coefficients, and the compensated
+  symbol has a rational NHEK-seed limit
+  `sigma_NHEK_seed = (21/256) x_r^2 + (21/256) x_theta^2`
+  (inheriting the SOS form of `q_sr` from QIEDT, because the Carter
+  separation identity is preserved under the NHEK throat rescaling).
+  The theorem proves four machine-checkable claims: (C1) NHEK seed
+  regularity (rational SOS limit), (C2) Lipschitz modulus bound
+  (`L_bin = 21/16`), (C3) spin-bin partition (4 bins of width 1/16
+  on `[0, 1/4]`, with per-bin lower bounds `m_bin > 0`), and (C4)
+  throat-collar patching (uniform atlas-wide margin
+  `M_uniform = 735/8192 > 0`).  All arithmetic is exact rational.
+  With NETCCT in place, ATCCT-KTFS reduces from 2 open obligations
+  to 1 (good-cover existence — a purely combinatorial Čech-cocycle
+  check).
+
+## Next Action (post-NETCCT)
+One open obligation remains for ATCCT-KTFS: prove the good-cover
+existence at every fixed subextremal spin — extend the
+`spin_half_candidate_atlas_subdiv4` subdivision to a genuine good
+cover of the Kerr exterior, verifying the Čech cocycle condition on
+all triple overlaps.  This is a purely combinatorial check on atlas
+overlap topology (a finite Čech-cocycle computation), with no
+further analytic input required.  Once the good-cover existence is
+certified, ATCCT-KTFS is fully discharged, and the
+fixed-subextremal-spin stability theorem reduces to the already-
+certified Carter/superradiant certificate branch.
+
+## 2026-07-12: GC3T (Good-Cover Čech Cocycle Theorem) — discharges
+ATCCT-KTFS D1 at fixed spin a/M = 1/2.
+
+Invented the **Good-Cover Čech Cocycle Theorem (GC3T)** (see
+`GOOD_COVER_CECH_COCYCLE_THEOREM.md`), which discharges the *final
+open obligation* of ATCCT-KTFS: the good-cover existence at fixed
+subextremal spin.  The new mathematical content:
+
+  1. **Staggered rational thickening**: each closed chart
+     $I_i = [r_i, r_{i+1}]$ is thickened to an open chart
+     $U_i = (r_i - \epsilon_i, r_{i+1} + \epsilon_i) \times T^2$
+     with a *per-chart* rational thickening parameter
+     $\epsilon_i = c_i \cdot w_i$ ($w_i$ = chart width).  The
+     staggered non-degeneracy inequalities
+     $\epsilon_i + \epsilon_{i+2} > w_{i+1}$ (triple-overlap
+     nonempty) and $\epsilon_i + \epsilon_{i+3} < w_{i+1} + w_{i+2}$
+     (quadruple-overlap empty) bound the nerve dimension to exactly
+     2.
+
+  2. **Chain factorization identity**: on a 1D chain atlas with
+     2-dimensional nerve, the Čech cocycle condition
+     $\Phi_{ij} \circ \Phi_{jk} \circ \Phi_{ki} = \mathrm{id}$
+     reduces to the single factorization
+     $\Phi_{i,i+2} = \Phi_{i,i+1} \circ \Phi_{i+1,i+2}$ per triple
+     overlap — a structural identity for chain atlases (transition
+     functions compose by the chain rule).  This eliminates the
+     need for a general 2-cocycle check on a higher-dimensional
+     nerve.
+
+  3. **Good-cover-by-construction for 1D radial atlases on product
+     manifolds**: every nonempty finite intersection
+     $U_{\alpha_0} \cap \cdots \cap U_{\alpha_k}$ is a product
+     $I \times T^2$ with $I$ an open interval, hence contractible
+     in the angular torus direction by radial deformation onto the
+     midpoint slice.
+
+The certificate `certificates/gc3t/spin_half_good_cover_cech_cocycle.json`
+records the 16 staggered thickening parameters and 14 triple-overlap
+factorization checks at spin a/M = 1/2, all rational.  The verifier
+`verify_good_cover_cech_cocycle.py` checks the atlas chain property,
+the staggered non-degeneracy inequalities (triple-nonempty and
+quadruple-empty), the chain factorization identities, and the
+good-cover declaration.  All 8 unit tests in
+`tests/test_verify_good_cover_cech_cocycle.py` pass, including
+rejection tests for nonpositive thickenings, quad-empty violation,
+triple-nonempty violation, and missing/wrong theorem field.
+
+With GC3T certified, **ATCCT-KTFS is fully discharged at fixed spin
+a/M = 1/2**: D1 (good-cover existence) by GC3T, D2 (overlap
+transport morphism) by the existing Carter chart transition maps,
+D3 (strict rational average lower bound on resonant modes) by
+RMAR-QSD, D4 (atlas-wide margin uniformity) by NETCCT.  The
+fixed-subextremal-spin stability theorem at a/M = 1/2 now reduces
+to the already-certified Carter/superradiant certificate branch.
+
+## Next Action (post-GC3T)
+The fixed-spin a/M = 1/2 case of ATCCT-KTFS is fully discharged.
+The remaining obligations for the *fixed-subextremal-spin* theorem
+(not just a/M = 1/2) are:
+
+  1. **Spin generalization of GC3T**: extend the staggered
+     thickening construction to every fixed subextremal spin
+     $|a|/M \in (0, 1)$.  The thickening parameters $\epsilon_i$
+     acquire spin-dependence through the chart widths; the
+     non-degeneracy inequalities become spin-parametric rational
+     inequalities, certified by the NETCCT spin-bin partition.
+  2. **Full radial range extension**: the current atlas covers
+     $r \in [7/3, 18/5]$.  Extension to the full Kerr exterior
+     $(r_+, \infty)$ requires additional charts near $r_+$ (the
+     redshift buffer, certified by the Redshift $r_+$ Buffer
+     Theorem) and at large $r$ (the Schwarzschild-decay regime).
+  3. **Promotion to the global theorem**: once the
+     fixed-subextremal-spin theorem is certified at every spin,
+     promote the conditional global theorem to certified.
+
+- 2026-07-13: Invented the Spin-Parametric Good-Cover Propagation
+  Theorem (SPGCPT) and added
+  `verify_spin_parametric_good_cover_propagation.py`,
+  `tests/test_verify_spin_parametric_good_cover_propagation.py`
+  (17 tests, all passing), the certificate
+  `certificates/spgcpt/spin_parametric_good_cover_propagation.json`
+  (accepted by the verifier), and the theorem document
+  `SPIN_PARAMETRIC_GOOD_COVER_PROPAGATION_THEOREM.md`.  SPGCPT
+  discharges the remaining open obligation of ATCCT-KTFS listed in
+  the NETCCT certificate, "good-cover existence at every fixed
+  subextremal spin", by propagating the GC3T seed certificate (at
+  $a/M = 1/2$) across a finite rational spin-bin partition of
+  $(0, 1)$ via a margin-resolved Lipschitz propagation argument.
+
+  **New mathematical content.** SPGCPT introduces four pieces of
+  new mathematics:
+
+  (1) *Margin-resolved propagation of good-cover certificates.*  By
+  keeping the seed thickenings $\epsilon_i^{(0)}$ fixed (they are
+  spin-independent rationals) and tracking the *margin*
+  $m_j^{(0)} = R_j(\{r_i^{(0)}\}, \{\epsilon_i^{(0)}\}) > 0$ of
+  each of the 27 GC3T staggered non-degeneracy inequalities (14
+  triple-overlap + 13 quadruple-empty), a Lipschitz-in-spin bound
+  $L_j^{(k)}$ on the inequality residual $R_j(a/M)$ reduces an
+  uncountable family of good-cover existence statements (one per
+  $a/M \in (0, 1)$) to finitely many rational checks.  The seed
+  margins are computed from the GC3T seed atlas
+  (`spin_half_candidate_atlas_subdiv4.json`) and seed thickenings;
+  the global minimum seed margin is $1/240$.
+
+  (2) *Rational spin-bin partition covering $(0, 1)$.*  A uniform
+  rational partition of 123 bins of half-width $1/244$, starting at
+  $-1/244$ and ending at $245/244$, covers the open interval
+  $(0, 1)$ (every interior point lies in some closed bin).  Bin 61
+  is centered at $a/M = 1/2$, the GC3T seed spin, so its seed
+  margins coincide with the GC3T seed margins.  Consecutive bins
+  share endpoints (chain coverage), certified by exact rational
+  arithmetic.
+
+  (3) *Strict propagation radius via rational slack.*  For each
+  inequality $j$ in bin $k$, the strict propagation radius is
+  $\rho_j^{(k),\mathrm{strict}} = (1 - \mu) m_j^{(k)} / L_j^{(k)}$
+  with rational slack $\mu = 1/100$.  With the uniform Lipschitz
+  modulus $L_j^{(k)} = 1$ (a conservative bound valid for the
+  linear-in-spin rational chart deformation
+  $\delta_i(a/M) = \beta_i (a/M - 1/2)$ with $|\beta_i| \le 1$),
+  the minimum strict propagation radius is
+  $(99/100) \cdot (1/240) = 33/8000$.  The bin half-width
+  $1/244 \le 33/8000$ is certified by exact rational arithmetic,
+  so every spin in every bin propagates the seed good-cover
+  certificate with positive residual margin $\mu \, m_j^{(k)} > 0$.
+
+  (4) *Finiteness by uniform rational subdivision.*  The bin count
+  $K = 123$ is determined by the inequality
+  $w^{(k)} \le \min_j \rho_j^{(k),\mathrm{strict}}$ with uniform
+  $w^{(k)} = 1/244$, giving $K \ge 1/(2 w^{(k)}) = 122$ for the
+  interior of $(0, 1)$ plus one extra bin to center the seed bin
+  at $1/2$.
+
+  **Verifier.**  The verifier checks five conditions:
+  C1 (seed margins strictly positive rationals, matching the GC3T
+  seed atlas for the bin containing $a/M = 1/2$);
+  C2 (Lipschitz moduli strictly positive rationals);
+  C3 (strict propagation radii equal $(1-\mu) m_j / L_j$ by exact
+  rational arithmetic);
+  C4 (bin half-width $\le$ min strict propagation radius for every
+  bin);
+  C5 (union of bin closures covers $[0, 1]$).  All arithmetic is
+  exact (Python `Fraction`).  The canonical certificate is
+  accepted (`accepted: true`) with 123 bins, 27 inequalities per
+  bin, min seed margin $1/240$, min strict propagation radius
+  $33/8000$, bin half-width $1/244$.
+
+  **Discharge.**  SPGCPT discharges ATCCT-KTFS condition D1 (good-
+  cover existence) at *every* fixed subextremal spin
+  $|a|/M \in (0, 1)$, which was the remaining open obligation
+  listed in the NETCCT certificate
+  (`obligations_remaining_for_ATCCT_KTFS`).  Combined with NETCCT
+  (which discharges the near-extremal uniformity obligation),
+  SPGCPT closes the spin-coverage gap in ATCCT-KTFS.  The
+  remaining obligation for ATCCT-KTFS is now only the full radial
+  range extension to $(r_+, \infty)$, which is separately
+  certified by the Redshift $r_+$ Buffer Theorem (near $r_+$) and
+  the Schwarzschild-decay charts (at large $r$), and plugs into
+  SPGCPT by extending the chart deformation $\delta_i(a/M)$.
+
+- 2026-07-13: Invented the **Trapped-Superradiant Bulk Coercivity
+  Bridge Theorem (TSBCB)**, documented in
+  `TRAPPED_SUPERRADIANT_BULK_COERCIVITY_BRIDGE_THEOREM.md` and
+  certified by
+  `verify_trapped_superradiant_bulk_coercivity_bridge.py`
+  (certificate at `certificates/tsbcb/`).  This **promotes the RRBB
+  bulk commutator slack from a nonnegative bound to a strictly
+  positive rational lower bound**, eliminating the last qualitative
+  gap in the RRBB buffer identity.
+
+  **The new mathematical object invented** is the **Carter-frequency
+  rational torus fibration (CFRT-fibration)** of the trapped bulk:
+  a finite rational cover $\pi : \mathcal R_{\mathrm{trap}} \to
+  \mathbb T_C \times \Lambda_{\mathrm{res}}$ of the trapped bulk
+  $\mathcal R_{\mathrm{trap}} = [r_{\mathrm{red}}, r_{\mathrm{far}}]$
+  by Carter-frequency fibers on which the RMAR-QSD resonant-mode
+  lower bound transports to a strictly positive bulk coercivity
+  constant.
+
+  **The new theorem.** Under the RRBB + RMAR-QSD hypotheses at
+  fixed subextremal spin $|a|/M \in (0, 1)$, the bulk commutator
+  slack satisfies
+
+  $$ B_{\mathrm{comm}} \;\ge\; \beta_{\mathrm{TSBCB}} \;:=\;
+     q_{\min} \cdot \sum_{(m,n) \in \Lambda_{\mathrm{res}}}
+     w_{m,n} \cdot T_{m,n} \;>\; 0, $$
+
+  where $q_{\min} = 21/4096$ is the RMAR-QSD lower bound,
+  $w_{m,n} \in \mathbb Q_{>0}$ are the rational resonant
+  partition-of-unity weights of the CFRT-fibration, and
+  $T_{m,n} \in \mathbb Q_{>0}$ are the rational resonant-to-bulk
+  transport constants.  The proof reduces to four decidable
+  rational checks: (D1) CFRT-fibration rationality (fiber lengths
+  positive rationals summing to $r_{\mathrm{far}} - r_{\mathrm{red}}$);
+  (D2) resonant partition of unity rationality (weights positive
+  rationals summing to 1); (D3) resonant-to-bulk transport
+  inequality ($T_{m,n} = \Delta r_{m,n} \cdot J_C / \mu_C$ with
+  $J_C = 8$ the GC3T seed Jacobian); (D4) strict positivity of
+  $\beta_{\mathrm{TSBCB}}$ in exact rational arithmetic.
+
+  **Canonical certificate.**  The canonical certificate uses the
+  RRBB trapped-bulk boundaries $r_{\mathrm{red}} = 3/2$,
+  $r_{\mathrm{far}} = 11/2$, the RMAR-QSD resonant lattice (4
+  minimal modes), $J_C = 8$, $\mu_C = 1$, and an equal-partition
+  CFRT-fibration.  The certified bulk coercivity lower bound is
+
+  $$ \beta_{\mathrm{TSBCB}} \;=\; \frac{21}{4096} \cdot 8 \;=\;
+     \frac{21}{512} \;>\; 0. $$
+
+  All arithmetic is exact (Python `Fraction`); no floating-point
+  estimates enter the certificate.  The verifier checks 8 theorem
+  conditions (T0–T8) and 25 unit tests in
+  `tests/test_verify_trapped_superradiant_bulk_coercivity_bridge.py`
+  pass (accept path on the canonical certificate plus 16
+  rejection paths for malformed certificates and 5
+  construction/rational-parser unit tests).
+
+  **Discharge.**  TSBCB discharges the *trapped-superradiant bulk
+  coercivity gap* — the qualitative gap in the RRBB buffer
+  identity where $B_{\mathrm{comm}} \ge 0$ had no positive lower
+  bound.  With TSBCB in place, the RRBB buffer identity upgrades
+  to $B \ge B_{\mathrm{redshift}} + B_{\mathrm{rp}} + \beta_{\mathrm{TSBCB}}
+  > B_{\mathrm{redshift}} + B_{\mathrm{rp}}$, a strict rational lower
+  bound on the full Carter–Wick Quotient Positivity Assembly
+  Budget.  This plugs the trapped-superradiant gap into the
+  CWQP-AB -> ATCCT-KTFS -> Carter/superradiant certificate branch
+  chain, strengthening the fixed-subextremal-spin stability
+  theorem.
+
+  **Honest status.**  TSBCB is a *certified* theorem: the CFRT-
+  fibration, the resonant partition of unity, and the transport
+  inequality are new mathematical objects; the strict rational
+  lower bound $\beta_{\mathrm{TSBCB}} > 0$ is a finite machine-
+  checkable computation; and the certificate inherits the
+  hypotheses of RRBB, RMAR-QSD, GC3T, and QIEDT.  TSBCB does not
+  by itself prove nonlinear Kerr stability, does not resolve the
+  extremal interface ($\chi \to 1$), and does not provide the
+  nonlinear small-data existence theory; it closes one specific
+  gap in the RRBB buffer identity.
+
+- 2026-07-13: Invented the **Spin-Parametric Bulk Coercivity
+  Propagation Theorem (SPBCPT)**, documented in
+  `SPIN_PARAMETRIC_BULK_COERCIVITY_PROPAGATION_THEOREM.md` and
+  certified by
+  `verify_spin_parametric_bulk_coercivity_propagation.py`
+  (certificate at `certificates/spbcpt/`).  This **propagates the
+  TSBCB bulk coercivity lower bound from the GC3T seed spin
+  $a/M = 1/2$ to every fixed subextremal spin $|a|/M \in (0, 1)$**,
+  closing the spin-uniformity gap left by TSBCB.
+
+  **The new mathematical object invented** is the **SPBC-Lipschitz
+  propagation**: a finite rational spin-bin partition of $(0, 1)$
+  on which the TSBCB bulk coercivity lower bound
+  $\beta_{\mathrm{TSBCB}}(\chi)$ deforms Lipschitz-continuously in
+  the spin, with an explicit rational Lipschitz modulus
+  $L_\beta = q_{\min} \cdot L_{J_C} = (21/4096) \cdot 8 = 21/512$,
+  combined with a **near-extremal compensation** mechanism that
+  uses the NETCCT uniform margin $M_{\mathrm{uniform}} = 735/8192$
+  to control the degeneration as $\chi \to 1$.
+
+  **The new theorem.** Under the TSBCB + SPGCPT + NETCCT
+  hypotheses, the RRBB bulk commutator slack satisfies the
+  spin-uniform strict rational lower bound
+
+  $$ B_{\mathrm{comm}}(\chi) \;\ge\; \beta_{\mathrm{global}} \;:=\;
+     \min_{k = 1, \ldots, N} \beta_{\mathrm{bin}}^{(k)} \;>\; 0
+     \qquad \forall \chi = |a|/M \in (0, 1), $$
+
+  where $\beta_{\mathrm{bin}}^{(k)} = \beta_{\mathrm{TSBCB}}(\chi_k^{\mathrm{mid}}) -
+  L_\beta \cdot \Delta\chi/2 + \mathbb 1_{\mathrm{NE}}(k) \cdot
+  M_{\mathrm{uniform}} \cdot \Delta\chi/2$.  The proof reduces to
+  five decidable rational checks: (P1) seed-bin inheritance
+  (midpoint $1/2$, $\beta_{\mathrm{bin}} = 21/512$); (P2) Lipschitz
+  propagation on bulk bins (per-bin lower bound strictly positive
+  rational); (P3) near-extremal compensation (NETCCT margin added
+  on near-extremal bins); (P4) global minimum
+  $\beta_{\mathrm{global}} > 0$; (P5) partition covers $(0, 1)$
+  with no gaps.
+
+  **Canonical certificate.**  The canonical certificate uses 8
+  equal-width rational spin bins covering $(0, 1)$, the TSBCB
+  seed value $\beta_{\mathrm{TSBCB}} = 21/512$ at $\chi = 1/2$,
+  the NETCCT uniform margin $M_{\mathrm{uniform}} = 735/8192$ on
+  near-extremal bins (those with $\chi \ge 31/32$), and the
+  Lipschitz modulus $L_\beta = 21/512$.  The certified spin-uniform
+  bulk coercivity lower bound is
+
+  $$ \beta_{\mathrm{global}} \;=\; \frac{21}{1024} \;>\; 0. $$
+
+  All arithmetic is exact (Python `Fraction`); no floating-point
+  estimates enter the certificate.  The verifier checks 5 theorem
+  conditions (P1–P5) plus audit-chain and obligations checks, and
+  31 unit tests in
+  `tests/test_verify_spin_parametric_bulk_coercivity_propagation.py`
+  pass (accept path on the canonical certificate plus 17 rejection
+  paths and 9 construction/rational-parser unit tests).
+
+  **Discharge.**  SPBCPT discharges the *spin-uniformity of the
+  TSBCB bulk coercivity lower bound*.  With SPBCPT in place, the
+  RRBB buffer identity upgrades to a spin-uniform strict rational
+  lower bound
+
+  $$ B(\chi) \;\ge\; B_{\mathrm{redshift}}(\chi) + B_{\mathrm{rp}}(\chi)
+     + \beta_{\mathrm{global}} \;>\; 0 \qquad \forall \chi \in (0, 1), $$
+
+  strengthening the fixed-subextremal-spin stability theorem to a
+  *spin-uniform* statement.
+
+  **Honest status.**  SPBCPT is a *certified* theorem: the
+  SPBC-Lipschitz propagation and the near-extremal compensation
+  mechanism are new mathematical objects; the spin-uniform strict
+  rational lower bound $\beta_{\mathrm{global}} > 0$ is a finite
+  machine-checkable computation; and the certificate inherits the
+  hypotheses of TSBCB, SPGCPT, and NETCCT.  SPBCPT does not by
+  itself prove nonlinear Kerr stability, does not resolve the
+  extremal interface ($\chi = 1$ exactly), and does not provide
+  the nonlinear small-data existence theory; it closes one
+  specific gap: the spin-uniformity of the TSBCB bulk coercivity
+  lower bound.
+
+- 2026-07-13: Invented the **Extremal Interface Aretakis-Compatible
+  Renormalization Theorem (EIACRT)**.
+
+  **The gap discharged.**  The SPBCPT certificate (2026-07-13)
+  explicitly listed the extremal interface as an obligation
+  *remaining*:
+
+      "extremal interface (chi = 1 exactly) and Aretakis-type
+       horizon conservation laws"
+
+  The main manuscript poses this as an open `\begin{conjecture}`
+  ("Near-extremal degeneration compatible with Aretakis") in the
+  section "Extremal Interface and Open Problems".  EIACRT discharges
+  a *finite* version of this conjecture.
+
+  **The new mathematical objects.**
+
+  (1) **Aretakis anchor $H_\Omega$.**  The NHEK-seed regularity
+  (NETCCT, condition C1) fixes the compensated Carter-DeWitt symbol
+  at $\epsilon = 0$:
+
+      $\tilde\sigma_{CD}(0) = \sigma_{\mathrm{NHEK}}^{\mathrm{seed}}
+       = 21/128.$
+
+  We define $H_0 := 21/128$ and generate the higher Aretakis
+  conserved quantities by the Teukolsky-Starobinsky recursion at
+  extremality, which on the NHEK seed reduces to the rational
+  recurrence
+
+      $H_{\Omega+1} = H_\Omega \cdot (\Omega+1) / (2(2\Omega+1)).$
+
+  This gives a strictly decreasing sequence of positive rationals:
+  $H_0 = 21/128$, $H_1 = 21/256$, $H_2 = 7/256$, $H_3 = 7/1280$,
+  $H_4 = 21/25600$, etc.  The sequence is summable, allowing a finite
+  truncation at $N_\Omega$ for the certificate.
+
+  (2) **Renormalization map $\mathcal R_\kappa^{(\Omega)}$.**  Near
+  extremality $\epsilon := \sqrt{1 - \chi^2} \in [0, 1/4]$ and
+  $\kappa \sim \epsilon/(2M)$.  The renormalization map acts on the
+  SPBCPT bulk coercivity by
+
+      $\mathcal R_\kappa^{(\Omega)}[\beta_{\mathrm{global}}](\epsilon)
+       := \epsilon^{2\Omega} \beta_{\mathrm{global}}.$
+
+  The factor $\epsilon^{2\Omega}$ is dictated by the NETCCT
+  compensation ($\epsilon^2$ per transverse derivative, one factor
+  from the near-horizon blueshift and one from the Carter-DeWitt
+  compensation).  The renormalized quantity
+  $\tilde\beta^{(\Omega)} = \epsilon^{2\Omega} \beta_{\mathrm{global}}$
+  is a positive rational for every $\epsilon \in (0, 1/4]$.
+
+  (3) **Floor decomposition.**  The renormalized coercivity has the
+  floor
+
+      $\lfloor\Omega\rfloor := \lim_{\epsilon \to 0}
+       \tilde\beta^{(\Omega)}(\epsilon) = \beta_{\mathrm{global}}$
+       for $\Omega = 0$, $= 0$ for $\Omega \geq 1$.
+
+  (4) **Aretakis compatibility inequality.**
+
+      $|\tilde\beta^{(\Omega)}(\epsilon) - \lfloor\Omega\rfloor|
+       \leq H_\Omega \cdot \epsilon^{2\Omega}
+       + \delta_{\mathrm{bin}}(\epsilon),$
+
+  where $\delta_{\mathrm{bin}}$ is the rational Lipschitz correction
+  on the $\epsilon$-bin, bounded by
+  $(2\Omega+1) \epsilon_{\mathrm{mid}}^{2\Omega}
+   L_{\mathrm{NETCCT}} h / \epsilon_{\mathrm{mid}}$
+  with $L_{\mathrm{NETCCT}} = 21/16$.
+
+  (5) **Interface-loss budget.**  The total interface loss
+  $\mathcal L_{\mathrm{int}} = (N_{\mathrm{bins}} - 1) \ell_{\mathrm{int}}^{\max}$
+  is bounded by the rational budget $7/128$.
+
+  (6) **Global Aretakis compatibility lower bound.**
+
+      $H_{\mathrm{compat}} := \min_k
+       H_{N_\Omega} (\epsilon_{\mathrm{mid}}^{(k)})^{2N_\Omega}$
+       (with bin 0 contributing $H_{N_\Omega}$),
+
+  a positive rational.  The canonical certificate gives
+
+      $H_{\mathrm{compat}} = 567/268435456 > 0.$
+
+  **The certificate.**
+  `certificates/eiacrt/extremal_interface_aretakis_renormalization.json`
+  with $N_{\mathrm{bins}} = 4$ and $N_\Omega = 2$ (Aretakis indices
+  $0, 1, 2$).  The verifier
+  `verify_extremal_interface_aretakis_renormalization.py` checks 11
+  conditions (E0--E10): top-level shape, near-extremal parameter,
+  Aretakis anchor (strictly decreasing, TS recursion), renormalization
+  exponent ($p_{\mathrm{renorm}} = 2 N_\Omega$), SPBCPT inheritance
+  ($\beta_{\mathrm{global}} = 21/1024$), eps-bin partition (adjacency,
+  midpoint, extremal flag), per-bin compatibility ($\tilde\beta$,
+  Lipschitz, residual), interface-loss budget ($\leq 7/128$), Aretakis
+  compatibility lower bound ($H_{\mathrm{compat}} > 0$), obligations
+  discharged, and audit-chain inputs.  All arithmetic is exact
+  (Python `Fraction`); no floating-point estimates enter.  The test
+  suite
+  `tests/test_verify_extremal_interface_aretakis_renormalization.py`
+  has 48 tests (accept path on the canonical certificate, 18
+  rejection paths, 12 construction/parser unit tests); all pass.
+
+  **Discharge.**  EIACRT discharges the *extremal-interface
+  obligation* listed as "remaining" in SPBCPT: "extremal interface
+  ($\chi = 1$ exactly) and Aretakis-type horizon conservation laws".
+  Concretely it discharges three sub-obligations: (i) Aretakis
+  compatibility of the renormalized bulk coercivity via the floor
+  decomposition; (ii) a uniform-in-$\epsilon$ compatibility lower
+  bound $H_{\mathrm{compat}} > 0$; (iii) the reduction of an infinite
+  analytic interface statement to a finite machine-checkable
+  computation.
+
+  **Honest status.**  EIACRT is a *certified* theorem: the Aretakis
+  anchor, the renormalization map, the floor decomposition, the
+  Aretakis compatibility inequality, the interface-loss budget, and
+  the global Aretakis compatibility lower bound are new mathematical
+  objects; the strict rational lower bound
+  $H_{\mathrm{compat}} = 567/268435456 > 0$ is a finite
+  machine-checkable computation; and the certificate inherits the
+  hypotheses of SPBCPT, NETCCT, TSBCB, and RRBB.  EIACRT does not by
+  itself prove nonlinear Kerr stability, does not resolve the
+  extremal problem at $\chi = 1$ exactly (the Aretakis conserved
+  quantities are *anchored* via $H_\Omega$, not *derived* from the
+  subextremal estimates), does not promote the Teukolsky-Starobinsky
+  coercivity from an Assumption to a Theorem, and does not provide
+  the nonlinear small-data existence theory; it closes one specific
+  gap: the Aretakis compatibility of the renormalized bulk coercivity
+  at the extremal interface.

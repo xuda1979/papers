@@ -36,6 +36,10 @@ from .tasks import (
     collate_fixed,
 )
 from .train import TrainConfig, train_model, evaluate_model, get_param_count
+from .adaptive import (
+    CASIA, CASIA2, AASIA, LSTCABlock, LSTCA, LSTCABlock2, LSTCA2,
+    LSTAABlock, LSTAA, soft_top_k_mask, causal_top_k,
+)
 __all__ = [
     "SelectiveSSM", "SIA", "GSIA", "LSTBlock", "LST", "LSTGBlock", "LSTG",
     "TransformerBlock", "TransformerLM",
@@ -46,4 +50,9 @@ __all__ = [
     "InductionPairsDataset", "CopySegmentDataset",
     "collate_fixed",
     "TrainConfig", "train_model", "evaluate_model", "get_param_count",
+    # Content-adaptive variants (this paper's innovation)
+    "CASIA", "CASIA2", "AASIA",
+    "LSTCABlock", "LSTCA", "LSTCABlock2", "LSTCA2",
+    "LSTAABlock", "LSTAA",
+    "soft_top_k_mask", "causal_top_k",
 ]

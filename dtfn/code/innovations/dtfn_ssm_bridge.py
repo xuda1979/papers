@@ -95,14 +95,28 @@ def dtfn_to_ssm_matrices(J_left: torch.Tensor, J_right: torch.Tensor,
     # A_i,i-1 = J_left             (flux from the left neighbour)
     # A_i,i+1 = J_right            (flux to the right neighbour)
     # In block form, A is (L, L) with (d, d) blocks.
-    diag_block = -(J_left + J_right)  # (d, d)
+    #
+    # Boundary conditions: zero-flux (reflecting) as in the DTFN layer:
+    #   F_{-1/2} = 0  and  F_{L-1/2} = 0.
+    # This means cell 0 has no left-neighbour contribution (only -J_right
+    # on its diagonal from the right flux), and cell L-1 has no
+    # right-neighbour contribution (only -J_left on its diagonal from the
+    # left flux).
+    diag_block = -(J_left + J_right)  # (d, d) for interior cells
+    diag_block_left = -J_right         # cell 0: only right flux contributes
+    diag_block_right = -J_left         # cell L-1: only left flux contributes
     offdiag_left = J_left   # block below the diagonal
     offdiag_right = J_right  # block above the diagonal
 
-    # Build A as a block-tridiagonal (L*d, L*d) matrix.
+    # Build A as a block-tridiagonal (L*d, L*d) matrix with zero-flux BCs.
     A = torch.zeros(L * d, L * d, device=J_left.device, dtype=J_left.dtype)
     for i in range(L):
-        A[i*d:(i+1)*d, i*d:(i+1)*d] = diag_block
+        if i == 0:
+            A[i*d:(i+1)*d, i*d:(i+1)*d] = diag_block_left
+        elif i == L - 1:
+            A[i*d:(i+1)*d, i*d:(i+1)*d] = diag_block_right
+        else:
+            A[i*d:(i+1)*d, i*d:(i+1)*d] = diag_block
         if i > 0:
             A[i*d:(i+1)*d, (i-1)*d:i*d] = offdiag_left
         if i < L - 1:

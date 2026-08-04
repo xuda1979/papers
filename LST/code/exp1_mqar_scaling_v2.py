@@ -35,7 +35,13 @@ def make_iter(ds, batch_size):
 def main():
     out_dir = Path(__file__).resolve().parent / "results"
     out_dir.mkdir(exist_ok=True)
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    try:
+        from device_utils import get_device, empty_cache
+        device = get_device()
+    except ImportError:
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        def empty_cache(_d):
+            if _.type == "mps": torch.mps.empty_cache()
     print(f"Using device: {device}", flush=True)
 
     results = []
@@ -86,8 +92,7 @@ def main():
                             "final_acc": acc, "final_loss": loss, "time_s": dt})
             (out_dir / "exp1_v2_partial.json").write_text(json.dumps(results, indent=2))
             del m
-            if device == "mps":
-                torch.mps.empty_cache()
+            empty_cache(device)
 
     (out_dir / "exp1_mqar_scaling_v2.json").write_text(json.dumps(results, indent=2))
     print(f"\nWrote {out_dir / 'exp1_mqar_scaling_v2.json'}")

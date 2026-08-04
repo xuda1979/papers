@@ -82,7 +82,13 @@ def collect_gate_stats(model, x):
 def main():
     out_dir = Path(__file__).resolve().parent / "results"
     out_dir.mkdir(exist_ok=True)
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    try:
+        from device_utils import get_device, empty_cache
+        device = get_device()
+    except ImportError:
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        def empty_cache(_d):
+            if _.type == "mps": torch.mps.empty_cache()
     print(f"Using device: {device}", flush=True)
 
     # Use n_kv=64 where all models learn well (~80% accuracy)

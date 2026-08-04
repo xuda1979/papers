@@ -32,8 +32,14 @@ class VerifyCarterExactDerivationAuditTests(unittest.TestCase):
         self.assertIn("carter_scale_packet", result["primitive_entries_exact"])
         self.assertIn("radial_trapped_constraint", result["primitive_entries_exact"])
         self.assertIn("radial_derivative_trapped_constraint", result["primitive_entries_exact"])
-        self.assertIn("diagonal_slack_packet", result["primitive_entries_open"])
-        self.assertIn("bilinear_slack_packet", result["primitive_entries_open"])
+        self.assertIn("diagonal_slack_packet", result["primitive_entries_exact"])
+        self.assertIn("bilinear_slack_packet", result["primitive_entries_exact"])
+        # TCDEDT (2026-07-08) closed the last two primitive-packet entries.
+        self.assertIn("trapped_radial_constraint_correction", result["primitive_entries_exact"])
+        self.assertIn("trapped_derivative_constraint_correction", result["primitive_entries_exact"])
+        # All 9 primitive-packet entries are now exact.
+        self.assertEqual(len(result["primitive_entries_open"]), 0)
+        self.assertEqual(len(result["primitive_entries_exact"]), 9)
         self.assertIn(
             "compute the normalized gravitational principal density q_grav in the listed phase variables",
             result["backend_obligations_open"],

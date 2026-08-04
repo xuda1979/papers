@@ -339,6 +339,68 @@ def fig_k_vs_n():
     print("Wrote k_vs_n.pdf")
 
 
+def fig_content_adaptive():
+    """Content-Adaptive SIA: accuracy vs n_kv for LST, LST-CA, LST-AA, Transformer.
+
+    Shows that CA-SIA and especially AA-SIA break the K >= n_kv barrier,
+    beating the original LST and the Transformer at n_kv=96 with K=32.
+    """
+    data = load_json("exp9_content_adaptive.json")
+    if data is None:
+        print("No exp9 data"); return
+    # Only keep K=32 runs (the fixed-budget comparison)
+    data32 = [d for d in data if d.get("K") == 32]
+    by_model = {}
+    for d in data32:
+        by_model.setdefault(d["model"], []).append((d["n_kv"], d["final_acc"]))
+
+    fig, ax = plt.subplots(figsize=(4.5, 3.2))
+    colors = dict(COLORS)
+    colors.update({"LST-CA": "#17becf", "LST-AA": "#e377c2"})
+    markers = dict(MARKERS)
+    markers.update({"LST-CA": "P", "LST-AA": "X"})
+    for m, vals in by_model.items():
+        vals.sort()
+        xs = [v[0] for v in vals]; ys = [v[1]*100 for v in vals]
+        ax.plot(xs, ys, marker=markers.get(m, 'o'), color=colors.get(m, 'gray'),
+                label=m, linewidth=2, markersize=7)
+    ax.set_xlabel("Number of KV pairs $n_{kv}$")
+    ax.set_ylabel("MQAR accuracy (\\%)")
+    ax.set_title("Content-adaptive SIA ($K{=}32$)")
+    ax.set_ylim(0, 100)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="lower right", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(FIGS / "content_adaptive.pdf", dpi=200)
+    fig.savefig(FIGS / "content_adaptive.png", dpi=120)
+    plt.close(fig)
+    print("Wrote content_adaptive.pdf")
+
+    # Also plot the K scaling comparison for n_kv=96
+    data96 = [d for d in data if d.get("n_kv") == 96]
+    if data96:
+        by_model = {}
+        for d in data96:
+            by_model.setdefault(d["model"], []).append((d["K"], d["final_acc"]))
+        fig, ax = plt.subplots(figsize=(4.5, 3.2))
+        for m, vals in by_model.items():
+            vals.sort()
+            xs = [v[0] for v in vals]; ys = [v[1]*100 for v in vals]
+            ax.plot(xs, ys, marker=markers.get(m, 'o'), color=colors.get(m, 'gray'),
+                    label=m, linewidth=2, markersize=7)
+        ax.set_xlabel("Latent dimension $K$")
+        ax.set_ylabel("MQAR accuracy (\\%)")
+        ax.set_title("Effect of $K$ at $n_{kv}{=}96$")
+        ax.set_ylim(0, 100)
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc="lower right", fontsize=8)
+        fig.tight_layout()
+        fig.savefig(FIGS / "content_adaptive_k.pdf", dpi=200)
+        fig.savefig(FIGS / "content_adaptive_k.png", dpi=120)
+        plt.close(fig)
+        print("Wrote content_adaptive_k.pdf")
+
+
 if __name__ == "__main__":
     fig_complexity()
     fig_throughput()
@@ -349,4 +411,5 @@ if __name__ == "__main__":
     fig_long_range()
     fig_noise_robustness()
     fig_k_vs_n()
+    fig_content_adaptive()
     print("Done")
