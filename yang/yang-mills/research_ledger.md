@@ -1631,3 +1631,75 @@ PDF: 194 pages, zero app226-specific LaTeX errors. Pre-existing label
 collisions (eq:ds_decay, eq:clay_final, rem:shortest_route) in
 app213/214/219/222/225 remain; these are not introduced by app226.
 
+
+## 2026-08-13 — app232: audit of app231; mass gap remains open
+
+**Context.** An unaudited draft `split/app231_concentration_via_faddeev_popov.tex`
+claimed to close the gauge-invariant concentration
+`hyp:gauge_invariant_concentration` (the single open obstruction after
+app230) and to prove a mass gap (`thm:mass_gap_app231`). New appendix
+`split/app232_audit_of_app231_and_corrected_scaling.tex` compiles cleanly
+and audits it.
+
+**Four errors identified in app231:**
+- Error 1 (scaling): proves only $h_j\ge c\,2^j/(j+1)^{1/2}$ (exp $2^j$);
+  mass gap needs $h_j\ge c\,2^{2j}/(j+1)$ (exp $2^{2j}$). Repeats app230
+  `thm:app229_error2`. Asserts stronger aggregation without proof.
+- Error 2 (local log-concavity): Hessian positivity on a subset is not
+  global convexity; log-concave tail inequality inapplicable; $\nu_j(U)\ge1/2$
+  circular.
+- Error 3 (unbounded volume ratio): $R_j\sim\exp(c\,2^{4j}j)$ unbounded;
+  `lem:det_vol_ratio` self-contradicted.
+- Error 4 (first shell): $k=0$ shell $\sim\exp(c\,2^{4j}j)$ large; repair
+  rests on invalid Error 2.
+
+**New math (app232):**
+- `thm:per_scale_exponent_needed`: restates the sharp per-scale condition.
+- `thm:equivalent_concentration`: gauge-invariant concentration
+  (eq:concentration_target) is equivalent to the single Weyl-type bound
+  $R_j\le c\exp(\alpha 2^{2j}/(j+1)^2 - c_1 2^{4j}\log(2^j)/(g_{\rm YM}^2(j)(j+1)^2))$;
+  i.e. cancellation of $c\,2^{4j}j$ by the AF action.
+
+**Status:** Clay mass-gap conjecture remains OPEN, sharply reduced to one
+checkable Landau-slice Weyl-volume estimate. app231 NOT included in
+master; app232 included (compiles).
+
+**Files:** `split/app232_audit_of_app231_and_corrected_scaling.tex`
+(new), `split/yang_mills_master.tex` (appended include),
+`OPEN_THEOREM_ROADMAP.md` (updated), this ledger.
+
+## 2026-08-13 (second) — app233: dimension reduction; AF mis-normalized;
+   mass gap -> non-Gaussian (Gribov) control at typical scale
+
+**Context.** After app232 reduced the Clay mass gap to the gauge-invariant
+concentration (eq:concentration_target), this session attacked that single
+open problem by dimensional/spectral analysis.
+
+**New math (app233, compiles into master):**
+- `lem:gaussian_shell`: Gaussian shell measure on the Landau slice; mass
+  concentrates at rho ~ rho_typ ~ g 2^{3j}; annular failure below 1/2 rho_typ,
+  sub-Gaussian tail above 2 rho_typ.
+- `thm:dimension_reduction`: concentration iff spin eta_* = liminf R1/rho_typ > 0.
+- `thm:spin_zero`: under AF and the app230 radius R1 = eta 2^{2j}/(j+1),
+  eta_* = 0 (R1/rho_typ = eta sqrt(log 2^j)/(N (j+1) 2^j) -> 0 exponentially).
+  **Diagnosis: app230 AF region mis-normalized by ~2^j; sits deep inside the
+  typical shell.**
+- `def:typical_af` + `thm:non_gaussian_reduction`: correct AF region at
+  typical scale rho_typ; if nonlinear measure satisfies concentration there
+  (eq:gaussian_dominance), per-scale Cheeger h_j >= c 2^{2j}/(j+1) -> mass gap.
+
+**Status:** Clay mass gap remains OPEN. Recast as single open problem:
+non-Gaussian (cubic bracket + Gribov horizon) concentration at typical scale
+eq:gaussian_dominance. app232 + app233 now give a sharp two-step route.
+
+**Files:** `split/app233_typical_radius_and_gaussian_shell.tex` (new),
+`split/yang_mills_master.tex` (include added), `OPEN_THEOREM_ROADMAP.md`,
+`research_ledger.md`, `split/yang_mills_master.pdf` (234 pages).
+
+**Note on non-Gaussian next step:** the open estimate eq:gaussian_dominance
+requires controlling the Gribov boundary layer of the quotient measure at
+rho ~ rho_typ -- a Zwanziger-type softening or a rigorous bound proving the
+quotient density is well approximated by its Gaussian on the typical-scale
+weak-field region. Candidate next move: Bakry--Emery on the quotient with a
+corrected (Gribov-aware) potential, or the Balaban/Federbush small-coupling
+cluster expansion restricted to the typical scale.

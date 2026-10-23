@@ -307,3 +307,91 @@ conjecture remains open.
 
 
 
+
+## 2026-08-13 Update: app231 audited (app232); mass gap remains open;
+   the single open problem is now sharply posed
+
+A new unpublished draft, `split/app231_concentration_via_faddeev_popov.tex`
+(not yet compiled into the master), attempted to close the gauge-invariant
+concentration Hypothesis `hyp:gauge_invariant_concentration` left open by
+app230). It was not audited and contained a claimed mass-gap theorem
+(`thm:mass_gap_app231`). New appendix `split/app232_audit_of_app231_and_corrected_scaling.tex`
+compiles and audits it, finding **four independent errors** that invalidate
+the claim:
+
+1. **Error 1 (scaling)**: app231 proves only the per-scale Cheeger bound
+   $h_j \ge c\,2^{j}/(j+1)^{1/2}$ (exponent $2^j$), but the mass gap
+   requires $h_j \ge c\,2^{2j}/(j+1)$ (exponent $2^{2j}$, app230
+   `thm:app229_error2`). app231 asserts the stronger aggregation
+   $h_{\mathrm{OS}}^{(n)}\ge c a_n^{-1/2}$ without proving the stronger
+   per-scale bound. This repeats exactly the scaling error app230 already
+   corrected.
+2. **Error 2 (local log-concavity)**: positive Hessian of the YM action
+   on the subset $U_{\mathrm{AF},j}^{corr}$ does NOT make the density
+   log-concave (convexity is global; YM action is non-convex on flat
+   directions and near the Gribov horizon). The log-concave tail
+   inequality requires a globally log-concave measure, so Step 11 and
+   `thm:log_concave`/`cor:af_concentration` are invalid (and the asserted
+   $\nu_j(U^{corr})\ge1/2$ is circular).
+3. **Error 3 (unbounded volume ratio)**: the determinant-to-volume ratio
+   $R_j=\mathrm{vol}(Q_j)/(g_{\mathrm{YM}}^{D_j^\perp}(\det\Delta_{0,j}^\perp)^{-1/2})$
+   is NOT bounded as $j\to\infty$ (it is $\sim\exp(c\,2^{4j}j)$), as
+   app231's own computation concedes; lemma `lem:det_vol_ratio` is
+   self-contradicted, so the Gaussian lower bound cannot control shells.
+4. **Error 4 (first shell)**: the $k=0$ shell at the AF boundary is
+   $\sim\exp(c\,2^{4j}j)$ (large) and is only "repaired" by the invalid
+   local-log-concavity step.
+
+**New precise target** (app232 `thm:equivalent_concentration`): the
+gauge-invariant concentration is equivalent to the single Weyl-type
+bound $R_j\le c\exp(\alpha\,2^{2j}/(j+1)^2 - c_1 2^{4j}\log(2^j)/(g_{\mathrm{YM}}^2(j)(j+1)^2))$,
+i.e. cancellation of the $c\,2^{4j}j$ growth by the AF action. This is the
+sharply posed, checkable, single open estimate.
+
+**Honest status**: the Clay Millennium Prize mass-gap conjecture
+**remains open**, reduced to a single sharply-stated gauge-invariant
+concentration/Weyl-volume estimate on the Landau slice.
+
+## 2026-08-13 Update (second): app233 — dimension reduction; AF region
+   mis-normalized; mass gap reduced to non-Gaussian (Gribov) control
+
+New appendix `split/app233_typical_radius_and_gaussian_shell.tex`
+compiles into the master and does the following:
+
+- **Gaussian dimension-reduction lemma** (`lem:gaussian_shell`): on the
+  Landau slice, the weak-field (quadratic) approximation is a Gaussian with
+  field radius rho whose typical value is
+  `rho_typ ~ sqrt(D_j^perp) g 2^j ~ g 2^{3j}`. In high dimension the mass
+  concentrates on the shell `rho ~ rho_typ`: for `R1 <= (1/2) rho_typ` the
+  annulus `[R1,2R1]` retains a fixed fraction (>=1/2) of the mass of the
+  ball of radius `2R1`; for `R1 >= 2 rho_typ` the upper tail is
+  `<= e^{-c R1^2/rho_typ^2}`.
+
+- **Dimension-reduction theorem** (`thm:dimension_reduction`): the whole
+  gauge-invariant concentration is governed by a single "spin" parameter
+  `eta_* = liminf R1/rho_typ`. If `eta_*>0` concentration holds (Gaussian
+  part); if `eta_*=0` no weak-field argument can give the exponential tail.
+
+- **The spin is zero** (`thm:spin_zero`): under asymptotic freedom and the
+  app230 radius `R1 = eta 2^{2j}/(j+1)`,
+  `R1/rho_typ = eta sqrt(log 2^j)/(N (j+1) 2^j) -> 0` exponentially.
+  **Diagnosis:** the app230 AF region sits DEEP INSIDE the typical shell;
+  it is mis-normalized by a factor ~`2^j`. The numerical spin decays
+  `0.049, 0.010, 0.0023, ...` for `j=2,4,6,...`.
+
+- **Corrected typical-scale AF region** (`def:typical_af`): define
+  `U_typ = {||F|| <= C_typ rho_typ}` at the intrinsic Gaussian width, where
+  Gaussian concentration is trivial.
+
+- **Final reduction** (`thm:non_gaussian_reduction`): if the full nonlinear
+  gauge quotient measure satisfies concentration on `U_typ`
+  (eq:gaussian_dominance), then the required per-scale Cheeger bound
+  `h_j >= c 2^{2j}/(j+1)` follows, giving the mass gap. The genuinely open
+  content is now precisely the **non-Gaussian (cubic bracket + Gribov
+  horizon) control at the typical scale**.
+
+**Honest status:** Clay mass-gap conjecture **remains open**. Progress: the
+concentration is reduced to a single Gaussian-scaled spin parameter, the
+AF region mis-normalization is rigorously diagnosed, and the open problem
+is sharply restated as non-Gaussian concentration at the typical scale
+(eq:gaussian_dominance).
