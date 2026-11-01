@@ -21,16 +21,16 @@ The deployment of Large Language Models (LLMs) is often constrained by high memo
 
 \section{Introduction}
 
-Large Language Models (LLMs) have revolutionized Natural Language Processing (NLP), but their scaling comes with prohibitive costs. A standard 7-billion parameter model requires approximately 14GB of VRAM in FP16 precision, making it difficult to deploy on consumer hardware or edge devices. Quantization has emerged as a key solution, reducing precision from 16-bit floating point to 8-bit or 4-bit integers.
+Large Language Models (LLMs) have revolutionized Natural Language Processing (NLP), but their scaling comes with prohibitive costs. A standard 7-billion parameter model requires approximately 14GB of VRAM in FP16 precision, making it difficult to deploy on consumer hardware or edge devices. Quantization has emerged as a key solution, reducing precision from 16-bit floating point to 8-bit or 4-bit integers \cite{qlora}.
 
-In this work, we explore an extreme form of quantization: ternary weights restricted to $\{-1, 0, 1\}$. This approach, inspired by recent advances in "1-bit" architectures like BitNet b1.58, offers unique advantages. First, the memory footprint is drastically reduced (theoretically 1.58 bits per parameter). Second, matrix multiplications can be replaced by simpler addition and subtraction operations, leading to significant energy savings.
+In this work, we explore an extreme form of quantization: ternary weights restricted to $\{-1, 0, 1\}$. This approach, inspired by recent advances in "1-bit" architectures like BitNet b1.58 \cite{bitnet158}, offers unique advantages. First, the memory footprint is drastically reduced (theoretically 1.58 bits per parameter). Second, matrix multiplications can be replaced by simpler addition and subtraction operations, leading to significant energy savings.
 
 We focus specifically on the \textit{fine-tuning} regime, addressing the challenge of adapting pre-trained or randomized ternary structures to downstream tasks without reverting to full precision. We present a methodology that combines AbsMean quantization with high-precision shadow weights to ensure stable convergence.
 
 \section{Methodology}
 \label{sec:methodology}
 
-Our approach replaces standard linear layers with \textbf{BitLinear} layers. We describe the quantization functions for weights and activations, and the training strategy.
+Our approach replaces standard linear layers in the Transformer blocks (including query, key, value projections, and feed-forward networks) with \textbf{BitLinear} layers, while keeping the final classification head in higher precision. We describe the quantization functions for weights and activations, and the training strategy.
 
 \subsection{Weight Quantization}
 
@@ -62,7 +62,7 @@ x_{q} = \text{Clip}\left(\text{Round}(x \cdot \eta), -Q_b, Q_b\right)
 
 The matrix multiplication then becomes:
 \begin{equation}
-y = \frac{(W_q x_q)}{\gamma \eta}
+y = \frac{\gamma}{\eta} (W_q x_q)
 \end{equation}
 The term $W_q x_q$ involves only integer additions and subtractions (since $W_q \in \{-1, 0, 1\}$), avoiding expensive floating-point multiplications.
 
@@ -124,7 +124,7 @@ We observed that the training stability is sensitive to the learning rate. As no
 
 \section{Conclusion}
 
-We successfully demonstrated a fine-tuning methodology for Large Language Models using ternary $\{-1, 0, 1\}$ weights. By leveraging AbsMean quantization and the Straight-Through Estimator, we achieved a highly efficient model with minimal performance degradation on language modeling tasks. This work confirms the viability of 1.58-bit architectures for resource-constrained deployment, offering a path toward sustainable and accessible AI. Future work will explore scaling this approach to billion-parameter models and integrating it with Parameter-Efficient Fine-Tuning (PEFT) methods like LoRA.
+We successfully demonstrated a fine-tuning methodology for Large Language Models using ternary $\{-1, 0, 1\}$ weights. By leveraging AbsMean quantization and the Straight-Through Estimator, we achieved a highly efficient model with minimal performance degradation on language modeling tasks. This work confirms the viability of 1.58-bit architectures for resource-constrained deployment, offering a path toward sustainable and accessible AI. Future work will explore scaling this approach to billion-parameter models and integrating it with Parameter-Efficient Fine-Tuning (PEFT) methods like LoRA \cite{lora}.
 
 \begin{thebibliography}{9}
 
@@ -136,6 +136,12 @@ Touvron, H., et al. (2023). \textit{LLaMA: Open and Efficient Foundation Languag
 
 \bibitem{ste}
 Bengio, Y., Léonard, N., \& Courville, A. (2013). \textit{Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation}. arXiv preprint arXiv:1308.3432.
+
+\bibitem{qlora}
+Dettmers, T., et al. (2023). \textit{QLoRA: Efficient Finetuning of Quantized LLMs}. arXiv preprint arXiv:2305.14314.
+
+\bibitem{lora}
+Hu, E. J., et al. (2021). \textit{LoRA: Low-Rank Adaptation of Large Language Models}. arXiv preprint arXiv:2106.09685.
 
 \end{thebibliography}
 
